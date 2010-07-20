@@ -5,6 +5,7 @@ PRO gala_bridge, filein
 ;constr_file, mask_file, out_file, fittab
 
    restore, filein
+;spawn, 'touch '+filein+'.restored';§§§§§§§§§§§§§§§§§§§§§§
 
    table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
 
@@ -42,6 +43,7 @@ PRO gala_bridge, filein
    delvarx, skypix
    global_sky = par[1]
    global_sigsky = par[2]
+;spawn, 'touch '+filein+'.sky';§§§§§§§§§§§§§§§§§§§§§§
 
 ;         print, systime(), ' done'
 ;         print, global_sky, global_sigsky
@@ -59,6 +61,7 @@ PRO gala_bridge, filein
                 setup.galfit_out, setup.outcat, setup.outparam, $
                 setup.stampfile, global_sky, global_sigsky, $
                 setup.convbox, nums, frames, setup.galexe, fittab
+;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
 
    print,table[cur].number
    create_mask, table, wht, seg, stamp_param_file, mask_file, $
@@ -66,6 +69,7 @@ PRO gala_bridge, filein
                 setup.neiscl, setup.skyoff, nums, frames, $
                 setup.maglim_gal, setup.maglim_star, $
                 setup.stel_slope, setup.stel_zp, objects, corner
+;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§§§§§§§
 
    prepare_galfit, objects, setup.files, corner, table, obj_file, $
                    im_file, constr_file, mask_file, setup.psf, $
@@ -74,6 +78,7 @@ PRO gala_bridge, filein
                    setup.outcat, setup.outparam, setup.stampfile, $
                    setup.conmaxre, setup.conminm, setup.conmaxm, $
                    fittab, setup.version;, n_constrained = n_constrained
+;spawn, 'touch '+filein+'.preparegalfit';§§§§§§§§§§§§§§§§§§§§§§
 
 ;spawn the script
 
@@ -87,5 +92,12 @@ PRO gala_bridge, filein
 
    file_delete, filein
 
+;file_delete, filein+'.restored';§§§§§§§§§§§§§§§§§§§§§§
+;file_delete, filein+'.sky';§§§§§§§§§§§§§§§§§§§§§§
+;file_delete, filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
+;file_delete, filein+'.mask';§§§§§§§§§§§§§§§§§§§§§§
+;file_delete, filein+'.preparegalfit';§§§§§§§§§§§§§§§§§§§§§§
+
    wait, 1
 END
+

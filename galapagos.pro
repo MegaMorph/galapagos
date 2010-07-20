@@ -1347,28 +1347,33 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
 ;clip 3 sigma outliers first
          resistant_mean, skyim, 3, m, s, nr
          s *= sqrt(n_ring-1-nr)
-         ring_sig_clip = where(skyim GT m-3*s AND skyim LT m+3*s)
-         skyim = skyim[ring_sig_clip]
-         n_ring = n_elements(skyim)
+         ring_sig_clip = where(skyim GT m-3*s AND skyim LT m+3*s, nw)
+         IF nw GT 4 THEN BEGIN
+            skyim = skyim[ring_sig_clip]
+            n_ring = n_elements(skyim)
 ;reduce size to 250x250 pixels
-         npix = ulong(sqrt(n_ring)) < 250
-         skyim = reform(skyim[randomu(seed, npix^2)*npix^2], npix, npix)
+            npix = ulong(sqrt(n_ring)) < 250
+            skyim = reform(skyim[randomu(seed, npix^2)*npix^2], npix, npix)
 
-         IF n_elements(uniq(skyim)) LT 5 THEN BEGIN
-            ringsky = mean(skyim)
-            ringsigma = 1e30
-         ENDIF ELSE BEGIN
+            IF n_elements(uniq(skyim)) LT 5 THEN BEGIN
+               ringsky = mean(skyim)
+               ringsigma = 1e30
+            ENDIF ELSE BEGIN
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-            plothist, skyim, x, y, chars = 2, bin = s*3*2/50., /noplot
-            f = gaussfit(x, y, a, sigma=sig, nterms = 3)
+               plothist, skyim, x, y, chars = 2, bin = s*3*2/50., /noplot
+               f = gaussfit(x, y, a, sigma=sig, nterms = 3)
 ;oplot, x, f, col = 250
-            resistant_mean, skyim, 3, ringsky, ringsigma
+               resistant_mean, skyim, 3, ringsky, ringsigma
 ;ver, ringsky
 ;ver, a[1], col = 250
 ;            print, ringsky, a[1]
-            ringsky = a[1]
-            ringsigma = sig[1]  ;a[2]/(n_elements(x)^2-1)
+               ringsky = a[1]
+               ringsigma = sig[1]  ;a[2]/(n_elements(x)^2-1)
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            ENDELSE
+         ENDIF ELSE BEGIN
+            ringsky = -1
+            ringsigma = 1e30
          ENDELSE
          delvarx, skyim, ring_empty_idx
       ENDELSE
@@ -1687,6 +1692,8 @@ PRO prepare_galfit, objects, files, corner, table0, obj_file, im_file, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
                     conminm, conmaxm, fit_table, setup_version, $
                     n_constrained = n_constrained
+
+   setup_version = 3
 
 ;objects contains an index of secondary sources
 
@@ -2316,7 +2323,23 @@ END
 ;******************************************************************************
 ;******************************************************************************
 
-PRO galapagos, setup_file
+PRO update_log, logfile, message
+   openw, lun, logfile, /get_lun, /append
+   printf, lun, message
+   free_lun, lun
+END
+
+PRO start_log, logfile, message
+   openw, lun, logfile, /get_lun
+   printf, lun, message
+   free_lun, lun
+END
+
+PRO galapagos, setup_file, gala_PRO, logfile=logfile
+   IF n_params() LE 1 THEN gala_pro = 'galapagos'
+;   gala_pro = '/home/gems/gala/galapagos.pro'
+;   logfile = '/cosmos1/arobaina/cosmos/setup/galapagos.log'
+;export IDL_PATH=/home/gems/gala:$IDL_PATH
 ;==============================================================================
 ;main input: location of the setup file
    IF n_params() LT 1 THEN BEGIN
@@ -2333,6 +2356,8 @@ PRO galapagos, setup_file
 ;==============================================================================
 ;read in the setup file
    read_setup, setup_file, setup
+   IF keyword_set(logfile) THEN $
+    start_log, logfile, 'Reading setup file... done!'
 ;==============================================================================
 
    addcol = [['ORG_IMAGE', '" "'], $
@@ -2378,6 +2403,8 @@ PRO galapagos, setup_file
     spawn, 'mkdir '+setup.outdir
    FOR i=0ul, nframes-1 DO $
     IF NOT file_test(outpath[i]) THEN spawn, 'mkdir '+outpath[i]
+   IF keyword_set(logfile) THEN $
+    update_log, logfile, 'Initialisation... done!'
 ;==============================================================================
 ;run SExtractor
    IF setup.dosex THEN BEGIN
@@ -2452,6 +2479,8 @@ PRO galapagos, setup_file
                             setup.outdir+setup.sexcomb
       sex2ds9reg, setup.outdir+setup.sexcomb, outpath_pre[0]+setup.outparam, $
                   setup.outdir+'sexcomb.reg', 0.5, tag = 'comb'
+      IF keyword_set(logfile) THEN $
+       update_log, logfile, 'SExtraction... done!'
    ENDIF
 ;==============================================================================
 ;create postage stamp description files 
@@ -2477,10 +2506,14 @@ PRO galapagos, setup_file
                         setup.skyscl, $
                         setup.skyoff
       ENDFOR
+      IF keyword_set(logfile) THEN $
+       update_log, logfile, 'Postage stamps... done!'
    ENDIF
 ;==============================================================================
 ;measure sky and run galfit
    IF setup.dosky THEN BEGIN
+       IF keyword_set(logfile) THEN $
+        update_log, logfile, 'Beginning sky loop...'
 ;==============================================================================
 ;read in the PSF
       fits_read, setup.psf, psf
@@ -2505,7 +2538,7 @@ PRO galapagos, setup_file
       fittab.n_galfit = -1
       fittab.q_galfit = -1
 
-;      mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
+      mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
 
 ;find the image files for the sources
       readcol, setup.files, orgim, orgwht, orgpath, orgpre, $
@@ -2537,9 +2570,18 @@ PRO galapagos, setup_file
 ;                               strtrim(i, 2)+'.ttmp')
 
 ;loop over all objects
+      loop = 0l
       REPEAT BEGIN
+         IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
+            update_log, logfile, 'last in cue... '+strtrim(cur, 2)
+            FOR i=0, setup.max_proc-1 DO $
+             update_log, logfile, 'Bridge status... '+ $
+             strtrim(bridge_arr[i]->status(), 2)
+         ENDIF
+         loop++
+           
 ;         print, 'currently working on No. ', cur
-
+          
 ;check if current object exists
          ct = 0
          IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim, ct)
@@ -2623,13 +2665,17 @@ PRO galapagos, setup_file
                   stamp_param_file, mask_file, im_file, obj_file, constr_file, $
                   mask_file, out_file, fittab, filename=out_file+'.sav'
             
-;print, 'bridge', out_file
             IF setup.max_proc GT 1 THEN BEGIN
+                IF keyword_set(logfile) THEN $
+                 update_log, logfile, 'Starting new bridge... ('+out_file+')'
                bridge_arr[free[0]]->execute, 'astrolib'
-               bridge_arr[free[0]]->execute, '.r gala'
+;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
+               bridge_arr[free[0]]->execute, '.r '+gala_pro
                bridge_arr[free[0]]->execute, $
                 'gala_bridge, "'+out_file+'.sav"', /nowait
             ENDIF ELSE BEGIN
+                IF keyword_set(logfile) THEN $
+                 update_log, logfile, 'Starting next object... ('+out_file+')'
                cd, orgpath[idx]
                gala_bridge, out_file+'.sav'
                file_delete, orgpath[idx]+'galfit.[0123456789]*', /quiet, $
@@ -2889,3 +2935,4 @@ END
 ;==============================================================================
 ;==============================================================================
 ;==============================================================================
+
