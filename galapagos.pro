@@ -2698,7 +2698,8 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
             ENDELSE
             
             bridge_obj[free[0]] = cur
-;switch to next object            cur++
+;switch to next object
+            cur++
          ENDIF ELSE BEGIN
 ;all bridges are busy --> wait    
             wait, 1
