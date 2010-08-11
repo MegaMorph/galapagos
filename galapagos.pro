@@ -258,7 +258,7 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
 
 ;this will produce a checkimage with all the ellipses
    IF chktype NE 'none' THEN BEGIN
-      print, 'starting cold sex check image'
+      print, 'starting cold sex check image on image '+image+' ''
       spawn, sexexe+' '+image+' -c '+cold+ $
              ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
              ' -PARAMETERS_NAME '+outparam+ $
@@ -745,7 +745,7 @@ PRO merge_sex_catalogues, incat, inparam, images, neighbours, outcat
          tot_dupe = fix(tot_d*0)
 
 ;loop over objects
-         cur = 0
+         cur = 0L
          WHILE 1 DO BEGIN
 ;find objects in other table within SExtractor ellipse and remove
             IF tot_id[cur] EQ j THEN rc = where(tot_id NE tot_id[cur]) $
@@ -2246,7 +2246,7 @@ bad_input:
    message, 'Invalid Entry in '+setup_file
 END
 
-FUNCTION read_sersic_results, obj
+FUNCTION read_sersic_results, obj, psf
    IF file_test(obj) THEN BEGIN
       hd = headfits(obj, exten = 2)
       mag0 = sxpar(hd, '2_MAG')
@@ -2272,6 +2272,8 @@ FUNCTION read_sersic_results, obj
       yerr = float(strmid(y0, strpos(y0, '+/-')+3, strlen(y0)))
       s0 = sxpar(hd, '1_SKY')
       sky = float(strmid(s0, 0, strpos(s0, '+/-')))
+      psf0 = sxpar(hd, 'PSF') 
+      psf= strtrim(psf0, 2)
    ENDIF ELSE BEGIN
       mag = 999
       magerr = 99999
@@ -2288,6 +2290,7 @@ FUNCTION read_sersic_results, obj
       y = 0
       yerr = 99999
       sky = 999
+      psf='none'
    ENDELSE
 
    return, [mag, magerr, re, reerr, n, nerr, q, qerr, pa, paerr, $
@@ -2299,7 +2302,7 @@ END
 PRO update_table, fittab, table, i, out_file
    IF file_test(out_file) THEN BEGIN
       fittab[i].org_image = table[i].frame
-      res = read_sersic_results(out_file)
+      res = read_sersic_results(out_file,psf)
       idx0 = where(finite(res) NE 1, ct)
       IF ct GT 0 THEN res[idx0] = -99999.
       fittab[i].file_galfit = out_file
@@ -2357,9 +2360,9 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 ;read in the setup file
    read_setup, setup_file, setup
    IF keyword_set(logfile) THEN $
-    start_log, logfile, 'Reading setup file... done!'
+      start_log, logfile, 'Reading setup file... done!'
 ;==============================================================================
-
+   
    addcol = [['ORG_IMAGE', '" "'], $
              ['FILE_GALFIT', '" "'], $
              ['X_GALFIT', '0.'], ['XERR_GALFIT', '0.'], $
@@ -2369,7 +2372,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
              ['N_GALFIT', '0.'], ['NERR_GALFIT', '0.'], $
              ['Q_GALFIT', '0.'], ['QERR_GALFIT', '0.'], $
              ['PA_GALFIT', '0.'], ['PAERR_GALFIT', '0.'], $
-             ['SKY_GALFIT', '0.']]
+             ['SKY_GALFIT', '0.'] ['PSF_GALFIT', '" "']
 
 ;read input files into arrays
    readcol, setup.files, images, weights, outpath, outpre, $
@@ -2514,14 +2517,17 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
    IF setup.dosky THEN BEGIN
        IF keyword_set(logfile) THEN $
         update_log, logfile, 'Beginning sky loop...'
-;==============================================================================
-;read in the PSF
-      fits_read, setup.psf, psf
-;==============================================================================
+;;==============================================================================
+;;read in the PSF
+;      fits_read, setup.psf, psf
+;;==============================================================================
 ;read in the combined SExtractor table
       sexcat = read_sex_table(setup.outdir+setup.sexcomb, $
                               outpath_pre[0]+setup.outparam, $
                               add_col = ['frame', '" "'])
+;==============================================================================
+; check if psf in setup file is an image or a list
+       readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images, psf_struct
 ;==============================================================================
 ;sort the total catalogue by magnitude and select the
 ;brightest BRIGHT percent
@@ -2660,10 +2666,19 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
             out_file = (orgpath[idx]+orgpre[idx]+setup.galfit_out+objnum)[0]
 ;sky summary file
             sky_file = (orgpath[idx]+orgpre[idx]+setup.outsky+objnum)[0]
+; choose closest PSF according to RA & DEC and subtract filename from
+; structure 'psf_struct'
+            choose_psf, table[cur].alpha_j2000, table[cur].delta_j2000, $
+                        psf_struct, table[cur].frame, chosen_psf_file
             
-            save, cur, orgwht, idx, orgpath, orgpre, setup, psf, sky_file, $
-                  stamp_param_file, mask_file, im_file, obj_file, constr_file, $
-                  mask_file, out_file, fittab, filename=out_file+'.sav'
+            fits_read, chosen_psf_file, psf
+;   read in chosen_psf into 'psf' , filename in chosen_psf_file   
+;output name chosen_ psf has to be the filename!
+;$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+            save, cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file,$
+                  sky_file, stamp_param_file, mask_file, im_file, obj_file, $
+                  constr_file, mask_file, out_file, fittab, filename=out_file+'.sav'
             
             IF setup.max_proc GT 1 THEN BEGIN
                 IF keyword_set(logfile) THEN $
@@ -2683,8 +2698,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
             ENDELSE
             
             bridge_obj[free[0]] = cur
-;switch to next object
-            cur++
+;switch to next object            cur++
          ENDIF ELSE BEGIN
 ;all bridges are busy --> wait    
             wait, 1
@@ -2806,7 +2820,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
                                FUNCTION_name = 'curvefit_gauss2side', $
                                /noderivative, status = status, iter = iter)
                global_sky = par[1]
-               global_sigsky = par[2]
+               global_sigsky = par[2]x
 
                print, systime(), ' done'
 
@@ -2821,6 +2835,12 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 ;does a GALFIT obj file exist (cannot test for _gf.fits -> files might
 ;bomb -> endless loop)?
             IF file_test(obj_file) THEN CONTINUE
+
+; choose closest PSF according to RA & DEC and subtract filename from
+; structure 'psf_struct'
+            choose_psf, table[current_obj].alpha_j2000, table[current_obj].delta_j2000, $
+                        psf_struct, table[current_obj].frame, chosen_psf_file            
+            fits_read, chosen_psf_file, psf
 
             getsky_loop, current_obj, table, rad, im, hd, map, setup.expt, $
                          setup.zp, setup.neiscl, setup.skyoff, setup.power, $
@@ -2837,8 +2857,8 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
                          setup.stel_slope, setup.stel_zp, objects, corner
             
             prepare_galfit, objects, setup.files, corner, table, $
-                            obj_file, im_file, constr_file, mask_file, $
-                            setup.psf, out_file, sky_file, setup.convbox, $
+                            obj_file, sim_file, constr_file, mask_file, $
+                            chosen_psf_file, out_file, sky_file, setup.convbox, $
                             setup.zp, setup.platescl, nums, frames, $
                             current_obj, setup.outcat, setup.outparam, $
                             setup.stampfile, setup.conmaxre, setup.conminm, $
@@ -2882,7 +2902,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 
          out[i].org_image = tab[i].tile
 
-         res = read_sersic_results(out_file)
+         res = read_sersic_results(out_file,psf)
          idx = where(finite(res) NE 1, ct)
          IF ct GT 0 THEN res[idx] = -99999.
 
@@ -2902,6 +2922,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
          out[i].pa_galfit = res[8]
          out[i].paerr_galfit = res[9]
          out[i].sky_galfit = res[14]
+         out[i].psf_galfit = psf
       ENDFOR
 
       IF file_test(setup.bad) THEN BEGIN

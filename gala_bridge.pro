@@ -1,6 +1,6 @@
 PRO gala_bridge, filein
 ;variables provided in filein:
-;cur, orgwht, idx, orgpath, orgpre, setup, psf, sky_file, 
+;cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
 ;nums, frames, stamp_param_file, mask_file, im_file, obj_file, 
 ;constr_file, mask_file, out_file, fittab
 
@@ -72,7 +72,7 @@ PRO gala_bridge, filein
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§§§§§§§
 
    prepare_galfit, objects, setup.files, corner, table, obj_file, $
-                   im_file, constr_file, mask_file, setup.psf, $
+                   im_file, constr_file, mask_file, chosen_psf_file, $
                    out_file, sky_file, setup.convbox, setup.zp, $
                    setup.platescl, nums, frames, cur, $
                    setup.outcat, setup.outparam, setup.stampfile, $
