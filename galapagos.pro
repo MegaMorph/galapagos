@@ -2372,7 +2372,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
              ['N_GALFIT', '0.'], ['NERR_GALFIT', '0.'], $
              ['Q_GALFIT', '0.'], ['QERR_GALFIT', '0.'], $
              ['PA_GALFIT', '0.'], ['PAERR_GALFIT', '0.'], $
-             ['SKY_GALFIT', '0.'], ['PSF_GALFIT', '" " ']]
+             ['SKY_GALFIT', '0.'], ['PSF_GALFIT', '" "']]
 
 ;read input files into arrays
    readcol, setup.files, images, weights, outpath, outpre, $
