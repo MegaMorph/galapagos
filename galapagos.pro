@@ -957,40 +957,56 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
 ;cut: magnitude cut (4.5)
 ;nums: OUTPUT, numbers of the most contributing objects
 ;frames: OUTPUT, frames of the most contributing objects
+  n = t.number*0.+4.
+  q = t.b_image/t.a_image
+  re = t.flux_radius^power
+  mag = t.mag_best
+  theta_image = t.theta_world-t[c].theta_world+t[c].theta_image
+  IF n_elements(fit_table) GT 0 THEN BEGIN
+      
+; or try using 'match'
+      ident1 = strtrim(fit_table.org_image,2)+':'+strtrim(fit_table.number,2)
+      ident2 = strtrim(t.frame,2)+':'+strtrim(t.number,2)
+      match, ident1, ident2, id_idx1, id_idx2
+      wh_re_gt0 = where(fit_table[id_idx1].re_galfit GE 0)
+      n[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].n_galfit
+      q[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].q_galfit
+      re[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].re_galfit
+      mag[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].mag_galfit
+      theta_image[id_idx2[wh_re_gt0]] = theta_image[id_idx2[wh_re_gt0]]-t[c].theta_image+ $
+        90+fit_table[id_idx1[wh_re_gt0]].pa_galfit
+      wh_theta_gt0 = where(theta_image GT 180, cnt_gt)
+      if cnt_gt gt 0 then theta_image[wh_theta_gt0] -= 180
+      wh_theta_lt0 = where(theta_image LT 180, cnt_lt)
+      if cnt_lt gt 0 then theta_image[wh_theta_lt0] += 180
+      
+;; Marcos original!
+;      FOR i=0ul, n_elements(n)-1 DO BEGIN
+;          idx = where(fit_table.org_image EQ t[i].frame AND $
+;                      fit_table.number EQ t[i].number, ct) 
+;          IF ct GT 1 THEN message, 'unexpected error in contrib_sky'
+;          IF ct GT 0 THEN BEGIN
+;              IF fit_table[idx].re_galfit GE 0 THEN BEGIN
+;                  n[i] = fit_table[idx].n_galfit
+;                  q[i] = fit_table[idx].q_galfit
+;                  re[i] = fit_table[idx].re_galfit
+;                  mag[i] = fit_table[idx].mag_galfit
+;                  theta_image[i] = theta_image[i]-t[c].theta_image+ $
+;                    90+fit_table[idx].pa_galfit
+;                  IF theta_image[i] GT 180 THEN theta_image[i] -= 180
+;                  IF theta_image[i] LT -180 THEN theta_image[i] += 180
+;              ENDIF
+;          ENDIF
+;      ENDFOR
 
-   n = t.number*0.+4.
-   q = t.b_image/t.a_image
-   re = t.flux_radius^power
-   mag = t.mag_best
-   theta_image = t.theta_world-t[c].theta_world+t[c].theta_image
-
-   IF n_elements(fit_table) GT 0 THEN BEGIN
-      FOR i=0ul, n_elements(n)-1 DO BEGIN
-         idx = where(fit_table.org_image EQ t[i].frame AND $
-                     fit_table.number EQ t[i].number, ct)
-         IF ct GT 1 THEN message, 'unexpected error in contrib_sky'
-         IF ct GT 0 THEN BEGIN
-            IF fit_table[idx].re_galfit GE 0 THEN BEGIN
-               n[i] = fit_table[idx].n_galfit
-               q[i] = fit_table[idx].q_galfit
-               re[i] = fit_table[idx].re_galfit
-               mag[i] = fit_table[idx].mag_galfit
-               theta_image[i] = theta_image[i]-t[c].theta_image+ $
-                                90+fit_table[idx].pa_galfit
-               IF theta_image[i] GT 180 THEN theta_image[i] -= 180
-               IF theta_image[i] LT -180 THEN theta_image[i] += 180
-            ENDIF
-         ENDIF
-      ENDFOR
-   ENDIF
-
-   ftot = 10.^(-0.4*(mag-zeropt))*exptime
-   kap = (kappa(n))[0]
-   f0 = ftot/(2*!pi*re^2.*exp(kap)*n*kap^(-2.*n)*gamma(2.*n)*q)
-
+  ENDIF
+  
+  ftot = 10.^(-0.4*(mag-zeropt))*exptime
+  kap = (kappa(n))[0]
+  f0 = ftot/(2*!pi*re^2.*exp(kap)*n*kap^(-2.*n)*gamma(2.*n)*q)
+  
 ;distance from the current object c
    d = sqrt((t[c].x_image-t.x_image)^2.+(t[c].y_image-t.y_image)^2.)
-
 ;position angle of the current source in the reference system of all
 ;other galaxies
    pa_all = rel_pos_ang(t[c].x_image, t[c].y_image, t.x_image, t.y_image, $
@@ -1010,7 +1026,6 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
 ;distance that the current object 'reaches' towards all objects
    r_ctr = ell_rad(t[c].a_image, t[c].b_image, pa_ctr)*t[c].kron_radius* $
            scale+offset
-
    con = r_ctr+r_all
 
    o = sort(c_all)
@@ -1038,7 +1053,6 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
       IF ct GT 0 THEN nums = t[o[no_fit[grad]]].number ELSE nums = -1
       IF ct GT 0 THEN frames = t[o[no_fit[grad]]].frame ELSE frames = ''
    ENDELSE
-
 ;   print, 'gradient sources:'
 ;   forprint, nums, ' '+frames
 
@@ -1119,7 +1133,6 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
 
 ;get the size of the image
    sz_im = (size(im0))[1:2]
-
 ;make sure that the image is large enough to compute the sky
 ;compute max radius possible in current image
    xarr = (lindgen(sz_im[0], sz_im[1]) MOD sz_im[0])+1
@@ -1163,7 +1176,6 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
 
 ;loop over all contributing sources============================================
       FOR current_contrib=0ul, n_contrib-1 DO BEGIN
-
          i_con = where(table.number EQ nums[current_contrib] AND $
                        table.frame EQ frames[current_contrib])
          dist[current_contrib] = $
@@ -1254,7 +1266,6 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
          
       ENDFOR
 ;loop over all contributing sources============================================
-
 ;define new starting radius for sky calculation
       notsubtracted = where(subtract EQ 0, ct)
       IF ct GT 0 THEN BEGIN
@@ -1266,7 +1277,6 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
 
 ;contributing sources FOUND----------------------------------------------------
    ENDELSE
-
 ;array containing radii
    nstep = ulong(max(sz_im)/float(dstep))
    radius = findgen(nstep)*dstep+rad[current_obj]+gap
@@ -1294,7 +1304,6 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
    min_sky_flag = 0
 ;loop over radii ==============================================================
    FOR r=0l, nstep-1 DO BEGIN
-
 ;first calculate ellipses
       theta = table[current_obj].theta_image/!radeg
       xfac = ((rad[current_obj]* $
@@ -1378,7 +1387,6 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
          delvarx, skyim, ring_empty_idx
       ENDELSE
       plotsym, 0, /fill
-
 ;replace one value in the slope arrays
       sl_rad[r MOD nslope] = radius[r]
       sl_sky[r MOD nslope] = ringsky
@@ -1434,7 +1442,6 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
    ENDFOR
 ;loop over radii done==========================================================
 ;   print,'radii loop done'
-
 ;get sky from last nslope measurements
    idx = where(sl_rad GT 0 AND sl_sct lt 1e20, ct)
 ;check if enough measurements available
@@ -2683,6 +2690,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
             IF setup.max_proc GT 1 THEN BEGIN
                 IF keyword_set(logfile) THEN $
                  update_log, logfile, 'Starting new bridge... ('+out_file+')'
+;print, 'starting new object at '+systime(0)
                bridge_arr[free[0]]->execute, 'astrolib'
 ;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
                bridge_arr[free[0]]->execute, '.r '+gala_pro
