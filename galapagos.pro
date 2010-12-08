@@ -260,43 +260,43 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
    IF chktype NE 'none' THEN BEGIN
       print, 'starting cold sex check image on image '+image+' ''
       spawn, sexexe+' '+image+' -c '+cold+ $
-             ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
-             ' -PARAMETERS_NAME '+outparam+ $
-             ' -WEIGHT_IMAGE '+weight+ $
-             ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
-             ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
-             file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
+        ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
+        ' -PARAMETERS_NAME '+outparam+ $
+        ' -WEIGHT_IMAGE '+weight+ $
+        ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
+        ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
+        file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
       IF multi EQ 3 THEN BEGIN
-         print, 'starting hot sex check image'
-         spawn, sexexe+' '+image+' -c '+hot+ $
-                ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
-                ' -PARAMETERS_NAME '+outparam+ $
-                ' -WEIGHT_IMAGE '+weight+ $
-                ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
-                ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
-                file_dirname(check)+'/'+file_basename(check, '.fits')+ $
-                '.hot.fits'
+          print, 'starting hot sex check image'
+          spawn, sexexe+' '+image+' -c '+hot+ $
+            ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
+            ' -PARAMETERS_NAME '+outparam+ $
+            ' -WEIGHT_IMAGE '+weight+ $
+            ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
+            ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
+            file_dirname(check)+'/'+file_basename(check, '.fits')+ $
+            '.hot.fits'
       ENDIF
-   ENDIF
-
+  ENDIF
+  
 ;now start sextractor to create hotcat and coldcat
-   print, 'starting cold sex'
-   spawn, sexexe+' '+image+' -c '+cold+ $
-          ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
-          ' -PARAMETERS_NAME '+outparam+ $
-          ' -WEIGHT_IMAGE '+weight+ $
-          ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
-          ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
-   IF multi EQ 3 THEN BEGIN
+  print, 'starting cold sex'
+  spawn, sexexe+' '+image+' -c '+cold+ $
+    ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
+    ' -PARAMETERS_NAME '+outparam+ $
+    ' -WEIGHT_IMAGE '+weight+ $
+    ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
+    ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
+  IF multi EQ 3 THEN BEGIN
       print, 'starting hot sex'
       spawn, sexexe+' '+image+' -c '+hot+ $
-             ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
-             ' -PARAMETERS_NAME '+outparam+ $
-             ' -WEIGHT_IMAGE '+weight+ $
-             ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
-             ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+hotseg
-   ENDIF
-
+        ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
+        ' -PARAMETERS_NAME '+outparam+ $
+        ' -WEIGHT_IMAGE '+weight+ $
+        ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
+        ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+hotseg
+  ENDIF
+  
 ;read in hotcat and coldcat
    cold_table = read_sex_table(coldcat, outparam)
    idx = where(cold_table.kron_radius EQ 0, ct)
@@ -2278,11 +2278,20 @@ FUNCTION read_sersic_results, obj, psf
       y = float(strmid(y0, 0, strpos(y0, '+/-')))
       yerr = float(strmid(y0, strpos(y0, '+/-')+3, strlen(y0)))
       s0 = sxpar(hd, '1_SKY')
-      sky = float(strmid(s0, 0, strpos(s0, '+/-')))
+      sky = float(strmid(s0, 1, strpos(s0, ']')))
       psf0 = sxpar(hd, 'PSF') 
       psf= strtrim(psf0, 2)
+; find number of neighbors
+      comp=0
+      repeat comp = comp +1 until sxpar(hd, 'COMP_'+strtrim(comp,2)) eq '0'
+      neigh_galfit = comp-3
+      chisq_galfit = float(strmid(sxpar(hd, 'CHISQ'),2)) 
+      ndof_galfit = float(strmid(sxpar(hd, 'NDOF'),2))
+      nfree_galfit = float(strmid(sxpar(hd, 'NFREE'),2))
+      nfix_galfit = float(strmid(sxpar(hd, 'NFIX'),2))
+      chi2nu_galfit = float(strmid(sxpar(hd, 'CHI2NU'),2))
    ENDIF ELSE BEGIN
-      mag = 999
+      mag = -999
       magerr = 99999
       re = -1
       reerr = 99999
@@ -2296,12 +2305,18 @@ FUNCTION read_sersic_results, obj, psf
       xerr = 99999
       y = 0
       yerr = 99999
-      sky = 999
+      sky = -999
+      neigh_galfit = -99
+      chisq_galfit = -99
+      ndof_galfit = -99
+      nfree_galfit = -99
+      nfix_galfit = -99
+      chi2nu_galfit = -99
       psf='none'
    ENDELSE
-
    return, [mag, magerr, re, reerr, n, nerr, q, qerr, pa, paerr, $
-            x, xerr, y, yerr, sky]
+            x, xerr, y, yerr, sky, neigh_galfit, chisq_galfit, ndof_galfit, $
+            nfree_galfit, nfix_galfit, chi2nu_galfit]
 END
 
 ;******************************************************************************
@@ -2328,7 +2343,14 @@ PRO update_table, fittab, table, i, out_file
       fittab[i].pa_galfit = res[8]
       fittab[i].paerr_galfit = res[9]
       fittab[i].sky_galfit = res[14]
-   ENDIF
+      fittab[i].psf_galfit = psf
+      fittab[i].neigh_galfit = res[15]
+      fittab[i].chisq_galfit = res[16]
+      fittab[i].ndof_galfit = res[17]
+      fittab[i].nfree_galfit = res[18]
+      fittab[i].nfix_galfit = res[19]
+      fittab[i].chi2nu_galfit = res[20]
+  ENDIF
 END
 ;******************************************************************************
 ;******************************************************************************
@@ -2379,8 +2401,11 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
              ['N_GALFIT', '0.'], ['NERR_GALFIT', '0.'], $
              ['Q_GALFIT', '0.'], ['QERR_GALFIT', '0.'], $
              ['PA_GALFIT', '0.'], ['PAERR_GALFIT', '0.'], $
-             ['SKY_GALFIT', '0.'], ['PSF_GALFIT', '" "']]
-
+             ['SKY_GALFIT', '0.'], ['PSF_GALFIT', '" "'], $
+             ['NEIGH_GALFIT', '0'], ['CHISQ_GALFIT','0'], $
+             ['NDOF_GALFIT','0'], ['NFREE_GALFIT','0'], $
+             ['NFIX_GALFIT','0'], ['CHI2NU_GALFIT','0']]
+   
 ;read input files into arrays
    readcol, setup.files, images, weights, outpath, outpre, $
             format = 'A,A,A,A', comment = '#', /silent
@@ -2932,6 +2957,12 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
          out[i].paerr_galfit = res[9]
          out[i].sky_galfit = res[14]
          out[i].psf_galfit = psf
+         out[i].neigh_galfit = res[15]
+         out[i].chisq_galfit = res[16]
+         out[i].ndof_galfit = res[17]
+         out[i].nfree_galfit = res[18]
+         out[i].nfix_galfit = res[19]
+         out[i].chi2nu_galfit = res[20]
       ENDFOR
 
       IF file_test(setup.bad) THEN BEGIN
