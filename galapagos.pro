@@ -1,3 +1,4 @@
+
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ;==============================================================================
@@ -403,7 +404,7 @@ FUNCTION calc_dist_to_edge, file, catalogue
 ;currently efficiency is optimised for 7000*7000 pix images
 
 ;get image size to calculate central position
-   fits_read, file, im, hd
+   fits_read, file, im, hd, exten_no=0
    xsz = float(sxpar(hd, 'NAXIS1'))
    ysz = float(sxpar(hd, 'NAXIS2'))
    xcnt = xsz*0.5
@@ -709,7 +710,6 @@ PRO merge_sex_catalogues, incat, inparam, images, neighbours, outcat
       idx = where(nei GT -1, ct)
       IF ct GT 0 THEN BEGIN
          nei = nei[idx]
-
 ;neighbouring frames will be split from the main catalogue and added
 ;back afterwards
          pri = main[nei]
@@ -968,13 +968,15 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
       ident1 = strtrim(fit_table.org_image,2)+':'+strtrim(fit_table.number,2)
       ident2 = strtrim(t.frame,2)+':'+strtrim(t.number,2)
       match, ident1, ident2, id_idx1, id_idx2
-      wh_re_gt0 = where(fit_table[id_idx1].re_galfit GE 0)
-      n[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].n_galfit
-      q[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].q_galfit
-      re[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].re_galfit
-      mag[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].mag_galfit
-      theta_image[id_idx2[wh_re_gt0]] = theta_image[id_idx2[wh_re_gt0]]-t[c].theta_image+ $
-        90+fit_table[id_idx1[wh_re_gt0]].pa_galfit
+      wh_re_gt0 = where(fit_table[id_idx1].re_galfit GE 0,cntregt0)
+      if cntregt0 gt 0 then begin
+          n[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].n_galfit
+          q[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].q_galfit
+          re[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].re_galfit
+          mag[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].mag_galfit
+          theta_image[id_idx2[wh_re_gt0]] = theta_image[id_idx2[wh_re_gt0]]-t[c].theta_image+ $
+            90+fit_table[id_idx1[wh_re_gt0]].pa_galfit
+      endif
       wh_theta_gt0 = where(theta_image GT 180, cnt_gt)
       if cnt_gt gt 0 then theta_image[wh_theta_gt0] -= 180
       wh_theta_lt0 = where(theta_image LT 180, cnt_lt)
