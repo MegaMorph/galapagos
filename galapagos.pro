@@ -2621,7 +2621,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
          loop++
            
 ;         print, 'currently working on No. ', cur
-          
+         statusline, '  currently working on No. '+strtrim(cur+1,2)+' of '+strtrim(n_elements(sexcat),2)+'   '
 ;check if current object exists
          ct = 0
          IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim, ct)
@@ -2702,14 +2702,13 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
             sky_file = (orgpath[idx]+orgpre[idx]+setup.outsky+objnum)[0]
 ; choose closest PSF according to RA & DEC and subtract filename from
 ; structure 'psf_struct'
+; read in chosen_psf into 'psf' , filename in chosen_psf_file   
             choose_psf, table[cur].alpha_j2000, table[cur].delta_j2000, $
                         psf_struct, table[cur].frame, chosen_psf_file
             
             fits_read, chosen_psf_file, psf
-;   read in chosen_psf into 'psf' , filename in chosen_psf_file   
-;output name chosen_ psf has to be the filename!
-;$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
+; create sav file for gala_bridge to read in
             save, cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file,$
                   sky_file, stamp_param_file, mask_file, im_file, obj_file, $
                   constr_file, mask_file, out_file, fittab, filename=out_file+'.sav'
@@ -2872,6 +2871,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 ;bomb -> endless loop)?
             IF file_test(obj_file) THEN CONTINUE
 
+            statusline, '  currently working on No. '+strtrim(current_obj+1,2)+' of '+strtrim(n_obj,2)+'   '
 ; choose closest PSF according to RA & DEC and subtract filename from
 ; structure 'psf_struct'
             choose_psf, table[current_obj].alpha_j2000, table[current_obj].delta_j2000, $
@@ -2929,7 +2929,8 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
       orgpath = set_trailing_slash(orgpath)
 
       FOR i=0ul, ntab-1 DO BEGIN
-         IF (i MOD 1000) EQ 0 THEN print, i, ntab
+;         IF (i MOD 1000) EQ 0 THEN print, i, ntab
+         statusline, '  '+strtrim(i,2)+'  '+strtrim(ntab)
          objnum = round_digit(tab[i].number, 0, /str)
 
          idx = where(tab[i].tile EQ orgim)
@@ -2966,7 +2967,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
          out[i].nfix_galfit = res[19]
          out[i].chi2nu_galfit = res[20]
       ENDFOR
-
+print, ' '
       IF file_test(setup.bad) THEN BEGIN
          readcol, setup.bad, tile, x, y, format = 'A,F,F', comment = '#', $
                   /silent
