@@ -2719,7 +2719,6 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 ;print, 'starting new object at '+systime(0)
                bridge_arr[free[0]]->execute, 'astrolib'
 ;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
-;	       bridge_arr[free[0]]->execute, '.r /home/boris/megamorph/astro-megamorph/galapagos/mrdfits.pro'
                bridge_arr[free[0]]->execute, '.r '+gala_pro
                bridge_arr[free[0]]->execute, $
                 'gala_bridge, "'+out_file+'.sav"', /nowait
@@ -2928,10 +2927,10 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
       readcol, setup.files, orgim, orgwht, orgpath, orgpre, $
                format = 'A,A,A,A', comment = '#', /silent
       orgpath = set_trailing_slash(orgpath)
-
+print,' '
       FOR i=0ul, ntab-1 DO BEGIN
 ;         IF (i MOD 1000) EQ 0 THEN print, i, ntab
-         statusline, '  '+strtrim(i,2)+'  '+strtrim(ntab)
+         statusline, ' reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
          objnum = round_digit(tab[i].number, 0, /str)
 
          idx = where(tab[i].tile EQ orgim)
