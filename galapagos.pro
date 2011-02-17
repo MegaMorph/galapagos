@@ -213,7 +213,7 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
 ;run SExtractor (SEXEXE path to the executable) using a given
 ;parameter file (SEXPARAM), a HOT setup file, a COLD setup file and a
 ;ZEROPOINT on an IMAGE and accompanying WEIGHT. On output one gets a
-;hot/cold catalogue (HOTCAT/COLDCAT), semgentation map (COLDSEG/HOTSEG)
+;hot/cold catalogue (HOTCAT/COLDCAT), segmentation map (COLDSEG/HOTSEG)
 ;and a combined catalogue and segmentation map (OUTCAT/OUTSEG). A
 ;checkimage can be created (filename CHECK) of type CHECKTYPE. If
 ;needed, objects at a set of x,y positions may be removed from the
@@ -511,7 +511,7 @@ PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac
 
 END
 
-PRO cut_stamps, image, param, outpath, pre
+PRO cut_stamps, image, param, outpath, pre, post
 ;cut postage stamps given an IMAGE (string, including path) and a
 ;PARAM file (string, including path, created by
 ;create_stamp_file). Output postage stamps are written into the
@@ -532,14 +532,13 @@ PRO cut_stamps, image, param, outpath, pre
 
    fill_struct, cat, param
 
-
 ;  ndigits = fix(alog10(max(cat.id)))+1
    FOR i=0ul, nobj-1 DO BEGIN
       hextract, im, hd, out, outhd, $
                 cat[i].xlo, cat[i].xhi, cat[i].ylo, cat[i].yhi, /silent
       num = strtrim(cat[i].id, 2)
 ;    WHILE strlen(num) LT ndigits DO num = '0'+num
-      writefits, outpath+pre+num+'.fits', out, outhd
+      writefits, outpath+pre+num+post+'.fits', out, outhd
    ENDFOR
 END
 
@@ -2071,7 +2070,7 @@ PRO read_setup, setup_file, setup
                          'sexcomb', '', $
                          'dostamps', 0, $
                          'stampfile', '', $
-                         'stamp_pre', '', $
+                         'stamp_pre', strarr(1), $
                          'stampsize', 0.0, $
                          'dosky', 0, $
                          'skymap', '', $
@@ -2094,7 +2093,7 @@ PRO read_setup, setup_file, setup
                          'nneighb', 0, $
                          'max_proc', 0.0, $
                          'min_dist', 0.0, $
-                         'galexe', '', $
+                         'galexe', '', $ 
                          'batch', '', $
                          'obj', '', $
                          'galfit_out', '', $
@@ -2111,7 +2110,9 @@ PRO read_setup, setup_file, setup
                          'docombine', 0, $
                          'cat', '', $
                          'nice', 0, $
-                         'version', 0)
+                         'version', 0,$
+                         'cheb', intarr(7), $
+                         'galfit_out_path',' ')
 
    setup.enlarge = -1
    setup.exclude_rad = -1
@@ -2126,16 +2127,15 @@ PRO read_setup, setup_file, setup
    setup.stel_zp = 1e20
    setup.maglim_gal = -1
    setup.maglim_star = -1
-   
-
+      
    line = ''
    openr, 1, setup_file
    WHILE NOT eof(1) DO BEGIN
-      readf, 1, line
-
+       readf, 1, line
+       
 ;get rid of leading and trailing blanks
       line = strtrim(line, 2)
-
+      
 ;comment or empty line encountered?
       IF strmid(line, 0, 1) EQ '#' OR strlen(line) EQ 0 THEN CONTINUE
 
@@ -2150,7 +2150,6 @@ PRO read_setup, setup_file, setup
 
          'A00)': setup.files = content
          'A01)': setup.outdir = set_trailing_slash(content)
-
          'B00)': setup.dosex = (content EQ 'execute') ? 1 : 0
          'B01)': setup.sexexe = content
          'B02)': setup.sexout = content
@@ -2225,6 +2224,18 @@ PRO read_setup, setup_file, setup
             content = strcompress(content, /remove_all)
             setup.version = (float(content) GE 2.1) ? 1 : 0
          END
+         'E16)': BEGIN
+             for n=0,5 do begin
+                 pos=strpos(content, ',')
+                 setup.cheb[n]=strmid(content,0,pos)
+                 content=strmid(content,pos+1)
+             ENDFOR
+             setup.cheb[6]=content
+         END
+         'E17)': BEGIN
+             if content eq '' then setup.galfit_out_path = content
+             if content ne '' then setup.galfit_out_path = set_trailing_slash(content)
+         END
 
          'F00)': setup.docombine = (content EQ 'execute') ? 1 : 0
          'F01)': setup.cat = content
@@ -2253,6 +2264,76 @@ PRO read_setup, setup_file, setup
 
 bad_input:
    message, 'Invalid Entry in '+setup_file
+END
+
+PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nband, silent=silent
+; reads in the image file and returns the results to galapagos
+
+; count number of columns in file
+   lineone = ''
+   openr, 1, setup.files
+   readf, 1, lineone
+   close, 1
+   lineone = strtrim(lineone, 2)
+   columnsf = strsplit(lineone, ' ', COUNT=ncolf)      
+
+; if number of columns eq 4 then assume 1 band survey and fits files
+; in the table
+   if ncolf eq 4 then begin
+       if not keyword_set(silent) then print, 'assuming one band dataset. Are all files within A00) fits images?'
+       readcol, setup.files, images, weights, outpath, outpre, $
+         format = 'A,A,A,A', comment = '#', /silent
+; doubling the arrays to get [*,0] SExtractor images and [*,1] fitting images
+       images=[[images],[images]]
+       weights=[[weights],[weights]]
+       outpath=[[outpath],[outpath]]
+       outpath_band=outpath
+       outpre=[[outpre],[outpre]]
+; setup.stamp_pre is used and stays as given in C02)
+; outpre is read in from the filelist
+       hlppre=setup.stamp_pre
+       setup=remove_tags(setup,'stamp_pre')
+       add_tag, setup, 'stamp_pre', [hlppre, hlppre], setup2
+       setup=setup2
+       delvarx, setup2
+       nband=1
+; wavelength
+; band
+   endif 
+
+; if number of columns eq 3 then assume multi band survey and
+; filesnames pointing to other file lists that contain all the images.
+   if ncolf eq 3 then begin
+       if not keyword_set(silent) then print, 'assuming multi-wavelength dataset. Assuming first line to be for SExtractor, rest for fitting!'
+       readcol, setup.files, band, wavelength, filelist, $
+         format = 'A,I,A', comment = '#', /silent      
+       nband=fix(n_elements(band)-1)
+       readcol, filelist[0], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
+         format = 'A,A,A,A', comment = '#', /silent
+       images=strarr(n_elements(hlpimages),nband+1)
+       weights=strarr(n_elements(hlpimages),nband+1)
+       outpath=strarr(n_elements(hlpimages),nband+1)
+       outpath_band=strarr(n_elements(hlpimages),nband+1)
+       outpre=strarr(n_elements(hlpimages),nband+1)
+       cnt=intarr(nband+1)
+       for b=0,nband do begin
+           readcol, filelist[b], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
+             format = 'A,A,A,A', comment = '#', /silent
+           cnt[b]=n_elements(hlpimages)
+           if (cnt[b] ne cnt[0]) and not keyword_set(silent) then print, 'input list '+strtrim(band[b])+' contains a wrong number of entries (tiles)'
+           if (cnt[b] ne cnt[0]) and not keyword_set(silent) then stop
+           images[*,b]=hlpimages
+           weights[*,b]=hlpweights
+           outpre[*,b]=hlpoutpre
+           outpath[*,b]=set_trailing_slash(setup.outdir)+set_trailing_slash(strtrim(hlpoutpath,2))
+           outpath_band[*,b]=outpath[*,b]+strtrim(band[b],2)
+           setup=remove_tags(setup,'stamp_pre')
+           add_tag, setup, 'stamp_pre', band, setup2
+           setup=setup2
+           delvarx, setup2
+       endfor 
+   endif
+   if ncolf ne 3 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
 END
 
 FUNCTION read_sersic_results, obj, psf
@@ -2371,54 +2452,60 @@ END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile
    IF n_params() LE 1 THEN gala_pro = 'galapagos'
-;   gala_pro = '/home/gems/gala/galapagos.pro'
-;   logfile = '/cosmos1/arobaina/cosmos/setup/galapagos.log'
-;export IDL_PATH=/home/gems/gala:$IDL_PATH
+;   gala_pro = '/home/boris/IDL/gala/galapagos.pro'
+;   logfile = '/data/gama/galapagos_multi_wlgalapagos.log'
+; .run galapagos.pro
+;  galapagos,'~/megamorph_dev/astro-megamorph/scripts_boris/megamorph/gala_setup/multi-wl/gala.gama_mwl_1'
+;  galapagos,'~/IDL/megamorph/gala_setup/gala.gama_set3.2_test'
 ;==============================================================================
 ;main input: location of the setup file
    IF n_params() LT 1 THEN BEGIN
       setup_file = ''
       read, prompt = 'Location of setup file: ', setup_file
    ENDIF
-;  setup_file = '/data2/barden/galapagos/sim/gala.setup'
-;  setup_file = '/data2/barden/galapagos/sim/sim930z/gala.setup'
-;  setup_file = '/data2/barden/red/obj0142/gala.setup'
-;  setup_file = '/data2/barden/galapagos/sim/sim_bulge/gala.setup'
-;  setup_file = '/data2/barden/galapagos/sim/sim_disc/gala.setup'
-;  setup_file = '/data/data2/stages/gala/setup/gala.setup'
-;  setup_file = '/RAID5/marco/stages/gala/setup/gala.setup'
+;  setup_file = '/home/boris/megamorph_dev/astro-megamorph/scripts_boris/megamorph/gala_setup/multi-wl/gala.gama_mwl_1'
 ;==============================================================================
 ;read in the setup file
-   read_setup, setup_file, setup
+  read_setup, setup_file, setup
    IF keyword_set(logfile) THEN $
       start_log, logfile, 'Reading setup file... done!'
-;==============================================================================
-   
-   addcol = [['ORG_IMAGE', '" "'], $
-             ['FILE_GALFIT', '" "'], $
-             ['X_GALFIT', '0.'], ['XERR_GALFIT', '0.'], $
-             ['Y_GALFIT', '0.'], ['YERR_GALFIT', '0.'], $
-             ['MAG_GALFIT', '0.'], ['MAGERR_GALFIT', '0.'], $
-             ['RE_GALFIT', '0.'], ['REERR_GALFIT', '0.'], $
-             ['N_GALFIT', '0.'], ['NERR_GALFIT', '0.'], $
-             ['Q_GALFIT', '0.'], ['QERR_GALFIT', '0.'], $
-             ['PA_GALFIT', '0.'], ['PAERR_GALFIT', '0.'], $
-             ['SKY_GALFIT', '0.'], ['PSF_GALFIT', '" "'], $
-             ['NEIGH_GALFIT', '0'], ['CHISQ_GALFIT','0'], $
-             ['NDOF_GALFIT','0'], ['NFREE_GALFIT','0'], $
-             ['NFIX_GALFIT','0'], ['CHI2NU_GALFIT','0']]
-   
+;==============================================================================   
 ;read input files into arrays
-   readcol, setup.files, images, weights, outpath, outpre, $
-            format = 'A,A,A,A', comment = '#', /silent
+   read_image_files, setup, images, weights, outpath, outpath_band, outpre, $
+     nband
+; old single-band version, will not work anymore, as the above doubnles
+; the array even for single band as elemen [*,0] have to be sextractor
+; only, no used for fitting!
+;   readcol, setup.files, images, weights, outpath, outpre, $
+;            format = 'A,A,A,A', comment = '#', /silent
+
+; MULTIBAND
+; outpath:      /data/gama/galapagos_multi_wl/tile10_5/
+; outpath_galfit: /data/gama/galapagos_multi_wl/tile10_5/galfit
+; outpath_band: /data/gama/galapagos_multi_wl/tile10_5/sex/
+; outpath_pre:  /data/gama/galapagos_multi_wl/tile10_5/sex/t10_5.
+; outpath_file: /data/gama/galapagos_multi_wl/tile10_5/sex/t10_5.sex.
+; outpath_file_no_band: /data/gama/galapagos_multi_wl/tile10_5/t10_5.
+; 1 BAND
+; outpath:      /data/gama/galapagos_multi_wl_test_3.2/tile10_5/
+; outpath_galfit: /data/gama/galapagos_multi_wl/tile10_5/
+; outpath_band: /data/gama/galapagos_multi_wl_test_3.2/tile10_5/
+; outpath_pre:  /data/gama/galapagos_multi_wl_test_3.2/tile10_5/t10_5.
+; outpath_file: /data/gama/galapagos_multi_wl_test_3.2/tile10_5/t10_5.v.
    outpath = set_trailing_slash(outpath)
-   outpath_pre = outpath+outpre
+   outpath_galfit = outpath[*,0]+setup.galfit_out_path
+   outpath_band = set_trailing_slash(outpath_band)
+   outpath_pre = outpath_band+outpre
+   outpath_file = outpath
+   for q=0,nband do outpath_file[*,q]=outpath_pre[*,q]+strtrim(setup.stamp_pre[q],2)+'.'
+   outpath_file_no_band = outpath
+   for q=0,nband do outpath_file_no_band[*,q]=outpath[*,q]+outpre[*,q]
 ;total number of frames
-   nframes = n_elements(images)
+   nframes = n_elements(images[*,0])
 ;calculate image centres
    dec_cnt = (ra_cnt = dblarr(nframes))
    FOR i=0ul, nframes-1 DO BEGIN
-      head = headfits(images[i])
+      head = headfits(images[i,0])
       xcnt = sxpar(head, 'NAXIS1')*0.5
       ycnt = sxpar(head, 'NAXIS2')*0.5
       xyad, head, xcnt, ycnt, a, d
@@ -2437,11 +2524,29 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 ;==============================================================================
 ;check if output path exists
    IF NOT file_test(setup.outdir) THEN $
-    spawn, 'mkdir '+setup.outdir
-   FOR i=0ul, nframes-1 DO $
-    IF NOT file_test(outpath[i]) THEN spawn, 'mkdir '+outpath[i]
-   IF keyword_set(logfile) THEN $
+    spawn, 'mkdirhier '+setup.outdir
+   FOR i=0ul, n_elements(outpath_band)-1 DO IF NOT file_test(outpath_band[i]) THEN spawn, 'mkdirhier '+outpath_band[i]
+   FOR i=0, n_elements(outpath_galfit)-1 DO IF NOT file_test(outpath_galfit[i]) THEN spawn, 'mkdirhier '+outpath_galfit[i]
+IF keyword_set(logfile) THEN $
     update_log, logfile, 'Initialisation... done!'
+;===============================================================================
+; define the columns that have to be added to the SExtractor catalogue
+; old addcol (1 band, single sersic)
+;   addcol = [['ORG_IMAGE', '" "'], $
+;             ['FILE_GALFIT', '" "'], $
+;             ['X_GALFIT', '0.'], ['XERR_GALFIT', '0.'], $
+;             ['Y_GALFIT', '0.'], ['YERR_GALFIT', '0.'], $
+;             ['MAG_GALFIT', '0.'], ['MAGERR_GALFIT', '0.'], $
+;             ['RE_GALFIT', '0.'], ['REERR_GALFIT', '0.'], $
+;             ['N_GALFIT', '0.'], ['NERR_GALFIT', '0.'], $
+;             ['Q_GALFIT', '0.'], ['QERR_GALFIT', '0.'], $
+;             ['PA_GALFIT', '0.'], ['PAERR_GALFIT', '0.'], $
+;             ['SKY_GALFIT', '0.'], ['PSF_GALFIT', '" "'], $
+;             ['NEIGH_GALFIT', '0'], ['CHISQ_GALFIT','0'], $
+;             ['NDOF_GALFIT','0'], ['NFREE_GALFIT','0'], $
+;             ['NFIX_GALFIT','0'], ['CHI2NU_GALFIT','0']]
+
+   define_addcol, addcol, nband, setup.stamp_pre, setup.cheb
 ;==============================================================================
 ;run SExtractor
    IF setup.dosex THEN BEGIN
@@ -2451,24 +2556,24 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
       ELSE exclude_files = ''
 
       FOR i=0ul, nframes-1 DO BEGIN
-         j = where(exclude_files EQ images[i], ct)
+         j = where(exclude_files EQ images[i,0], ct)
          IF ct GT 0 THEN $
           exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] $
          ELSE exclude = [[-1, -1]]
 
-         run_sextractor, setup.sexexe, setup.sexout, setup.zp, $
-                         images[i], weights[i], $
+        run_sextractor, setup.sexexe, setup.sexout, setup.zp, $
+                         images[i,0], weights[i,0], $
                          setup.cold, $
-                         outpath_pre[i]+setup.coldcat, $
-                         outpath_pre[i]+setup.coldseg, $
+                         outpath_file[i,0]+setup.coldcat, $
+                         outpath_file[i,0]+setup.coldseg, $
                          setup.hot, $
-                         outpath_pre[i]+setup.hotcat, $
-                         outpath_pre[i]+setup.hotseg, $
+                         outpath_file[i,0]+setup.hotcat, $
+                         outpath_file[i,0]+setup.hotseg, $
                          setup.enlarge, $
-                         outpath_pre[i]+setup.outcat, $
-                         outpath_pre[i]+setup.outseg, $
-                         outpath_pre[i]+setup.outparam, $
-                         outpath_pre[i]+setup.check, $
+                         outpath_file[i,0]+setup.outcat, $
+                         outpath_file[i,0]+setup.outseg, $
+                         outpath_file[i,0]+setup.outparam, $
+                         outpath_file[i,0]+setup.check, $
                          setup.chktype, exclude, setup.exclude_rad, $
                          outonly = setup.outonly
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -2507,61 +2612,60 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 ;         print, 'Number of green sources: ', ncold
 ;         print, 'Number of  red  sources: ', nhot
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
       ENDFOR
 
 ;combine all SExtractor catalogues
-      merge_sex_catalogues, outpath_pre+setup.outcat, $
-                            outpath_pre+setup.outparam, images, neighbours, $
+      merge_sex_catalogues, outpath_file[*,0]+setup.outcat, $
+                            outpath_file[*,0]+setup.outparam, images[*,0], neighbours, $
                             setup.outdir+setup.sexcomb
-      sex2ds9reg, setup.outdir+setup.sexcomb, outpath_pre[0]+setup.outparam, $
-                  setup.outdir+'sexcomb.reg', 0.5, tag = 'comb'
+      sex2ds9reg, setup.outdir+setup.sexcomb, outpath_file[0,0]+setup.outparam, $
+                  setup.outdir+'sexcomb.reg', 10, color='red', tag = 'comb'
       IF keyword_set(logfile) THEN $
        update_log, logfile, 'SExtraction... done!'
    ENDIF
 ;==============================================================================
 ;create postage stamp description files 
    IF setup.dostamps THEN BEGIN
-      FOR i=0ul, nframes-1 DO BEGIN
-         create_stamp_file, images[i], $
-                            outpath_pre[i]+setup.outcat, $
-                            outpath_pre[i]+setup.outparam, $
-                            outpath_pre[i]+setup.stampfile, $
-                            setup.stampsize
-         cut_stamps, images[i], $
-                     outpath_pre[i]+setup.stampfile, $
-                     outpath[i], $
-                     outpre[i]+setup.stamp_pre
-      ENDFOR
+       FOR i=0ul, nframes-1 DO BEGIN
+           create_stamp_file, images[i,0], $
+             outpath_file[i,0]+setup.outcat, $
+             outpath_file[i,0]+setup.outparam, $
+             outpath_file_no_band[i,0]+setup.stampfile, $
+             setup.stampsize
+           FOR b=1,nband do begin
+               cut_stamps, images[i,b], $
+                 outpath_file_no_band[i,0]+setup.stampfile, $
+                 outpath_band[i,b], $
+                 outpre[i,b], '_'+setup.stamp_pre[b]
+          ENDFOR
+       ENDFOR
 ;create skymap files 
-      FOR i=0ul, nframes-1 DO BEGIN
-         create_skymap, weights[i], $
-                        outpath_pre[i]+setup.outseg, $
-                        outpath_pre[i]+setup.outcat, $
-                        outpath_pre[i]+setup.outparam, $
-                        outpath_pre[i]+setup.skymap, $
-                        setup.skyscl, $
-                        setup.skyoff
-      ENDFOR
-      IF keyword_set(logfile) THEN $
-       update_log, logfile, 'Postage stamps... done!'
-   ENDIF
+       FOR i=0ul, nframes-1 DO BEGIN
+           FOR b=1,nband do begin
+               create_skymap, weights[i,b], $
+                 outpath_file[i,0]+setup.outseg, $
+                 outpath_file[i,0]+setup.outcat, $
+                 outpath_file[i,0]+setup.outparam, $
+                 outpath_file_no_band[i,b]+setup.skymap, $
+                 setup.skyscl, setup.skyoff
+           ENDFOR
+       ENDFOR
+       IF keyword_set(logfile) THEN $
+         update_log, logfile, 'Postage stamps... done!'
+   ENDIF 
 ;==============================================================================
 ;measure sky and run galfit
    IF setup.dosky THEN BEGIN
        IF keyword_set(logfile) THEN $
         update_log, logfile, 'Beginning sky loop...'
 ;;==============================================================================
-;;read in the PSF
-;      fits_read, setup.psf, psf
-;;==============================================================================
 ;read in the combined SExtractor table
       sexcat = read_sex_table(setup.outdir+setup.sexcomb, $
-                              outpath_pre[0]+setup.outparam, $
+                              outpath_file[0,0]+setup.outparam, $
                               add_col = ['frame', '" "'])
 ;==============================================================================
 ; check if psf in setup file is an image or a list
-       readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images, psf_struct
+       readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband
 ;==============================================================================
 ;sort the total catalogue by magnitude and select the
 ;brightest BRIGHT percent
@@ -2569,8 +2673,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
       nbr = round(n_elements(sexcat.mag_best)*setup.bright/100.)
 
       table = sexcat[br]
-
-      fittab = read_sex_param(outpath_pre[0]+setup.outparam, nbr, $
+      fittab = read_sex_param(outpath_file[0,0]+setup.outparam, nbr, $
                               add_column = addcol)
       struct_assign, table, fittab
       fittab.mag_galfit = 999
@@ -2579,14 +2682,20 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
       fittab.q_galfit = -1
 
       mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
-
 ;find the image files for the sources
-      readcol, setup.files, orgim, orgwht, orgpath, orgpre, $
-               format = 'A,A,A,A', comment = '#', /silent
+      read_image_files, setup, orgim, orgwht, orgpath, orgpath_band, orgpre, $
+        nband,/silent
+;      readcol, setup.files, orgim, orgwht, orgpath, orgpre, $
+;               format = 'A,A,A,A', comment = '#', /silent
       orgpath = set_trailing_slash(orgpath)
+      orgpath_band = set_trailing_slash(orgpath_band)
+      orgpath_pre = orgpath_band+orgpre
+      orgpath_file = orgpath
+      for q=0, nband do orgpath_file[*,q]=orgpath_pre[*,q]+strtrim(setup.stamp_pre[q],2)+'.'
+      orgpath_file_no_band = orgpath
+      for q=0, nband do orgpath_file_no_band[*,q]=orgpath[*,q]+orgpre[*,q]
 
 ;calculate sky for the brightest objects
-
 ;==============================================================================
 ;==============================================================================
 
@@ -2620,16 +2729,16 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
          ENDIF
          loop++
            
-;         print, 'currently working on No. ', cur
          statusline, '  currently working on No. '+strtrim(cur+1,2)+' of '+strtrim(n_elements(sexcat),2)+'   '
 ;check if current object exists
          ct = 0
-         IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim, ct)
+
+;         IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[0,0], ct)
+         IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[*,0], ct)
          IF ct GT 0 THEN BEGIN
             objnum = round_digit(table[cur].number, 0, /str)
-            out_file = (orgpath[idx]+orgpre[idx]+setup.galfit_out+objnum)[0]+ $
-                       '.fits'
-            obj_file = (orgpath[idx]+orgpre[idx]+setup.obj+objnum)[0]
+            obj_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.obj)[0]
+            out_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out)[0]
 ;check if file was done successfully or bombed
             IF file_test(obj_file) THEN BEGIN
 ;print, obj_file+' found.'
@@ -2645,7 +2754,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
          
 ;check for free bridges
          free = where(bridge_use eq 0, ct)
-         
+
          IF ct GT 0 AND cur LT nbr THEN BEGIN
 ;at least one bridge is free --> start new object
 ;the available bridge is free[0]
@@ -2653,11 +2762,13 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 ;treat finished objects first
             IF bridge_obj[free[0]] GE 0 THEN BEGIN
 ;read in feedback data
-               idx = where(table[bridge_obj[free[0]]].frame EQ orgim)
+               idx = where(table[bridge_obj[free[0]]].frame EQ orgim[*,0])
                objnum = round_digit(table[bridge_obj[free[0]]].number, 0, /str)
-               out_file = (orgpath[idx]+orgpre[idx]+ $
-                           setup.galfit_out+objnum)[0]+'.fits'
-               obj_file = (orgpath[idx]+orgpre[idx]+setup.obj+objnum)[0]
+               obj_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.obj)[0]
+               out_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out)[0]
+;               out_file = (outpath_galfit[idx]+orgpre[idx]+setup.galfit_out+objnum)[0]+'.fits'
+;               obj_file = (outpath_galfit[idx]+orgpre[idx]+setup.obj+objnum)[0]
+
 ;check if file was done successfully or bombed
                update_table, fittab, table, bridge_obj[free[0]], out_file
 ;print, 'out file exists -- fittab updated'
@@ -2683,35 +2794,47 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
                                       table[cur].delta_j2000]
             
 ;find the matching filenames
-            idx = where(table[cur].frame EQ orgim)
-;define the file names for the:
+            idx = where(table[cur].frame EQ orgim[*,0])
+; MULTIBAND
+; outpath:      /data/gama/galapagos_multi_wl/tile10_5/
+; outpath_band: /data/gama/galapagos_multi_wl/tile10_5/sex/
+; outpath_pre:  /data/gama/galapagos_multi_wl/tile10_5/sex/t10_5.
+; outpath_file: /data/gama/galapagos_multi_wl/tile10_5/sex/t10_5.sex.
+; outpath_file_no_band: /data/gama/galapagos_multi_wl/tile10_5/t10_5.
+; 1 BAND
+; outpath:      /data/gama/galapagos_multi_wl_test_3.2/tile10_5/
+; outpath_band: /data/gama/galapagos_multi_wl_test_3.2/tile10_5/
+; outpath_pre:  /data/gama/galapagos_multi_wl_test_3.2/tile10_5/t10_5.
+; outpath_file: /data/gama/galapagos_multi_wl_test_3.2/tile10_5/t10_5.v.
+ ;define the file names for the:
 ;postage stamp parameters
-            stamp_param_file = (orgpath[idx]+orgpre[idx]+setup.stampfile)[0]
+            stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
             objnum = round_digit(table[cur].number, 0, /str)
 ;galfit masks
-            mask_file = (orgpath[idx]+orgpre[idx]+setup.mask+objnum)[0]
+            mask_file = strarr(nband+1)
+            for q=1,nband do mask_file[q] = (outpath_galfit[idx,0]+outpre[idx,0]+objnum+setup.stamp_pre[q]+'_'+setup.mask)[0]
 ;galfit obj file
-            obj_file = (orgpath[idx]+orgpre[idx]+setup.obj+objnum)[0]
+            obj_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.obj)[0]
 ;galfit constraint file
-            constr_file = (orgpath[idx]+orgpre[idx]+setup.constr+objnum)[0]
+            constr_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.constr)[0]
 ;galfit input file
-            im_file = (orgpath[idx]+orgpre[idx]+setup.stamp_pre+objnum)[0]
+            im_file = strarr(nband+1)
+            for q=1,nband do im_file[q] = (orgpath_pre[idx,q]+objnum+'_'+setup.stamp_pre[q])[0]
 ;galfit output path
-            out_file = (orgpath[idx]+orgpre[idx]+setup.galfit_out+objnum)[0]
+            out_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out)[0]
 ;sky summary file
-            sky_file = (orgpath[idx]+orgpre[idx]+setup.outsky+objnum)[0]
+            sky_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.outsky)[0]
 ; choose closest PSF according to RA & DEC and subtract filename from
 ; structure 'psf_struct'
-; read in chosen_psf into 'psf' , filename in chosen_psf_file   
-            choose_psf, table[cur].alpha_j2000, table[cur].delta_j2000, $
-                        psf_struct, table[cur].frame, chosen_psf_file
-            
-            fits_read, chosen_psf_file, psf
-
+; read in chosen_psf into 'psf' (???), filename in chosen_psf_file   
+           choose_psf, table[cur].alpha_j2000, table[cur].delta_j2000, $
+                        psf_struct, table[cur].frame, chosen_psf_file, nband
+ 
 ; create sav file for gala_bridge to read in
-            save, cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file,$
+stop
+            save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
                   sky_file, stamp_param_file, mask_file, im_file, obj_file, $
-                  constr_file, mask_file, out_file, fittab, filename=out_file+'.sav'
+                  constr_file, out_file, fittab, filename=out_file+'.sav'
             
             IF setup.max_proc GT 1 THEN BEGIN
                 IF keyword_set(logfile) THEN $
