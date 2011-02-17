@@ -1,27 +1,29 @@
 PRO gala_bridge, filein
 ;variables provided in filein:
-;cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
+;cur, orgim, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
 ;nums, frames, stamp_param_file, mask_file, im_file, obj_file, 
-;constr_file, mask_file, out_file, fittab
-
+;constr_file, out_file, fittab
+;orgpath_band, orgpath_pre, orgpath_file, orgpath_file_no_band
    restore, filein
-;spawn, 'touch '+filein+'.restored';§§§§§§§§§§§§§§§§§§§§§§
 
    table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
 
+for b=1,nband do begin
 ;read in image and weight (takes 15sec)
-;   print, systime(), ' reading images...'
-   fits_read, table[cur].frame, im, hd
-   fits_read, orgwht[idx], wht, whd
+    fits_read, table[cur].frame[b], im, hd
+;    fits_read, orgim[idx,b], im, hd
+    fits_read, orgwht[idx,b], wht, whd
 
 ;image size
    sz_im = (size(im))[1:2]
 
+print, sz_im
+
 ;read segmentation map (needed for excluding neighbouring sources)
-   fits_read, orgpath[idx]+orgpre[idx]+setup.outseg, seg
+   fits_read, orgpath_file[idx,0]+setup.outseg, seg
 
 ;read the skymap
-   fits_read, orgpath[idx]+orgpre[idx]+setup.skymap+'.fits', map
+   fits_read, orgpath_file_no_band[idx,b]+setup.skymap+'.fits', map
 ;         print, systime(), ' done'
 
 ;rad is the minimum starting radius for the sky calculation (outside
@@ -54,10 +56,16 @@ PRO gala_bridge, filein
 
    table.x_image = x+1
    table.y_image = y+1
+;++++++++++++++++++++++++++++++++++
+stop
+   fits_read, chosen_psf_file[b], psf, psfhead
+; fittab used??? YES
+; fix getsky_loop
+; fix contrib_targets
    getsky_loop, cur, table, rad, im, hd, map, setup.expt, $
                 setup.zp, setup.neiscl, setup.skyoff, setup.power, $
                 setup.cut, setup.files, psf, setup.dstep, $
-                setup.wstep, setup.gap, setup.nslope, sky_file, $
+                setup.wstep, setup.gap, setup.nslope, sky_file[b], $
                 setup.galfit_out, setup.outcat, setup.outparam, $
                 setup.stampfile, global_sky, global_sigsky, $
                 setup.convbox, nums, frames, setup.galexe, fittab
@@ -70,7 +78,7 @@ PRO gala_bridge, filein
                 setup.maglim_gal, setup.maglim_star, $
                 setup.stel_slope, setup.stel_zp, objects, corner
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§§§§§§§
-
+endfor
    prepare_galfit, objects, setup.files, corner, table, obj_file, $
                    im_file, constr_file, mask_file, chosen_psf_file, $
                    out_file, sky_file, setup.convbox, setup.zp, $
@@ -90,13 +98,7 @@ PRO gala_bridge, filein
 ;   wait, randomu(systime(/seconds))*8+2
 ;   spawn, 'touch '+out_file
 
-   file_delete, filein
-
-;file_delete, filein+'.restored';§§§§§§§§§§§§§§§§§§§§§§
-;file_delete, filein+'.sky';§§§§§§§§§§§§§§§§§§§§§§
-;file_delete, filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
-;file_delete, filein+'.mask';§§§§§§§§§§§§§§§§§§§§§§
-;file_delete, filein+'.preparegalfit';§§§§§§§§§§§§§§§§§§§§§§
+;   file_delete, filein
 
    wait, 1
 END

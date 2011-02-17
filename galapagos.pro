@@ -1162,7 +1162,10 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
 ;nothing to be done
    ENDIF ELSE BEGIN
 ;contributing sources FOUND----------------------------------------------------
-      readcol, files, orgim, outpath, outpre, format = 'A,X,A,A', $
+;       read_image_files, setup, orgim, xxx, outpath, outpath_bandxxx, outpre, $
+;         nbandxxx,/silent
+;       delvarx, xxx, outpath_bandxxx, nbandxxx
+       readcol, files, orgim, outpath, outpre, format = 'A,X,A,A', $
                comment = '#', /silent
       outpath = set_trailing_slash(outpath)
 
@@ -2673,6 +2676,21 @@ IF keyword_set(logfile) THEN $
       nbr = round(n_elements(sexcat.mag_best)*setup.bright/100.)
 
       table = sexcat[br]
+
+; make table.frame multi-wavelength-ready to be passed onto gala_bridge
+      tableim = strarr(nband+1,n_elements(table.frame))
+      for i = 0, n_elements(images[*,0])-1 do begin
+          whtableim = where(table.frame eq images[i,0], ct)
+          for b=0,nband do begin
+              if ct gt 0 then tableim[b,whtableim] = images[i,b]
+          ENDFOR
+      ENDFOR 
+      table=remove_tags(table,'frame')
+      add_tag, table, 'frame', strarr(nband+1), table2
+      table=table2
+      delvarx, table2
+      table.frame = tableim
+
       fittab = read_sex_param(outpath_file[0,0]+setup.outparam, nbr, $
                               add_column = addcol)
       struct_assign, table, fittab
@@ -2812,7 +2830,7 @@ IF keyword_set(logfile) THEN $
             objnum = round_digit(table[cur].number, 0, /str)
 ;galfit masks
             mask_file = strarr(nband+1)
-            for q=1,nband do mask_file[q] = (outpath_galfit[idx,0]+outpre[idx,0]+objnum+setup.stamp_pre[q]+'_'+setup.mask)[0]
+            for q=1,nband do mask_file[q] = (outpath_galfit[idx,0]+outpre[idx,0]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
 ;galfit obj file
             obj_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.obj)[0]
 ;galfit constraint file
@@ -2821,9 +2839,11 @@ IF keyword_set(logfile) THEN $
             im_file = strarr(nband+1)
             for q=1,nband do im_file[q] = (orgpath_pre[idx,q]+objnum+'_'+setup.stamp_pre[q])[0]
 ;galfit output path
-            out_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out)[0]
+            out_file = (outpath[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out)[0]
 ;sky summary file
-            sky_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.outsky)[0]
+            sky_file = strarr(nband+1)
+            for q=1,nband do sky_file[q] = (outpath_galfit[idx,0]+outpre[idx,0]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+
 ; choose closest PSF according to RA & DEC and subtract filename from
 ; structure 'psf_struct'
 ; read in chosen_psf into 'psf' (???), filename in chosen_psf_file   
@@ -2831,34 +2851,37 @@ IF keyword_set(logfile) THEN $
                         psf_struct, table[cur].frame, chosen_psf_file, nband
  
 ; create sav file for gala_bridge to read in
-stop
-            save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
-                  sky_file, stamp_param_file, mask_file, im_file, obj_file, $
-                  constr_file, out_file, fittab, filename=out_file+'.sav'
-            
+           save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
+             sky_file, stamp_param_file, mask_file, im_file, obj_file, $
+             constr_file, out_file, fittab, nband, $
+             orgpath_band, orgpath_pre, orgpath_file, orgpath_file_no_band, $
+             filename=out_file+'.sav'
+stop           
             IF setup.max_proc GT 1 THEN BEGIN
                 IF keyword_set(logfile) THEN $
                  update_log, logfile, 'Starting new bridge... ('+out_file+')'
-;print, 'starting new object at '+systime(0)
+; print, 'starting new object at '+systime(0)
                bridge_arr[free[0]]->execute, 'astrolib'
 ;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
                bridge_arr[free[0]]->execute, '.r '+gala_pro
+stop
                bridge_arr[free[0]]->execute, $
                 'gala_bridge, "'+out_file+'.sav"', /nowait
             ENDIF ELSE BEGIN
                 IF keyword_set(logfile) THEN $
                  update_log, logfile, 'Starting next object... ('+out_file+')'
-               cd, orgpath[idx]
+               cd, orgpath[idx,0]
                gala_bridge, out_file+'.sav'
                file_delete, orgpath[idx]+'galfit.[0123456789]*', /quiet, $
                             /allow_nonexistent, /noexpand_path
             ENDELSE
-            
+;++++++++++++++++++++++++++++++++++++=            
             bridge_obj[free[0]] = cur
 ;switch to next object
             cur++
          ENDIF ELSE BEGIN
 ;all bridges are busy --> wait    
+stop
             wait, 1
          ENDELSE
          
