@@ -1,8 +1,8 @@
 PRO gala_bridge, filein
 ;variables provided in filein:
-;cur, orgim, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
-;nums, frames, stamp_param_file, mask_file, im_file, obj_file, 
-;constr_file, out_file, fittab
+;cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
+;stamp_param_file, mask_file, im_file, obj_file, 
+;constr_file, out_file, fittab, nband
 ;orgpath_band, orgpath_pre, orgpath_file, orgpath_file_no_band
    restore, filein
 
@@ -57,20 +57,20 @@ print, sz_im
    table.x_image = x+1
    table.y_image = y+1
 ;++++++++++++++++++++++++++++++++++
-stop
    fits_read, chosen_psf_file[b], psf, psfhead
 ; fittab used??? YES
 ; fix getsky_loop
 ; fix contrib_targets
+; put b to be passed along!
    getsky_loop, cur, table, rad, im, hd, map, setup.expt, $
                 setup.zp, setup.neiscl, setup.skyoff, setup.power, $
                 setup.cut, setup.files, psf, setup.dstep, $
                 setup.wstep, setup.gap, setup.nslope, sky_file[b], $
                 setup.galfit_out, setup.outcat, setup.outparam, $
                 setup.stampfile, global_sky, global_sigsky, $
-                setup.convbox, nums, frames, setup.galexe, fittab
+                setup.convbox, nums, frames, setup.galexe, fittab, b
 ;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
-
+stop
    print,table[cur].number
    create_mask, table, wht, seg, stamp_param_file, mask_file, $
                 im_file, table[cur].frame, cur, $

@@ -1001,7 +1001,7 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
 ;      ENDFOR
 
   ENDIF
-  
+;+++++++++++++++++++++++++++++++=  
   ftot = 10.^(-0.4*(mag-zeropt))*exptime
   kap = (kappa(n))[0]
   f0 = ftot/(2*!pi*re^2.*exp(kap)*n*kap^(-2.*n)*gamma(2.*n)*q)
@@ -1094,7 +1094,7 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
                  scale, offset, power, cut, files, psf, dstep, wstep, gap, $
                  nslope, sky_file, out_file, out_cat, out_param, out_stamps, $
                  global_sky, global_sigsky, conv_box, nums, frames, galexe, $
-                 fit_table
+                 fit_table, b
 ;current_obj: idx of the current object in table
 ;table: sextractor table (frame of current object and surrounding
 ;neighbouring frames)
@@ -1115,7 +1115,7 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
 ;global_sky, global_sigsky: global sky value plus scatter
 ;conv_box: convolution box size for subtracting sources
 ;nums, frames: object numbers and frames of potential contributing sources
-
+;curb: current band index (deblending only decided in reference band)
 ;compute the sky for a single source
 
 ;computation flag:
@@ -1151,9 +1151,14 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
    ENDIF
 
 ;see if current source has contributors
-   contrib_targets, exptime, zero_pt, scale, offset, power, table, $
-                    current_obj, cut, nums, frames, fit_table
-
+; this is only done in REFERENCE band, for the other bands, num and
+; frames are input by gala_bridge, to which they have been returned in
+; the run on the reference band.
+;+++++++++++++++++++=
+   if b eq 1 then contrib_targets, exptime, zero_pt, scale, offset, power, table, $
+     current_obj, cut, nums, frames, fit_table
+   
+stop
    contrib_sky = 1e30
 
    IF nums[0] LT 0 THEN BEGIN
@@ -1162,11 +1167,12 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
 ;nothing to be done
    ENDIF ELSE BEGIN
 ;contributing sources FOUND----------------------------------------------------
-;       read_image_files, setup, orgim, xxx, outpath, outpath_bandxxx, outpre, $
-;         nbandxxx,/silent
-;       delvarx, xxx, outpath_bandxxx, nbandxxx
-       readcol, files, orgim, outpath, outpre, format = 'A,X,A,A', $
-               comment = '#', /silent
+; FIX THIS DO BE USING THE SOURCES FOUND IN REFERENCE BAND!
+       read_image_files, files, orgim, xxx, outpath, outpath_bandxxx, outpre, $
+         nbandxxx,/silent
+       delvarx, xxx, outpath_bandxxx, nbandxxx
+;       readcol, files, orgim, outpath, outpre, format = 'A,X,A,A', $
+;               comment = '#', /silent
       outpath = set_trailing_slash(outpath)
 
 ;total number of contributing sources
@@ -1182,12 +1188,14 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
       FOR current_contrib=0ul, n_contrib-1 DO BEGIN
          i_con = where(table.number EQ nums[current_contrib] AND $
                        table.frame EQ frames[current_contrib])
+; table.frame[1]??
          dist[current_contrib] = $
           sqrt((table[i_con].x_image-table[current_obj].x_image)^2+ $
                (table[i_con].y_image-table[current_obj].y_image)^2)+ $
           table[i_con].a_image*table[i_con].kron_radius*scale
 
 ;find the GALFIT output file for the current contributing source
+stop
          idx = where(orgim EQ table[i_con].frame)
 
          objnum = round_digit(table[i_con].number, 0, /str)
@@ -2294,6 +2302,7 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
        outpre=[[outpre],[outpre]]
 ; setup.stamp_pre is used and stays as given in C02)
 ; outpre is read in from the filelist
+; exposure time and zeropoint read from setup file
        hlppre=setup.stamp_pre
        setup=remove_tags(setup,'stamp_pre')
        add_tag, setup, 'stamp_pre', [hlppre, hlppre], setup2
@@ -2306,10 +2315,10 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
 
 ; if number of columns eq 3 then assume multi band survey and
 ; filesnames pointing to other file lists that contain all the images.
-   if ncolf eq 3 then begin
+   if ncolf eq 5 then begin
        if not keyword_set(silent) then print, 'assuming multi-wavelength dataset. Assuming first line to be for SExtractor, rest for fitting!'
-       readcol, setup.files, band, wavelength, filelist, $
-         format = 'A,I,A', comment = '#', /silent      
+       readcol, setup.files, band, wavelength, filelist, zeropoint, exptime, $
+         format = 'A,I,A,F,F', comment = '#', /silent      
        nband=fix(n_elements(band)-1)
        readcol, filelist[0], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
          format = 'A,A,A,A', comment = '#', /silent
@@ -2319,7 +2328,19 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
        outpath_band=strarr(n_elements(hlpimages),nband+1)
        outpre=strarr(n_elements(hlpimages),nband+1)
        cnt=intarr(nband+1)
-       for b=0,nband do begin
+       setup=remove_tags(setup,'stamp_pre')
+       add_tag, setup, 'stamp_pre', band, setup2
+       setup=setup2
+       delvarx, setup2
+       setup=remove_tags(setup,'zp')
+       add_tag, setup, 'zp', zeropoint, setup2
+       setup=setup2
+       delvarx, setup2
+       setup=remove_tags(setup,'expt')
+       add_tag, setup, 'expt', exptime, setup2
+       setup=setup2
+       delvarx, setup2
+      for b=0,nband do begin
            readcol, filelist[b], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
              format = 'A,A,A,A', comment = '#', /silent
            cnt[b]=n_elements(hlpimages)
@@ -2330,13 +2351,10 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
            outpre[*,b]=hlpoutpre
            outpath[*,b]=set_trailing_slash(setup.outdir)+set_trailing_slash(strtrim(hlpoutpath,2))
            outpath_band[*,b]=outpath[*,b]+strtrim(band[b],2)
-           setup=remove_tags(setup,'stamp_pre')
-           add_tag, setup, 'stamp_pre', band, setup2
-           setup=setup2
-           delvarx, setup2
        endfor 
    endif
-   if ncolf ne 3 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
+   if ncolf ne 5 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
+stop
 END
 
 FUNCTION read_sersic_results, obj, psf
@@ -2799,6 +2817,7 @@ IF keyword_set(logfile) THEN $
             ENDIF
             
 ;check if current position is far enough from bridge positions
+; CHANGE ORDER OF OBJECTS HERE!
             filled = where(finite(bridge_pos[0, *]) EQ 1 AND $
                            bridge_use GT 0, ct)
             IF ct GT 0 THEN BEGIN
@@ -2813,17 +2832,6 @@ IF keyword_set(logfile) THEN $
             
 ;find the matching filenames
             idx = where(table[cur].frame EQ orgim[*,0])
-; MULTIBAND
-; outpath:      /data/gama/galapagos_multi_wl/tile10_5/
-; outpath_band: /data/gama/galapagos_multi_wl/tile10_5/sex/
-; outpath_pre:  /data/gama/galapagos_multi_wl/tile10_5/sex/t10_5.
-; outpath_file: /data/gama/galapagos_multi_wl/tile10_5/sex/t10_5.sex.
-; outpath_file_no_band: /data/gama/galapagos_multi_wl/tile10_5/t10_5.
-; 1 BAND
-; outpath:      /data/gama/galapagos_multi_wl_test_3.2/tile10_5/
-; outpath_band: /data/gama/galapagos_multi_wl_test_3.2/tile10_5/
-; outpath_pre:  /data/gama/galapagos_multi_wl_test_3.2/tile10_5/t10_5.
-; outpath_file: /data/gama/galapagos_multi_wl_test_3.2/tile10_5/t10_5.v.
  ;define the file names for the:
 ;postage stamp parameters
             stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
@@ -2881,11 +2889,11 @@ stop
             cur++
          ENDIF ELSE BEGIN
 ;all bridges are busy --> wait    
-stop
             wait, 1
          ENDELSE
          
 ;stop when all done and no bridge in use any more
+; CHANGE THIS FOR NEW FITTING ORDER AS WELL!!
       ENDREP UNTIL cur GE nbr AND total(bridge_use) EQ 0
 
 ;have to read in the last batch of objects
@@ -2894,10 +2902,14 @@ stop
          FOR i=0, ct-1 DO BEGIN
             idx = where(table[bridge_obj[remain[i]]].frame EQ orgim)
             objnum = round_digit(table[bridge_obj[remain[i]]].number, 0, /str)
-            out_file = (orgpath[idx]+orgpre[idx]+ $
-                        setup.galfit_out+objnum)[0]+'.fits'
-            obj_file = (orgpath[idx]+orgpre[idx]+setup.obj+objnum)[0]
+;            out_file = (orgpath[idx]+orgpre[idx]+ $
+;                        setup.galfit_out+objnum)[0]+'.fits'
+;            obj_file = (orgpath[idx]+orgpre[idx]+setup.obj+objnum)[0]
+            obj_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.obj)[0]
+            out_file = (outpath[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out)[0]
+
 ;check if file was done successfully or bombed
+; CHANGE TO NEW READING IN ROUTINE!!!
             update_table, fittab, table, bridge_obj[remain[i]], out_file
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
@@ -2905,6 +2917,7 @@ stop
       ENDIF
 
 ;stop
+;++++++++++++++++++++++++++++++++++++
 ;==============================================================================
 ;==============================================================================
 ;read in batch list
