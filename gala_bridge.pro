@@ -57,10 +57,10 @@ for b=1,nband do begin
 ;++++++++++++++++++++++++++++++++++
    fits_read, chosen_psf_file[b], psf, psfhead
 ; fittab used??? YES
-; fix getsky_loop
+; fix getsky_loopgala_bridge,'/data/gama/galapagos_multi_wl/tile10_5/t10_5.1558_gf.sav'
+
 ; fix contrib_targets
 ; put b to be passed along!
-stop
    getsky_loop, setup, cur, table, rad, im, hd, map, setup.expt, $
      setup.zp, setup.neiscl, setup.skyoff, setup.power, $
      setup.cut, setup.files, psf, setup.dstep, $
@@ -70,23 +70,28 @@ stop
      setup.convbox, nums, frames, setup.galexe, fittab, b, $
      orgpath_pre, outpath_file, outpath_file_no_band
 ;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
-stop
-   print,table[cur].number
-   create_mask, table, wht, seg, stamp_param_file, mask_file, $
-                im_file, table[cur].frame, cur, $
-                setup.neiscl, setup.skyoff, nums, frames, $
-                setup.maglim_gal, setup.maglim_star, $
-                setup.stel_slope, setup.stel_zp, objects, corner
+;   print,table[cur].number
+   create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
+     im_file[b], table[cur].frame[b], cur, $
+     setup.neiscl, setup.skyoff, nums, frames, $   hdr = headfits(im_file[1]+'.fits')
+   xmax = sxpar(hdr, 'NAXIS1')
+   ymax = sxpar(hdr, 'NAXIS2')
+
+     setup.maglim_gal, setup.maglim_star, $
+     setup.stel_slope, setup.stel_zp, objects, corner, $
+     b
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§§§§§§§
-stop
 endfor
-   prepare_galfit, objects, setup.files, corner, table, obj_file, $
+stop
+save, /all, '~/IDL/save.sav'
+restore, '~/IDL/save.sav'
+   prepare_galfit, setup, objects, setup.files, corner, table, obj_file, $
                    im_file, constr_file, mask_file, chosen_psf_file, $
                    out_file, sky_file, setup.convbox, setup.zp, $
                    setup.platescl, nums, frames, cur, $
                    setup.outcat, setup.outparam, setup.stampfile, $
                    setup.conmaxre, setup.conminm, setup.conmaxm, $
-                   fittab, setup.version;, n_constrained = n_constrained
+                   fittab, setup.version, nband;, n_constrained = n_constrained
 ;spawn, 'touch '+filein+'.preparegalfit';§§§§§§§§§§§§§§§§§§§§§§
 
 ;spawn the script

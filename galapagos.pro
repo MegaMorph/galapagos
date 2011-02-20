@@ -1186,7 +1186,6 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
       FOR current_contrib=0ul, n_contrib-1 DO BEGIN
           i_con = where(table.number EQ nums[current_contrib] AND $
                         table.frame[1] EQ frames[current_contrib])
-; table.frame[1]??
           dist[current_contrib] = $
             sqrt((table[i_con].x_image-table[current_obj].x_image)^2+ $
                  (table[i_con].y_image-table[current_obj].y_image)^2)+ $
@@ -1496,7 +1495,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
    ENDIF
 
 ;write output sky file
-   openw, 1, sky_file[b]
+   openw, 1, sky_file
    printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
            sky_flag
    close, 1
@@ -1504,7 +1503,7 @@ END
 
 PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
                  current, scale, offset, nums, frames, lim_gal, lim_star, $
-                 stel_slope, stel_zp, objects, corner
+                 stel_slope, stel_zp, objects, corner, b
 ;objects and corner are output needed by prepare_galfit
 
 ;in the case of contributing sources, the TABLE is changed, so keep a
@@ -1518,7 +1517,6 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
 ;   print, systime()
 
    rad = table.a_image*table.kron_radius*scale+offset
-stop
    readcol, paramfile, $
             pnum, px, py, pxlo, pxhi, pylo, pyhi, $
             comment = '#', format = 'I,F,F,L,L,L,L', /silent
@@ -1643,7 +1641,7 @@ stop
       ENDIF ELSE BEGIN
 ;loop source has NO overlap with current --> tertiary
 ;if loop source is contributing source on current frame, make secondary
-         coni = where(table[i].number EQ nums AND table[i].frame EQ frames, $
+         coni = where(table[i].number EQ nums AND table[i].frame[1] EQ frames, $
                       con)
          IF con GT 0 THEN BEGIN
             plus = 1
@@ -1694,7 +1692,7 @@ stop
    mask1 = segm < 1
    FOR i=0ul, n_elements(objects)-1 DO BEGIN
       idx = where(segm EQ table[objects[i]].number AND $
-                  table[objects[i]].frame EQ image AND segm GT 0, ct)
+                  table[objects[i]].frame[b] EQ image AND segm GT 0, ct)
       IF ct GT 0 THEN mask1[idx] = 0
    ENDFOR
    FOR i=0ul, n_elements(con_num)-1 DO BEGIN
@@ -1702,17 +1700,16 @@ stop
       IF ct GT 0 THEN mask1[idx] = 0
    ENDFOR
    mask = (mask+mask1) < 1
-
    writefits, mask_file+'.fits', mask, headfits(im_file+'.fits')
 
    corner = [pxlo, pylo]
 END
 
-PRO prepare_galfit, objects, files, corner, table0, obj_file, im_file, $
+PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
                     constr_file, mask_file, psf_file, out_file, sky_file, $
                     conv_box, zero_pt, plate_scl, num_contrib, frame_contrib, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
-                    conminm, conmaxm, fit_table, setup_version, $
+                    conminm, conmaxm, fit_table, setup_version, nband, $
                     n_constrained = n_constrained
 
    setup_version = 3
@@ -1722,9 +1719,8 @@ PRO prepare_galfit, objects, files, corner, table0, obj_file, im_file, $
 ;in the case of contributing sources, the TABLE is changed, so keep a
 ;backup copy
    table = table0
-
 ;current is the index of the current object
-   hdr = headfits(im_file+'.fits')
+   hdr = headfits(im_file[1]+'.fits')
    xmax = sxpar(hdr, 'NAXIS1')
    ymax = sxpar(hdr, 'NAXIS2')
 
@@ -1750,19 +1746,55 @@ PRO prepare_galfit, objects, files, corner, table0, obj_file, im_file, $
       printf, 1, j, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
    ENDFOR
    close, 1
-
+stop
 ;write obj file header plus sky
-   openw, 1, obj_file
+   openw, 1, obj_file, width=1000
    printf, 1, '# IMAGE PARAMETERS'
-   printf, 1, 'A) '+im_file+'.fits'
+;   printf, 1, 'A) '+im_file+'.fits'
+   A_po=''
+   FOR b=1,nband DO BEGIN
+       A_po=A_po+strtrim(im_file[b],2)+'.fits'
+       if b lt nband then A_po=A_po+','
+   ENDFOR
+   printf, 1, 'A) '+a_po
+   A1_po=''
+   FOR b=1,nband DO BEGIN
+       A1_po=A1_po+setup.stamp_pre[b]
+       if b lt nband then A1_po=A1_po+','
+   ENDFOR
+   printf, 1, 'A1) '+A1_po+ $
+     '  # Band labels (can be omitted if fitting a single band)'
+   A2_po=''
+   FOR b=1,nband DO BEGIN
+       A2_po=A2_po+setup.stamp_pre[b]
+       if b lt nband then A2_po=A2_po+','
+   ENDFOR
+   printf, 1, 'A2) '+A2_pro+ $
+     '  # Band wavelengths (choice of wavelength units is arbitrary, as long as consistent)'
+
+
+
    printf, 1, 'B) '+out_file+'.fits'
    printf, 1, 'C) none                # Noise image name ' + $
            '(made from data if blank or "none")'
-   printf, 1, 'D) '+psf_file+' kernel' + $
+;   printf, 1, 'D) '+psf_file+' kernel' + $
+;           ' # Input PSF image and (optional) diffusion kernel'
+   D_po=''
+   FOR b=1,nband DO BEGIN
+       D_po=D_po+strtrim(psf_file[b],2)
+       if b lt nband then D_po=D_po+','
+   ENDFOR
+   printf, 1, 'D) '+D_po+' kernel' + $
            ' # Input PSF image and (optional) diffusion kernel'
    printf, 1, 'E) 1                   ' + $
            '# PSF oversampling factor relative to data'
-   printf, 1, 'F) '+mask_file+'.fits'
+;   printf, 1, 'F) '+mask_file+'.fits'
+   F_po=''
+   FOR b=1,nband DO BEGIN
+       F_po=F_po+strtrim(mask_file[b],2)
+       if b lt nband then F_po=F_po+','
+   ENDFOR
+   printf, 1, 'F) '+F_po+'.fits'
    printf, 1, 'G) '+constr_file
    printf, 1, 'H) 1 '+strtrim(xmax, 2)+' 1 '+strtrim(ymax, 2)+ $
            '       # Image region to fit (xmin xmax ' + $
@@ -2891,7 +2923,7 @@ stop
                file_delete, orgpath[idx]+'galfit.[0123456789]*', /quiet, $
                             /allow_nonexistent, /noexpand_path
             ENDELSE
-;++++++++++++++++++++++++++++++++++++=            
+;+CONTINUE HERE! +++++++++++++++++++++++++++++++++++=            
             bridge_obj[free[0]] = cur
 ;switch to next object
             cur++
@@ -3055,18 +3087,20 @@ stop
               orgpath_pre, outpath_file, outpath_file_no_band
 
             create_mask, table, wht, seg, stamp_param_file, mask_file, $
-                         im_file, table[current_obj].frame, current_obj, $
-                         setup.neiscl, setup.skyoff, nums, frames, $
-                         setup.maglim_gal, setup.maglim_star, $
-                         setup.stel_slope, setup.stel_zp, objects, corner
+              im_file, table[current_obj].frame, current_obj, $
+              setup.neiscl, setup.skyoff, nums, frames, $
+              setup.maglim_gal, setup.maglim_star, $
+              setup.stel_slope, setup.stel_zp, objects, corner, $
+              b
             
-            prepare_galfit, objects, setup.files, corner, table, $
-                            obj_file, sim_file, constr_file, mask_file, $
-                            chosen_psf_file, out_file, sky_file, setup.convbox, $
-                            setup.zp, setup.platescl, nums, frames, $
-                            current_obj, setup.outcat, setup.outparam, $
-                            setup.stampfile, setup.conmaxre, setup.conminm, $
-                            setup.conmaxm, fittab, setup.version ;, n_constrained = n_constrained
+            prepare_galfit, setup, objects, setup.files, corner, table, $
+              obj_file, sim_file, constr_file, mask_file, $
+              chosen_psf_file, out_file, sky_file, setup.convbox, $
+              setup.zp, setup.platescl, nums, frames, $
+              current_obj, setup.outcat, setup.outparam, $
+              setup.stampfile, setup.conmaxre, setup.conminm, $
+              setup.conmaxm, fittab, setup.version ;, n_constrained = n_constrained
+
             cd, orgpath[idx]
             print, setup.galexe
             IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file $
