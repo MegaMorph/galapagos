@@ -1052,7 +1052,7 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
       
       grad = where(c_all[o[no_fit]] LT cut, ct)
       IF ct GT 0 THEN nums = t[o[no_fit[grad]]].number ELSE nums = -1
-      IF ct GT 0 THEN frames = t[o[no_fit[grad]]].frame ELSE frames = ''
+      IF ct GT 0 THEN frames = t[o[no_fit[grad]]].frame[1] ELSE frames = ''
    ENDELSE
 ;   print, 'gradient sources:'
 ;   forprint, nums, ' '+frames
@@ -1090,11 +1090,11 @@ PRO dist_angle, arr, sz, x, y
    IF ct GT 0 THEN arr[j] -= 2*!pi
 END
 
-PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
+PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
                  scale, offset, power, cut, files, psf, dstep, wstep, gap, $
                  nslope, sky_file, out_file, out_cat, out_param, out_stamps, $
                  global_sky, global_sigsky, conv_box, nums, frames, galexe, $
-                 fit_table, b
+                 fit_table, b, orgpath_pre, outpath_file, outpath_file_no_band
 ;current_obj: idx of the current object in table
 ;table: sextractor table (frame of current object and surrounding
 ;neighbouring frames)
@@ -1154,11 +1154,9 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
 ; this is only done in REFERENCE band, for the other bands, num and
 ; frames are input by gala_bridge, to which they have been returned in
 ; the run on the reference band.
-;+++++++++++++++++++=
-   if b eq 1 then contrib_targets, exptime, zero_pt, scale, offset, power, table, $
+   if b eq 1 then contrib_targets, exptime[1], zero_pt[1], scale, offset, power, table, $
      current_obj, cut, nums, frames, fit_table
    
-stop
    contrib_sky = 1e30
 
    IF nums[0] LT 0 THEN BEGIN
@@ -1168,12 +1166,12 @@ stop
    ENDIF ELSE BEGIN
 ;contributing sources FOUND----------------------------------------------------
 ; FIX THIS DO BE USING THE SOURCES FOUND IN REFERENCE BAND!
-       read_image_files, files, orgim, xxx, outpath, outpath_bandxxx, outpre, $
-         nbandxxx,/silent
+       read_image_files, setup, orgim, xxx, outpath, outpath_bandxxx, outpre, $
+         nbandxxx, /silent
        delvarx, xxx, outpath_bandxxx, nbandxxx
 ;       readcol, files, orgim, outpath, outpre, format = 'A,X,A,A', $
 ;               comment = '#', /silent
-      outpath = set_trailing_slash(outpath)
+       outpath = set_trailing_slash(outpath)
 
 ;total number of contributing sources
       n_contrib = n_elements(nums)
@@ -1186,29 +1184,30 @@ stop
 
 ;loop over all contributing sources============================================
       FOR current_contrib=0ul, n_contrib-1 DO BEGIN
-         i_con = where(table.number EQ nums[current_contrib] AND $
-                       table.frame EQ frames[current_contrib])
+          i_con = where(table.number EQ nums[current_contrib] AND $
+                        table.frame[1] EQ frames[current_contrib])
 ; table.frame[1]??
-         dist[current_contrib] = $
-          sqrt((table[i_con].x_image-table[current_obj].x_image)^2+ $
-               (table[i_con].y_image-table[current_obj].y_image)^2)+ $
-          table[i_con].a_image*table[i_con].kron_radius*scale
-
+          dist[current_contrib] = $
+            sqrt((table[i_con].x_image-table[current_obj].x_image)^2+ $
+                 (table[i_con].y_image-table[current_obj].y_image)^2)+ $
+            table[i_con].a_image*table[i_con].kron_radius*scale
+          
 ;find the GALFIT output file for the current contributing source
-stop
-         idx = where(orgim EQ table[i_con].frame)
+         idx = where(orgim[*,1] EQ table[i_con].frame[1])
 
          objnum = round_digit(table[i_con].number, 0, /str)
-         current_contrib_file = outpath[idx]+out_file+objnum+'.fits'
+         current_contrib_file = outpath[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out
 
          IF file_test(current_contrib_file) THEN BEGIN
 ;a GALFIT result exists for the current contributing source--------------------
 
 ;read in the GALFIT image fitting results from current_file
+; READ_GALFIT_SERSIC!!!! OUTPUT FILE IS DIFFERENT
+; CURRENTLY, ONLY REFERENCE BAND IS READ OUT!
             par = read_galfit_sersic(current_contrib_file)
 ;     0  1  2    3   4  5  6   7
 ;par=[x, y, mag, re, n, q, pa, sky]
-
+;++++++++++++++++++++++++++++++++++++++
             contrib_sky = [contrib_sky, par[7]]
 
 ;subtract the source from the image
@@ -1216,24 +1215,28 @@ stop
 ;            print, systime(), ' subtracting contributing source...'
 
 ;position is in the original postage stamp frame
-            tb = read_sex_table(outpath[idx]+outpre[idx]+out_cat, $
-                                outpath[idx]+outpre[idx]+out_param)
+            tb = read_sex_table(outpath_file[idx,0]+out_cat, $
+                                outpath_file[0,0]+out_param)
+
             itb = where(tb.number EQ table[i_con].number)
 
-            stamp_file = outpath[idx]+outpre[idx]+out_stamps
+            stamp_file = outpath_file_no_band[idx,0]+setup.stampfile
+; stamp_file = outpath[idx]+outpre[idx]+out_stamps
             cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
                              ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
                              n_lines(stamp_file), /no_execute)
             fill_struct, cat, stamp_file
             icat = where(cat.id EQ table[i_con].number)
 
+; here, the sersic profiles are subtracted
             par[0] = par[0]+cat[icat].xlo-1-tb[itb].x_image+ $
                      table[i_con].x_image
             par[1] = par[1]+cat[icat].ylo-1-tb[itb].y_image+ $
                      table[i_con].y_image
 
 ;the total flux of the target
-            ftot = 10.^(-0.4*(par[2]-zero_pt))*exptime
+;+++++++++++++++++
+            ftot = 10.^(-0.4*(par[2]-zero_pt[b]))*exptime[b]
 
             kap = (kappa(par[4]))[0]
             f0 = ftot/(2*!pi*par[3]^2.*exp(kap)*par[4]*kap^(-2.*par[4])* $
@@ -1493,7 +1496,7 @@ stop
    ENDIF
 
 ;write output sky file
-   openw, 1, sky_file
+   openw, 1, sky_file[b]
    printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
            sky_flag
    close, 1
@@ -1515,7 +1518,7 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
 ;   print, systime()
 
    rad = table.a_image*table.kron_radius*scale+offset
-
+stop
    readcol, paramfile, $
             pnum, px, py, pxlo, pxhi, pylo, pyhi, $
             comment = '#', format = 'I,F,F,L,L,L,L', /silent
@@ -2307,6 +2310,14 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
        setup=remove_tags(setup,'stamp_pre')
        add_tag, setup, 'stamp_pre', [hlppre, hlppre], setup2
        setup=setup2
+       hlpzp=setup.zp
+       setup=remove_tags(setup,'zp')
+       add_tag, setup, 'zp', [hlpzp, hlpzp], setup2
+       setup=setup2
+       hlpexp=setup.expt
+       setup=remove_tags(setup,'expt')
+       add_tag, setup, 'expt', [hlpexp, hlpexp], setup2
+       setup=setup2
        delvarx, setup2
        nband=1
 ; wavelength
@@ -2331,11 +2342,9 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
        setup=remove_tags(setup,'stamp_pre')
        add_tag, setup, 'stamp_pre', band, setup2
        setup=setup2
-       delvarx, setup2
        setup=remove_tags(setup,'zp')
        add_tag, setup, 'zp', zeropoint, setup2
        setup=setup2
-       delvarx, setup2
        setup=remove_tags(setup,'expt')
        add_tag, setup, 'expt', exptime, setup2
        setup=setup2
@@ -2354,7 +2363,6 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
        endfor 
    endif
    if ncolf ne 5 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
-stop
 END
 
 FUNCTION read_sersic_results, obj, psf
@@ -2861,8 +2869,9 @@ IF keyword_set(logfile) THEN $
 ; create sav file for gala_bridge to read in
            save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
              sky_file, stamp_param_file, mask_file, im_file, obj_file, $
-             constr_file, out_file, fittab, nband, $
-             orgpath_band, orgpath_pre, orgpath_file, orgpath_file_no_band, $
+             constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
+             outpath_file_no_band, orgpath_file_no_band, $
+             orgpath_band, orgpath_file, $
              filename=out_file+'.sav'
 stop           
             IF setup.max_proc GT 1 THEN BEGIN
@@ -2872,7 +2881,6 @@ stop
                bridge_arr[free[0]]->execute, 'astrolib'
 ;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
                bridge_arr[free[0]]->execute, '.r '+gala_pro
-stop
                bridge_arr[free[0]]->execute, $
                 'gala_bridge, "'+out_file+'.sav"', /nowait
             ENDIF ELSE BEGIN
@@ -3037,13 +3045,14 @@ stop
                         psf_struct, table[current_obj].frame, chosen_psf_file            
             fits_read, chosen_psf_file, psf
 
-            getsky_loop, current_obj, table, rad, im, hd, map, setup.expt, $
-                         setup.zp, setup.neiscl, setup.skyoff, setup.power, $
-                         setup.cut, setup.files, psf, setup.dstep, $
-                         setup.wstep, setup.gap, setup.nslope, sky_file, $
-                         setup.galfit_out, setup.outcat, setup.outparam, $
-                         setup.stampfile, global_sky, global_sigsky, $
-                         setup.convbox, nums, frames, setup.galexe, fittab
+            getsky_loop, setup, current_obj, table, rad, im, hd, map, setup.expt, $
+              setup.zp, setup.neiscl, setup.skyoff, setup.power, $
+              setup.cut, setup.files, psf, setup.dstep, $
+              setup.wstep, setup.gap, setup.nslope, sky_file, $
+              setup.galfit_out, setup.outcat, setup.outparam, $
+              setup.stampfile, global_sky, global_sigsky, $
+              setup.convbox, nums, frames, setup.galexe, fittab, b, $
+              orgpath_pre, outpath_file, outpath_file_no_band
 
             create_mask, table, wht, seg, stamp_param_file, mask_file, $
                          im_file, table[current_obj].frame, current_obj, $

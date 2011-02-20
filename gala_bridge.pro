@@ -2,7 +2,7 @@ PRO gala_bridge, filein
 ;variables provided in filein:
 ;cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
 ;stamp_param_file, mask_file, im_file, obj_file, 
-;constr_file, out_file, fittab, nband
+;constr_file, out_file, fittab, nband, outpath_file
 ;orgpath_band, orgpath_pre, orgpath_file, orgpath_file_no_band
    restore, filein
 
@@ -16,8 +16,6 @@ for b=1,nband do begin
 
 ;image size
    sz_im = (size(im))[1:2]
-
-print, sz_im
 
 ;read segmentation map (needed for excluding neighbouring sources)
    fits_read, orgpath_file[idx,0]+setup.outseg, seg
@@ -62,13 +60,15 @@ print, sz_im
 ; fix getsky_loop
 ; fix contrib_targets
 ; put b to be passed along!
-   getsky_loop, cur, table, rad, im, hd, map, setup.expt, $
-                setup.zp, setup.neiscl, setup.skyoff, setup.power, $
-                setup.cut, setup.files, psf, setup.dstep, $
-                setup.wstep, setup.gap, setup.nslope, sky_file[b], $
-                setup.galfit_out, setup.outcat, setup.outparam, $
-                setup.stampfile, global_sky, global_sigsky, $
-                setup.convbox, nums, frames, setup.galexe, fittab, b
+stop
+   getsky_loop, setup, cur, table, rad, im, hd, map, setup.expt, $
+     setup.zp, setup.neiscl, setup.skyoff, setup.power, $
+     setup.cut, setup.files, psf, setup.dstep, $
+     setup.wstep, setup.gap, setup.nslope, sky_file[b], $
+     setup.galfit_out, setup.outcat, setup.outparam, $
+     setup.stampfile, global_sky, global_sigsky, $
+     setup.convbox, nums, frames, setup.galexe, fittab, b, $
+     orgpath_pre, outpath_file, outpath_file_no_band
 ;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
 stop
    print,table[cur].number
@@ -78,6 +78,7 @@ stop
                 setup.maglim_gal, setup.maglim_star, $
                 setup.stel_slope, setup.stel_zp, objects, corner
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§§§§§§§
+stop
 endfor
    prepare_galfit, objects, setup.files, corner, table, obj_file, $
                    im_file, constr_file, mask_file, chosen_psf_file, $
