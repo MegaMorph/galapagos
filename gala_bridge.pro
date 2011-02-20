@@ -72,7 +72,7 @@ for b=1,nband do begin
 ;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
 ;   print,table[cur].number
    create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
-     im_file[b], table[cur].frame[b], cur, $
+     im_file[b], table[cur].frame[b], cur, $'+SKYG_po+'    '+SKYG_po2+'
      setup.neiscl, setup.skyoff, nums, frames, $   hdr = headfits(im_file[1]+'.fits')
    xmax = sxpar(hdr, 'NAXIS1')
    ymax = sxpar(hdr, 'NAXIS2')
@@ -82,9 +82,9 @@ for b=1,nband do begin
      b
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§§§§§§§
 endfor
-stop
-save, /all, '~/IDL/save.sav'
-restore, '~/IDL/save.sav'
+;stop
+;save, /all, '~/IDL/save.sav'
+;restore, '~/IDL/save.sav'
    prepare_galfit, setup, objects, setup.files, corner, table, obj_file, $
                    im_file, constr_file, mask_file, chosen_psf_file, $
                    out_file, sky_file, setup.convbox, setup.zp, $

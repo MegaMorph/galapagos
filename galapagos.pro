@@ -1749,6 +1749,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
 stop
 ;write obj file header plus sky
    openw, 1, obj_file, width=1000
+; WRITE FILES & STUFF
    printf, 1, '# IMAGE PARAMETERS'
 ;   printf, 1, 'A) '+im_file+'.fits'
    A_po=''
@@ -1759,20 +1760,18 @@ stop
    printf, 1, 'A) '+a_po
    A1_po=''
    FOR b=1,nband DO BEGIN
-       A1_po=A1_po+setup.stamp_pre[b]
+       A1_po=A1_po+strtrim(setup.stamp_pre[b],2)
        if b lt nband then A1_po=A1_po+','
    ENDFOR
    printf, 1, 'A1) '+A1_po+ $
-     '  # Band labels (can be omitted if fitting a single band)'
+     '             # Band labels (can be omitted if fitting a single band)'
    A2_po=''
    FOR b=1,nband DO BEGIN
-       A2_po=A2_po+setup.stamp_pre[b]
+       A2_po=A2_po+strtrim(setup.wavelength[b],2)
        if b lt nband then A2_po=A2_po+','
    ENDFOR
    printf, 1, 'A2) '+A2_pro+ $
-     '  # Band wavelengths (choice of wavelength units is arbitrary, as long as consistent)'
-
-
+     '             # Band wavelengths (choice of wavelength units is arbitrary, as long as consistent)'
 
    printf, 1, 'B) '+out_file+'.fits'
    printf, 1, 'C) none                # Noise image name ' + $
@@ -1787,7 +1786,7 @@ stop
    printf, 1, 'D) '+D_po+' kernel' + $
            ' # Input PSF image and (optional) diffusion kernel'
    printf, 1, 'E) 1                   ' + $
-           '# PSF oversampling factor relative to data'
+           ' # PSF oversampling factor relative to data'
 ;   printf, 1, 'F) '+mask_file+'.fits'
    F_po=''
    FOR b=1,nband DO BEGIN
@@ -1802,8 +1801,15 @@ stop
    printf, 1, 'I) '+round_digit(conv_box, 0, /str)+'   '+ $
            round_digit(conv_box, 0, /str)+ $
            '         # Size of convolution box (x y)'
-   printf, 1, 'J) '+round_digit(zero_pt, 4, /str)+ $
-           '              # Magnitude photometric zeropoint'
+;   printf, 1, 'J) '+round_digit(zero_pt, 4, /str)+ $
+;           '              # Magnitude photometric zeropoint'
+   J_po=''
+   FOR b=1,nband DO BEGIN
+       J_po=J_po+strtrim(round_digit(setup.zp[b],4,/str),2)
+       if b lt nband then J_po=J_po+','
+   ENDFOR
+   printf, 1, 'J) '+J_po+ $
+     '              # Magnitude photometric zeropoint'
    printf, 1, 'K) '+round_digit(plate_scl, 5, /str)+' '+ $
            round_digit(plate_scl, 5, /str)+'           # Plate scale (dx dy).'
    printf, 1, 'O) regular             # Display type (regular, ' + $
@@ -1816,15 +1822,36 @@ stop
    printf, 1, '# sky'
    printf, 1, ''
    printf, 1, ' 0) sky'
-   IF file_test(sky_file) EQ 0 THEN $
-    message, 'sky file corresponding to current object was not found'
-   openr, 2, sky_file
-   readf, 2, sky, dsky, minrad, maxrad, flag
-   close, 2
-   printf, 1, ' 1) '+round_digit(sky, 3, /string)+'     0       ' + $
-           '# sky background       [ADU counts]'
-   printf, 1, ' 2) 0.000      0       # dsky/dx (sky gradient in x)'
-   printf, 1, ' 3) 0.000      0       # dsky/dy (sky gradient in y)'
+; WRITE SKY
+;   printf, 1, ' 1) '+round_digit(sky, 3, /string)+'     0,       ' + $
+;           '# sky background       [ADU counts]'
+   SKY_po=''
+   SKY_po2=''
+   FOR b=1, nband DO BEGIN
+       IF file_test(sky_file[b]) EQ 0 THEN $
+         message, 'sky file corresponding to current object was not found in band '+strtrim(setup.stamp_pre[b],2)
+       openr, 2, sky_file[b]
+       readf, 2, sky, dsky, minrad, maxrad, flag
+       close, 2
+       SKY_po=SKY_po+strtrim(round_digit(sky,3,/string),2)
+       SKY_po2=SKY_po2+'0'
+       if b lt nband then SKY_po=SKY_po+','
+       if b lt nband then SKY_po2=SKY_po2+','
+   ENDFOR
+   printf, 1, ' 1) '+SKY_po+'    '+SKY_po2+ $
+     '          # sky background       [ADU counts]'
+   SKYG_po=''
+   SKYG_po2=''
+;   printf, 1, ' 2) 0.000      0       # dsky/dx (sky gradient in x)'
+;   printf, 1, ' 3) 0.000      0       # dsky/dy (sky gradient in y)'
+   FOR b=1, nband DO BEGIN
+       SKYG_po=SKYG_po+'0.000'
+       SKYG_po2=SKYG_po2+'0'
+       if b lt nband then SKYG_po=SKYG_po+','
+       if b lt nband then SKYG_po2=SKYG_po2+','
+   ENDFOR
+   printf, 1, ' 2) '+SKYG_po+'    '+SKYG_po2+'        # dsky/dx (sky gradient in x)'
+   printf, 1, ' 3) '+SKYG_po+'    '+SKYG_po2+'        # dsky/dy (sky gradient in y)'
    printf, 1, ' Z) 0                  # output image'
    printf, 1, ''
    printf, 1, ''
@@ -2343,6 +2370,8 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
        add_tag, setup, 'stamp_pre', [hlppre, hlppre], setup2
        setup=setup2
        hlpzp=setup.zp
+       add_tag, setup, 'wavelength', [0,0], setup2
+       setup=setup2
        setup=remove_tags(setup,'zp')
        add_tag, setup, 'zp', [hlpzp, hlpzp], setup2
        setup=setup2
@@ -2373,6 +2402,8 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
        cnt=intarr(nband+1)
        setup=remove_tags(setup,'stamp_pre')
        add_tag, setup, 'stamp_pre', band, setup2
+       setup=setup2
+       add_tag, setup, 'wavelength', wavelength, setup2
        setup=setup2
        setup=remove_tags(setup,'zp')
        add_tag, setup, 'zp', zeropoint, setup2
