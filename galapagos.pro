@@ -134,6 +134,7 @@ FUNCTION read_sex_param, file, nrow, no_add = no_add, add_column = add_column
          value = [value, add_column[1, i]]
       ENDFOR
    ENDIF
+stop
 
    return, mrd_struct(label, value, nrow, /no_execute)
 END
@@ -1864,6 +1865,7 @@ stop
    file_root = strmid(file_root, strpos(file_root, '/', /reverse_search)+1, $
                       strlen(file_root))
 ;++++++++++++++++++++++++++++++++++++++++++++++++++
+
    readcol, files, orgim, outpath, outpre, format = 'A,X,A,A', $
             comment = '#', /silent
    outpath = set_trailing_slash(outpath)
@@ -2429,8 +2431,15 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
    if ncolf ne 5 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
 END
 
-FUNCTION read_sersic_results, obj, psf
+FUNCTION read_sersic_results, obj
    IF file_test(obj) THEN BEGIN
+
+
+
+
+
+
+
       hd = headfits(obj, exten = 2)
       mag0 = sxpar(hd, '2_MAG')
       mag = float(strmid(mag0, 0, strpos(mag0, '+/-')))
@@ -2528,6 +2537,104 @@ PRO update_table, fittab, table, i, out_file
       fittab[i].chi2nu_galfit = res[20]
   ENDIF
 END
+;******************* OLD VERSIONS *********************************************
+;******************************************************************************
+;FUNCTION read_sersic_results, obj, psf
+;   IF file_test(obj) THEN BEGIN
+;      hd = headfits(obj, exten = 2)
+;      mag0 = sxpar(hd, '2_MAG')
+;      mag = float(strmid(mag0, 0, strpos(mag0, '+/-')))
+;      magerr = float(strmid(mag0, strpos(mag0, '+/-')+3, strlen(mag0)))
+;      re0 = sxpar(hd, '2_RE')
+;      re = float(strmid(re0, 0, strpos(re0, '+/-')))
+;      reerr = float(strmid(re0, strpos(re0, '+/-')+3, strlen(re0)))
+;      n0 = sxpar(hd, '2_N')
+;      n = float(strmid(n0, 0, strpos(n0, '+/-')))
+;      nerr = float(strmid(n0, strpos(n0, '+/-')+3, strlen(n0)))
+;      q0 = sxpar(hd, '2_AR')
+;      q = float(strmid(q0, 0, strpos(q0, '+/-')))
+;      qerr = float(strmid(q0, strpos(q0, '+/-')+3, strlen(q0)))
+;      pa0 = sxpar(hd, '2_PA')
+;      pa = float(strmid(pa0, 0, strpos(pa0, '+/-')))
+;      paerr = float(strmid(pa0, strpos(pa0, '+/-')+3, strlen(pa0)))
+;      x0 = sxpar(hd, '2_XC')
+;      x = float(strmid(x0, 0, strpos(x0, '+/-')))
+;      xerr = float(strmid(x0, strpos(x0, '+/-')+3, strlen(x0)))
+;      y0 = sxpar(hd, '2_YC')
+;      y = float(strmid(y0, 0, strpos(y0, '+/-')))
+;      yerr = float(strmid(y0, strpos(y0, '+/-')+3, strlen(y0)))
+;      s0 = sxpar(hd, '1_SKY')
+;      sky = float(strmid(s0, 1, strpos(s0, ']')))
+;      psf0 = sxpar(hd, 'PSF') 
+;      psf= strtrim(psf0, 2)
+;; find number of neighbors
+;      comp=0
+;      repeat comp = comp +1 until sxpar(hd, 'COMP_'+strtrim(comp,2)) eq '0'
+;      neigh_galfit = comp-3
+;      chisq_galfit = float(strmid(sxpar(hd, 'CHISQ'),2)) 
+;      ndof_galfit = float(strmid(sxpar(hd, 'NDOF'),2))
+;      nfree_galfit = float(strmid(sxpar(hd, 'NFREE'),2))
+;      nfix_galfit = float(strmid(sxpar(hd, 'NFIX'),2))
+;      chi2nu_galfit = float(strmid(sxpar(hd, 'CHI2NU'),2))
+;   ENDIF ELSE BEGIN
+;      mag = -999
+;      magerr = 99999
+;      re = -1
+;      reerr = 99999
+;      n = -1
+;      nerr = 99999
+;      q = -1
+;      qerr = 99999
+;      pa = 0
+;      paerr = 99999
+;      x = 0
+;      xerr = 99999
+;      y = 0
+;      yerr = 99999
+;      sky = -999
+;      neigh_galfit = -99
+;      chisq_galfit = -99
+;      ndof_galfit = -99
+;      nfree_galfit = -99
+;      nfix_galfit = -99
+;      chi2nu_galfit = -99
+;      psf='none'
+;   ENDELSE
+;   return, [mag, magerr, re, reerr, n, nerr, q, qerr, pa, paerr, $
+;            x, xerr, y, yerr, sky, neigh_galfit, chisq_galfit, ndof_galfit, $
+;            nfree_galfit, nfix_galfit, chi2nu_galfit]
+;END
+;PRO update_table, fittab, table, i, out_file
+;   IF file_test(out_file) THEN BEGIN
+;      fittab[i].org_image = table[i].frame
+;      res = read_sersic_results(out_file,psf)
+;      idx0 = where(finite(res) NE 1, ct)
+;      IF ct GT 0 THEN res[idx0] = -99999.
+;      fittab[i].file_galfit = out_file
+;      fittab[i].x_galfit = res[10]
+;      fittab[i].xerr_galfit = res[11]
+;      fittab[i].y_galfit = res[12]
+;      fittab[i].yerr_galfit = res[13]
+;      fittab[i].mag_galfit = res[0]
+;      fittab[i].magerr_galfit = res[1]
+;      fittab[i].re_galfit = res[2]
+;      fittab[i].reerr_galfit = res[3]
+;      fittab[i].n_galfit = res[4]
+;      fittab[i].nerr_galfit = res[5]
+;      fittab[i].q_galfit = res[6]
+;      fittab[i].qerr_galfit = res[7]
+;      fittab[i].pa_galfit = res[8]
+;      fittab[i].paerr_galfit = res[9]
+;      fittab[i].sky_galfit = res[14]
+;      fittab[i].psf_galfit = psf
+;      fittab[i].neigh_galfit = res[15]
+;      fittab[i].chisq_galfit = res[16]
+;      fittab[i].ndof_galfit = res[17]
+;      fittab[i].nfree_galfit = res[18]
+;      fittab[i].nfix_galfit = res[19]
+;      fittab[i].chi2nu_galfit = res[20]
+;  ENDIF
+;END
 ;******************************************************************************
 ;******************************************************************************
 
@@ -2783,6 +2890,7 @@ IF keyword_set(logfile) THEN $
 
       fittab = read_sex_param(outpath_file[0,0]+setup.outparam, nbr, $
                               add_column = addcol)
+stop
       struct_assign, table, fittab
       fittab.mag_galfit = 999
       fittab.re_galfit = -1
@@ -3161,7 +3269,7 @@ stop
       readcol, setup.files, orgim, orgwht, orgpath, orgpre, $
                format = 'A,A,A,A', comment = '#', /silent
       orgpath = set_trailing_slash(orgpath)
-print,' '
+      print,' '
       FOR i=0ul, ntab-1 DO BEGIN
 ;         IF (i MOD 1000) EQ 0 THEN print, i, ntab
          statusline, ' reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)

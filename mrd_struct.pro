@@ -76,6 +76,8 @@
 ;       Restore EXECUTE limit (sigh...), added NO_EXECUTE keyword
 ;                         W. Landsman July 2004
 ;       Fix use of STRUCTYP with /NO_EXECUTE  W. Landsman June 2005
+;       Add the possibility to create string arrays (strarr(x))
+;                                                 B. Haeussler Feb 2011
 ;-
 
 ; Check that the number of names is the same as the number of values.
@@ -120,6 +122,7 @@ if noexecute then begin
 		dimen_string = gettok(value,')')	
 		dimen = long(strsplit(dimen_string,',',/extract))
 		case type of
+		    'strarr': v = make_array(dimen=dimen,/string)
 		    'bytarr': v = make_array(dimen=dimen,/byte)
 		    'intarr': v = make_array(dimen=dimen,/int)
 		    'fltarr': v = make_array(dimen=dimen,/float)
