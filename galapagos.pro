@@ -1839,7 +1839,7 @@ stop
        if b lt nband then SKY_po2=SKY_po2+','
    ENDFOR
    printf, 1, ' 1) '+SKY_po+'    '+SKY_po2+ $
-     '          # sky background       [ADU counts]'
+     '  band        # sky background       [ADU counts]'
    SKYG_po=''
    SKYG_po2=''
 ;   printf, 1, ' 2) 0.000      0       # dsky/dx (sky gradient in x)'
@@ -1850,6 +1850,7 @@ stop
        if b lt nband then SKYG_po=SKYG_po+','
        if b lt nband then SKYG_po2=SKYG_po2+','
    ENDFOR
+; add BAND here and there!!!
    printf, 1, ' 2) '+SKYG_po+'    '+SKYG_po2+'        # dsky/dx (sky gradient in x)'
    printf, 1, ' 3) '+SKYG_po+'    '+SKYG_po2+'        # dsky/dy (sky gradient in y)'
    printf, 1, ' Z) 0                  # output image'
@@ -1859,10 +1860,10 @@ stop
 
 ;find the GALFIT output file for the current contributing source
    num_current = round_digit(table[current].number, 0, /str)
-   file_root = strmid(out_file, 0, strlen(out_file)-strlen(num_current))
+   file_root = strmid(out_file, 0, strlen(out_file)-strlen(setup.galfit_out)-1)
    file_root = strmid(file_root, strpos(file_root, '/', /reverse_search)+1, $
                       strlen(file_root))
-
+;++++++++++++++++++++++++++++++++++++++++++++++++++
    readcol, files, orgim, outpath, outpre, format = 'A,X,A,A', $
             comment = '#', /silent
    outpath = set_trailing_slash(outpath)
@@ -2988,7 +2989,7 @@ stop
       ENDIF
 
 ;stop
-;++++++++++++++++++++++++++++++++++++
+;DONE TO HERE, OTHER THAN READING_IN AND UPDATE_TABLE++++++++++++++++++++++++++++++++++++
 ;==============================================================================
 ;==============================================================================
 ;read in batch list
