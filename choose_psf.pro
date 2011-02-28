@@ -17,8 +17,9 @@ pro choose_psf, obj_ra, obj_dec, psf_struct, tile, chosen_psf_file, nband
       
 ; if psf is given in ra,dec
       if strtrim(psf_struct[0].type[q],2) eq 'closest' then begin     
+          ord=0
           valid = where(strtrim(psf_struct.psffile[q],2) ne '')
-          gcirc, 1, psf_struct[valid].ra/15., psf_struct[valid].dec, obj_ra/15., obj_dec, dist
+          gcirc, 1, psf_struct[valid].ra[q]/15., psf_struct[valid].dec[q], obj_ra/15., obj_dec, dist
           ord = sort(dist)
           chosen_psf_file[q] = strtrim(psf_struct[valid[ord[0]]].psffile[q],2)
       endif

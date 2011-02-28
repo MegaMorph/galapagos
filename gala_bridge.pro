@@ -4,6 +4,7 @@ PRO gala_bridge, filein
 ;stamp_param_file, mask_file, im_file, obj_file, 
 ;constr_file, out_file, fittab, nband, outpath_file
 ;orgpath_band, orgpath_pre, orgpath_file, orgpath_file_no_band
+stop
    restore, filein
 
    table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
@@ -79,17 +80,17 @@ for b=1,nband do begin
      b
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§§§§§§§
 endfor
-;stop
-;save, /all, '~/IDL/save.sav'
-restore, '~/IDL/save.sav'
-stop 
+stop
+save, /all, filename='/home/boris/IDL/bridge_save.sav'
+restore, '/home/boris/IDL/bridge_save.sav'
   prepare_galfit, setup, objects, setup.files, corner, table, obj_file, $
                    im_file, constr_file, mask_file, chosen_psf_file, $
                    out_file, sky_file, setup.convbox, setup.zp, $
                    setup.platescl, nums, frames, cur, $
                    setup.outcat, setup.outparam, setup.stampfile, $
                    setup.conmaxre, setup.conminm, setup.conmaxm, $
-                   fittab, setup.version, nband;, n_constrained = n_constrained
+                   fittab, setup.version, nband, orgpre;, n_constrained = n_constrained
+stop
 ;spawn, 'touch '+filein+'.preparegalfit';§§§§§§§§§§§§§§§§§§§§§§
 
 ;spawn the script

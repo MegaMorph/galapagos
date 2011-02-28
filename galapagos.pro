@@ -1,4 +1,4 @@
-
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ;==============================================================================
@@ -134,7 +134,6 @@ FUNCTION read_sex_param, file, nrow, no_add = no_add, add_column = add_column
          value = [value, add_column[1, i]]
       ENDFOR
    ENDIF
-stop
 
    return, mrd_struct(label, value, nrow, /no_execute)
 END
@@ -1167,9 +1166,9 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
    ENDIF ELSE BEGIN
 ;contributing sources FOUND----------------------------------------------------
 ; FIX THIS DO BE USING THE SOURCES FOUND IN REFERENCE BAND!
-       read_image_files, setup, orgim, xxx, outpath, outpath_bandxxx, outpre, $
+       read_image_files, setup, orgim, weightxxx, outpath, outpath_bandxxx, outpre, $
          nbandxxx, /silent
-       delvarx, xxx, outpath_bandxxx, nbandxxx
+       delvarx, weightxxx, outpath_bandxxx, nbandxxx
 ;       readcol, files, orgim, outpath, outpre, format = 'A,X,A,A', $
 ;               comment = '#', /silent
        outpath = set_trailing_slash(outpath)
@@ -1196,7 +1195,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
          idx = where(orgim[*,1] EQ table[i_con].frame[1])
 
          objnum = round_digit(table[i_con].number, 0, /str)
-         current_contrib_file = outpath[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out
+         current_contrib_file = outpath[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out
 
          IF file_test(current_contrib_file) THEN BEGIN
 ;a GALFIT result exists for the current contributing source--------------------
@@ -1711,10 +1710,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
                     conv_box, zero_pt, plate_scl, num_contrib, frame_contrib, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
                     conminm, conmaxm, fit_table, setup_version, nband, $
-                    n_constrained = n_constrained
-
-   setup_version = 3
-
+                    outpre, n_constrained = n_constrained
+   setup_version = 4
 ;objects contains an index of secondary sources
 
 ;in the case of contributing sources, the TABLE is changed, so keep a
@@ -1747,7 +1744,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
       printf, 1, j, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
    ENDFOR
    close, 1
-stop
+
 ;write obj file header plus sky
    openw, 1, obj_file, width=1000
 ; WRITE FILES & STUFF
@@ -1771,7 +1768,7 @@ stop
        A2_po=A2_po+strtrim(setup.wavelength[b],2)
        if b lt nband then A2_po=A2_po+','
    ENDFOR
-   printf, 1, 'A2) '+A2_pro+ $
+   printf, 1, 'A2) '+A2_po+ $
      '             # Band wavelengths (choice of wavelength units is arbitrary, as long as consistent)'
 
    printf, 1, 'B) '+out_file+'.fits'
@@ -1859,16 +1856,25 @@ stop
    printf, 1, ''
    close, 1
 
+   read_image_files, setup, orgim, orgweights, outpath, outpath_band, outpre, $
+     nbandxxx
+   delvarx, nbandxxx
+; ALL NEEDED??
+   outpath = set_trailing_slash(outpath) 
+   outpath_galfit = outpath[*,0]+setup.galfit_out_path
+;   outpath_band = set_trailing_slash(outpath_band)
+;   outpath_pre = outpath_band+outpre
+;   outpath_file = outpath
+;   for q=0,nband do outpath_file[*,q]=outpath_pre[*,q]+strtrim(setup.stamp_pre[q],2)+'.'
+;   outpath_file_no_band = outpath
+;   for q=0,nband do outpath_file_no_band[*,q]=outpath[*,q]+outpre[*,q]
+
 ;find the GALFIT output file for the current contributing source
    num_current = round_digit(table[current].number, 0, /str)
-   file_root = strmid(out_file, 0, strlen(out_file)-strlen(setup.galfit_out)-1)
-   file_root = strmid(file_root, strpos(file_root, '/', /reverse_search)+1, $
-                      strlen(file_root))
-;++++++++++++++++++++++++++++++++++++++++++++++++++
-
-   readcol, files, orgim, outpath, outpre, format = 'A,X,A,A', $
-            comment = '#', /silent
-   outpath = set_trailing_slash(outpath)
+;   file_root = strmid(out_file, 0, $
+;                      strlen(out_file)-strlen(setup.galfit_out)-strlen(strtrim(table[current].number,2))-1)
+;   file_root = strmid(file_root, strpos(file_root, '/', /reverse_search)+1, $
+;                      strlen(file_root))
 
 ;find the faintest source with proper magnitude measurement (non 99) and
 ;correct 99 sources
@@ -1882,11 +1888,13 @@ stop
 
 ;loop over all (primary & secondary) sources
    FOR i=0ul, n_elements(objects)-1 DO BEGIN
-      idx = where(orgim EQ table[objects[i]].frame, ct)
-      secout_file = outpath[idx]+file_root+ $
-                    round_digit(table[objects[i]].number, 0, /str)+'.fits'
+      idx = where(orgim[*,0] EQ table[objects[i]].frame[0], ct)
+      secout_file = outpath_galfit[idx]+outpre[idx,1]+ $
+                    round_digit(table[objects[i]].number, 0, /str)+'_'+strtrim(setup.galfit_out,2)+'.fits'
+
       IF file_test(secout_file) THEN BEGIN
 ;sources with existing fit will be included as static source
+stop
          par = read_galfit_sersic(secout_file)
 
 ;problem: position from GALFIT is relative to original postage
@@ -2373,8 +2381,10 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
        add_tag, setup, 'stamp_pre', [hlppre, hlppre], setup2
        setup=setup2
        hlpzp=setup.zp
-       add_tag, setup, 'wavelength', [0,0], setup2
-       setup=setup2
+       if not tag_exist(setup, 'wavelength') then begin
+           add_tag, setup, 'wavelength', [0,0], setup2
+           setup=setup2
+       endif
        setup=remove_tags(setup,'zp')
        add_tag, setup, 'zp', [hlpzp, hlpzp], setup2
        setup=setup2
@@ -2406,8 +2416,12 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
        setup=remove_tags(setup,'stamp_pre')
        add_tag, setup, 'stamp_pre', band, setup2
        setup=setup2
-       add_tag, setup, 'wavelength', wavelength, setup2
-       setup=setup2
+       if not tag_exist(setup, 'wavelength') then begin
+; setup=remove_tags(setup,'wavelength')
+           add_tag, setup, 'wavelength', wavelength, setup2
+           setup=setup2
+       endif
+
        setup=remove_tags(setup,'zp')
        add_tag, setup, 'zp', zeropoint, setup2
        setup=setup2
@@ -2431,84 +2445,105 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
    if ncolf ne 5 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
 END
 
-FUNCTION read_sersic_results, obj
+FUNCTION read_sersic_results, obj, nband
    IF file_test(obj) THEN BEGIN
-
-
-
-
-
-
-
-      hd = headfits(obj, exten = 2)
-      mag0 = sxpar(hd, '2_MAG')
-      mag = float(strmid(mag0, 0, strpos(mag0, '+/-')))
-      magerr = float(strmid(mag0, strpos(mag0, '+/-')+3, strlen(mag0)))
-      re0 = sxpar(hd, '2_RE')
-      re = float(strmid(re0, 0, strpos(re0, '+/-')))
-      reerr = float(strmid(re0, strpos(re0, '+/-')+3, strlen(re0)))
-      n0 = sxpar(hd, '2_N')
-      n = float(strmid(n0, 0, strpos(n0, '+/-')))
-      nerr = float(strmid(n0, strpos(n0, '+/-')+3, strlen(n0)))
-      q0 = sxpar(hd, '2_AR')
-      q = float(strmid(q0, 0, strpos(q0, '+/-')))
-      qerr = float(strmid(q0, strpos(q0, '+/-')+3, strlen(q0)))
-      pa0 = sxpar(hd, '2_PA')
-      pa = float(strmid(pa0, 0, strpos(pa0, '+/-')))
-      paerr = float(strmid(pa0, strpos(pa0, '+/-')+3, strlen(pa0)))
-      x0 = sxpar(hd, '2_XC')
-      x = float(strmid(x0, 0, strpos(x0, '+/-')))
-      xerr = float(strmid(x0, strpos(x0, '+/-')+3, strlen(x0)))
-      y0 = sxpar(hd, '2_YC')
-      y = float(strmid(y0, 0, strpos(y0, '+/-')))
-      yerr = float(strmid(y0, strpos(y0, '+/-')+3, strlen(y0)))
-      s0 = sxpar(hd, '1_SKY')
-      sky = float(strmid(s0, 1, strpos(s0, ']')))
-      psf0 = sxpar(hd, 'PSF') 
-      psf= strtrim(psf0, 2)
-; find number of neighbors
-      comp=0
-      repeat comp = comp +1 until sxpar(hd, 'COMP_'+strtrim(comp,2)) eq '0'
-      neigh_galfit = comp-3
-      chisq_galfit = float(strmid(sxpar(hd, 'CHISQ'),2)) 
-      ndof_galfit = float(strmid(sxpar(hd, 'NDOF'),2))
-      nfree_galfit = float(strmid(sxpar(hd, 'NFREE'),2))
-      nfix_galfit = float(strmid(sxpar(hd, 'NFIX'),2))
-      chi2nu_galfit = float(strmid(sxpar(hd, 'CHI2NU'),2))
+; obj='~/megamorph_dev/astro-megamorph/galfit/EXAMPLE/imgblock.fits'
+       result=mrdfits(obj, 'FINAL_BAND',/silent)
+       res_cheb=mrdfits(obj, 'FINAL_CHEB',/silent)
+       hd = headfits(obj, exten = nband+1)
+       comp=1
+       repeat comp = comp +1 until tag_exist(result, '_'+strtrim(comp,2)+'_MAG') eq 0
+; delete feedback, just in case the format of one is different,
+; avoiding crash
+       delvarx, feedback
+       feedback = create_struct('mag_galfit', result[0]._2_MAG, 'magerr_galfit',result[0]._2_MAG_ERR, $
+                                're_galfit', result[0]._2_RE, 'reerr_galfit', result[0]._2_RE_ERR, $
+                                'n_galfit', result[0]._2_N, 'nerr_galfit' ,result[0]._2_N_ERR, $
+                                'q_galfit', result[0]._2_AR, 'qerr_galfit', result[0]._2_AR_ERR, $
+                                'pa_galfit', result[0]._2_PA, 'paerr_galfit', result[0]._2_PA_ERR, $
+                                'x_galfit', result[0]._2_XC, 'xerr_galfit', result[0]._2_XC_ERR, $
+                                'y_galfit', result[0]._2_YC, 'yerr_galfit', result[0]._2_YC_ERR, $
+; adapt PSF
+                                'psf_galfit', strtrim(sxpar(hd, 'PSF_A'),2), $
+                                'mag_galfit_band', result._2_MAG, 'magerr_galfit_band',result._2_MAG_ERR, $
+                                're_galfit_band', result._2_RE, 'reerr_galfit_band', result._2_RE_ERR, $
+                                'n_galfit_band', result._2_N, 'nerr_galfit_band' ,result._2_N_ERR, $
+                                'q_galfit_band', result._2_AR, 'qerr_galfit_band', result._2_AR_ERR, $
+                                'pa_galfit_band', result._2_PA, 'paerr_galfit_band', result._2_PA_ERR, $
+                                'x_galfit_band', result._2_XC, 'xerr_galfit_band', result._2_XC_ERR, $
+                                'y_galfit_band', result._2_YC, 'yerr_galfit_band', result._2_YC_ERR, $
+                                'mag_galfit_cheb', res_cheb._2_MAG, 'magerr_galfit_cheb',res_cheb._2_MAG_ERR, $
+                                're_galfit_cheb', res_cheb._2_RE, 'reerr_galfit_cheb', res_cheb._2_RE_ERR, $
+                                'n_galfit_cheb', res_cheb._2_N, 'nerr_galfit_cheb' ,res_cheb._2_N_ERR, $
+                                'q_galfit_cheb', res_cheb._2_AR, 'qerr_galfit_cheb', res_cheb._2_AR_ERR, $
+                                'pa_galfit_cheb', res_cheb._2_PA, 'paerr_galfit_cheb', res_cheb._2_PA_ERR, $
+                                'x_galfit_cheb', res_cheb._2_XC, 'xerr_galfit_cheb', res_cheb._2_XC_ERR, $
+                                'y_galfit_cheb', res_cheb._2_YC, 'yerr_galfit_cheb', res_cheb._2_YC_ERR, $
+; PSF_BAND HAS TO BE ADAPTED!!
+                                'psf_galfit_band', strtrim(sxpar(hd, 'PSF'), 2), $
+                                'chisq_galfit', float(strmid(sxpar(hd, 'CHISQ'),2)), $
+                                'ndof_galfit', float(strmid(sxpar(hd, 'NDOF'),2)), $
+                                'nfree_galfit', float(strmid(sxpar(hd, 'NFREE'),2)), $
+                                'nfix_galfit', float(strmid(sxpar(hd, 'NFIX'),2)), $
+                                'chi2nu_galfit', float(strmid(sxpar(hd, 'CHI2NU'),2)), $
+; TO BE ADDED:
+; #iterations, time
+; NEIGH_GALFIT HAS TO BE ADAPTED!
+                                'neigh_galfit', comp-3)
    ENDIF ELSE BEGIN
-      mag = -999
-      magerr = 99999
-      re = -1
-      reerr = 99999
-      n = -1
-      nerr = 99999
-      q = -1
-      qerr = 99999
-      pa = 0
-      paerr = 99999
-      x = 0
-      xerr = 99999
-      y = 0
-      yerr = 99999
-      sky = -999
-      neigh_galfit = -99
-      chisq_galfit = -99
-      ndof_galfit = -99
-      nfree_galfit = -99
-      nfix_galfit = -99
-      chi2nu_galfit = -99
-      psf='none'
+       psf=strarr(nband)
+       for n=0,nband-1 do psf[n]='none'
+
+      feedback = create_struct('mag_galfit', -999, 'magerr_galfit',99999, $
+                                're_galfit', -999, 'reerr_galfit', 99999, $
+                                'n_galfit', -999, 'nerr_galfit' ,99999, $
+                                'q_galfit', -999, 'qerr_galfit', 99999, $
+                                'pa_galfit', -999, 'paerr_galfit', 99999, $
+                                'x_galfit', -999, 'xerr_galfit', 99999, $
+                                'y_galfit', -999, 'yerr_galfit', 99999, $
+                                'psf_galfit', 'none', $
+                                'mag_galfit_band', fltarr(nband)-999, 'magerr_galfit_band',fltarr(nband)+99999, $
+                                're_galfit_band', fltarr(nband)-999, 'reerr_galfit_band', fltarr(nband)+99999, $
+                                'n_galfit_band', fltarr(nband)-999, 'nerr_galfit_band' ,fltarr(nband)+99999, $
+                                'q_galfit_band', fltarr(nband)-999, 'qerr_galfit_band', fltarr(nband)+99999, $
+                                'pa_galfit_band', fltarr(nband)-999, 'paerr_galfit_band', fltarr(nband)+99999, $
+                                'x_galfit_band', fltarr(nband)-999, 'xerr_galfit_band', fltarr(nband)+99999, $
+                                'y_galfit_band', fltarr(nband)-999, 'yerr_galfit_band', fltarr(nband)+99999, $
+                                'mag_galfit_chev', fltarr(nband)-999, 'magerr_galfit_chev',fltarr(nband)+99999, $
+                                're_galfit_chev', fltarr(nband)-999, 'reerr_galfit_chev', fltarr(nband)+99999, $
+                                'n_galfit_chev', fltarr(nband)-999, 'nerr_galfit_chev' ,fltarr(nband)+99999, $
+                                'q_galfit_chev', fltarr(nband)-999, 'qerr_galfit_chev', fltarr(nband)+99999, $
+                                'pa_galfit_chev', fltarr(nband)-999, 'paerr_galfit_chev', fltarr(nband)+99999, $
+                                'x_galfit_chev', fltarr(nband)-999, 'xerr_galfit_chev', fltarr(nband)+99999, $
+                                'y_galfit_chev', fltarr(nband)-999, 'yerr_galfit_chev', fltarr(nband)+99999, $
+; PSF_BAND HAS TO BE ADAPTED!!
+                                'psf_galfit_band', psf, $
+                                'chisq_galfit', -99, $
+                                'ndof_galfit', -99, $
+                                'nfree_galfit', -99, $
+                                'nfix_galfit', -99, $
+                                'chi2nu_galfit', -99, $
+; TO BE ADDED:
+; #iterations, time
+; NEIGH_GALFIT HAS TO BE ADAPTED!
+                                'neigh_galfit', -99)
    ENDELSE
-   return, [mag, magerr, re, reerr, n, nerr, q, qerr, pa, paerr, $
-            x, xerr, y, yerr, sky, neigh_galfit, chisq_galfit, ndof_galfit, $
-            nfree_galfit, nfix_galfit, chi2nu_galfit]
+   return, feedback
+;[mag, magerr, re, reerr, n, nerr, q, qerr, pa, paerr, $
+;            x, xerr, y, yerr, sky, neigh_galfit, chisq_galfit, ndof_galfit, $
+;            nfree_galfit, nfix_galfit, chi2nu_galfit]
 END
 
-;******************************************************************************
-;******************************************************************************
 PRO update_table, fittab, table, i, out_file
+; THIS WHOLE ROUTINE HAS TO BE CHANGED AS THE TABLE FORMAT HAS BEEN
+; CHANGED SEVERELY!!!! MULTI_BAND AND POSSIBILITY FOR B/D
+; DECOMPOSITION
+; REMEMBER TO STORE SOME VALUES TWICE!!!
    IF file_test(out_file) THEN BEGIN
+stop
       fittab[i].org_image = table[i].frame
+; TO USE:    struct_assign,ah, test,/nozero 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
       res = read_sersic_results(out_file,psf)
       idx0 = where(finite(res) NE 1, ct)
       IF ct GT 0 THEN res[idx0] = -99999.
@@ -2603,6 +2638,12 @@ END
 ;   return, [mag, magerr, re, reerr, n, nerr, q, qerr, pa, paerr, $
 ;            x, xerr, y, yerr, sky, neigh_galfit, chisq_galfit, ndof_galfit, $
 ;            nfree_galfit, nfix_galfit, chi2nu_galfit]
+;
+;;; read_galfit_sersic returns different format
+;;    return, [x, y, mag, re, n, q, pa, s, $
+;;             xerr, yerr, magerr, reerr, nerr, qerr, paerr]
+;;  ENDIF ELSE return, -1
+;
 ;END
 ;PRO update_table, fittab, table, i, out_file
 ;   IF file_test(out_file) THEN BEGIN
@@ -2890,12 +2931,15 @@ IF keyword_set(logfile) THEN $
 
       fittab = read_sex_param(outpath_file[0,0]+setup.outparam, nbr, $
                               add_column = addcol)
-stop
       struct_assign, table, fittab
       fittab.mag_galfit = 999
+      fittab.mag_galfit_band = fltarr(nband)+999
       fittab.re_galfit = -1
+      fittab.re_galfit_band = fltarr(nband)-1
       fittab.n_galfit = -1
+      fittab.n_galfit_band = fltarr(nband)-1
       fittab.q_galfit = -1
+      fittab.q_galfit_band = fltarr(nband)-1
 
       mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
 ;find the image files for the sources
@@ -3018,26 +3062,26 @@ stop
             objnum = round_digit(table[cur].number, 0, /str)
 ;galfit masks
             mask_file = strarr(nband+1)
-            for q=1,nband do mask_file[q] = (outpath_galfit[idx,0]+outpre[idx,0]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
+            for q=1,nband do mask_file[q] = (outpath_galfit[idx,0]+outpre[idx,1]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
 ;galfit obj file
-            obj_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.obj)[0]
+            obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
 ;galfit constraint file
-            constr_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.constr)[0]
+            constr_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.constr)[0]
 ;galfit input file
             im_file = strarr(nband+1)
             for q=1,nband do im_file[q] = (orgpath_pre[idx,q]+objnum+'_'+setup.stamp_pre[q])[0]
 ;galfit output path
-            out_file = (outpath[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out)[0]
+            out_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out)[0]
 ;sky summary file
             sky_file = strarr(nband+1)
-            for q=1,nband do sky_file[q] = (outpath_galfit[idx,0]+outpre[idx,0]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+            for q=1,nband do sky_file[q] = (outpath_galfit[idx,0]+outpre[idx,1]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
 
 ; choose closest PSF according to RA & DEC and subtract filename from
 ; structure 'psf_struct'
 ; read in chosen_psf into 'psf' (???), filename in chosen_psf_file   
            choose_psf, table[cur].alpha_j2000, table[cur].delta_j2000, $
                         psf_struct, table[cur].frame, chosen_psf_file, nband
- 
+
 ; create sav file for gala_bridge to read in
            save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
              sky_file, stamp_param_file, mask_file, im_file, obj_file, $
@@ -3085,8 +3129,8 @@ stop
 ;            out_file = (orgpath[idx]+orgpre[idx]+ $
 ;                        setup.galfit_out+objnum)[0]+'.fits'
 ;            obj_file = (orgpath[idx]+orgpre[idx]+setup.obj+objnum)[0]
-            obj_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.obj)[0]
-            out_file = (outpath[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out)[0]
+            obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
+            out_file = (outpath[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out)[0]
 
 ;check if file was done successfully or bombed
 ; CHANGE TO NEW READING IN ROUTINE!!!
@@ -3281,6 +3325,7 @@ stop
 
          out[i].org_image = tab[i].tile
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
          res = read_sersic_results(out_file,psf)
          idx = where(finite(res) NE 1, ct)
          IF ct GT 0 THEN res[idx] = -99999.
