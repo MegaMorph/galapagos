@@ -4,7 +4,6 @@ PRO gala_bridge, filein
 ;stamp_param_file, mask_file, im_file, obj_file, 
 ;constr_file, out_file, fittab, nband, outpath_file
 ;orgpath_band, orgpath_pre, orgpath_file, orgpath_file_no_band
-stop
    restore, filein
 
    table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
@@ -78,11 +77,12 @@ for b=1,nband do begin
      setup.maglim_gal, setup.maglim_star, $
      setup.stel_slope, setup.stel_zp, objects, corner, $
      b
-;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§§§§§§§
+;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§tile10_5/t10_5.3416_obj§§§§§§
 endfor
-stop
-save, /all, filename='/home/boris/IDL/bridge_save.sav'
-restore, '/home/boris/IDL/bridge_save.sav'
+;stop
+;save, /all, filename='/home/boris/IDL/bridge_save.sav'
+;; .run galapagos.pro
+;restore, '/home/boris/IDL/bridge_save.sav'
   prepare_galfit, setup, objects, setup.files, corner, table, obj_file, $
                    im_file, constr_file, mask_file, chosen_psf_file, $
                    out_file, sky_file, setup.convbox, setup.zp, $
@@ -90,7 +90,6 @@ restore, '/home/boris/IDL/bridge_save.sav'
                    setup.outcat, setup.outparam, setup.stampfile, $
                    setup.conmaxre, setup.conminm, setup.conmaxm, $
                    fittab, setup.version, nband, orgpre;, n_constrained = n_constrained
-stop
 ;spawn, 'touch '+filein+'.preparegalfit';§§§§§§§§§§§§§§§§§§§§§§
 
 ;spawn the script

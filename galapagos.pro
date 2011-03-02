@@ -1711,9 +1711,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
                     conminm, conmaxm, fit_table, setup_version, nband, $
                     outpre, n_constrained = n_constrained
-   setup_version = 4
+;   setup_version = 4
 ;objects contains an index of secondary sources
-
 ;in the case of contributing sources, the TABLE is changed, so keep a
 ;backup copy
    table = table0
@@ -1791,7 +1790,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
        F_po=F_po+strtrim(mask_file[b],2)
        if b lt nband then F_po=F_po+','
    ENDFOR
-   printf, 1, 'F) '+F_po+'.fits'
+   printf, 1, 'F) '+F_po
    printf, 1, 'G) '+constr_file
    printf, 1, 'H) 1 '+strtrim(xmax, 2)+' 1 '+strtrim(ymax, 2)+ $
            '       # Image region to fit (xmin xmax ' + $
@@ -1857,17 +1856,17 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
    close, 1
 
    read_image_files, setup, orgim, orgweights, outpath, outpath_band, outpre, $
-     nbandxxx
+     nbandxxx,/silent
    delvarx, nbandxxx
-; ALL NEEDED??
+; define all paths and names again
    outpath = set_trailing_slash(outpath) 
    outpath_galfit = outpath[*,0]+setup.galfit_out_path
-;   outpath_band = set_trailing_slash(outpath_band)
-;   outpath_pre = outpath_band+outpre
-;   outpath_file = outpath
-;   for q=0,nband do outpath_file[*,q]=outpath_pre[*,q]+strtrim(setup.stamp_pre[q],2)+'.'
-;   outpath_file_no_band = outpath
-;   for q=0,nband do outpath_file_no_band[*,q]=outpath[*,q]+outpre[*,q]
+   outpath_band = set_trailing_slash(outpath_band)
+   outpath_pre = outpath_band+outpre
+   outpath_file = outpath
+   for q=0,nband do outpath_file[*,q]=outpath_pre[*,q]+strtrim(setup.stamp_pre[q],2)+'.'
+   outpath_file_no_band = outpath
+   for q=0,nband do outpath_file_no_band[*,q]=outpath[*,q]+outpre[*,q]
 
 ;find the GALFIT output file for the current contributing source
    num_current = round_digit(table[current].number, 0, /str)
@@ -1880,95 +1879,219 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
 ;correct 99 sources
    nn = where(table[objects].mag_best GT 80, n_nn)
    IF n_nn GT 0 THEN BEGIN
-      good_mag = where(table[objects].mag_best LT 80, ngood_mag)
-      IF ngood_mag EQ 0 THEN table[objects[nn]].mag_best = zero_pt $
-      ELSE $
-       table[objects[nn]].mag_best = max(table[objects[good_mag]].mag_best)+2
+       good_mag = where(table[objects].mag_best LT 80, ngood_mag)
+       IF ngood_mag EQ 0 THEN table[objects[nn]].mag_best = zero_pt $
+       ELSE $
+         table[objects[nn]].mag_best = max(table[objects[good_mag]].mag_best)+2
    ENDIF
-
 ;loop over all (primary & secondary) sources
    FOR i=0ul, n_elements(objects)-1 DO BEGIN
-      idx = where(orgim[*,0] EQ table[objects[i]].frame[0], ct)
-      secout_file = outpath_galfit[idx]+outpre[idx,1]+ $
-                    round_digit(table[objects[i]].number, 0, /str)+'_'+strtrim(setup.galfit_out,2)+'.fits'
+       idx = where(orgim[*,0] EQ table[objects[i]].frame[0], ct)
+       secout_file = outpath_galfit[idx]+outpre[idx,1]+ $
+         round_digit(table[objects[i]].number, 0, /str)+'_'+strtrim(setup.galfit_out,2)+'.fits'
 
-      IF file_test(secout_file) THEN BEGIN
+; for some reason needs this to find read_sersic_results as a
+; function, not a variable. Worked before and still works fine in the
+; command line.
+; Baffled!
+forward_function read_sersic_results
+       IF file_test(secout_file) THEN BEGIN
 ;sources with existing fit will be included as static source
-stop
-         par = read_galfit_sersic(secout_file)
-
+           par = read_sersic_results(secout_file, nband)
+           
 ;problem: position from GALFIT is relative to original postage
 ;stamp. Need to compute offset using SExtractor input for that fit
 ;position is in the original postage stamp frame
-         tb = read_sex_table(outpath[idx]+outpre[idx]+out_cat, $
-                             outpath[idx]+outpre[idx]+out_param)
-         itb = where(tb.number EQ table[objects[i]].number)
-         
-         stamp_file = outpath[idx]+outpre[idx]+out_stamps
-         cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
-                          ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
-                          n_lines(stamp_file), /no_execute)
-         fill_struct, cat, stamp_file
-         icat = where(cat.id EQ table[objects[i]].number)
-         
-         par[0] = par[0]+cat[icat].xlo-1-tb[itb].x_image+ $
-                  table[objects[i]].x_image
-         par[1] = par[1]+cat[icat].ylo-1-tb[itb].y_image+ $
-                  table[objects[i]].y_image
-         
-         fix = ['0', '0', '0', '0', '0', '0', '0']
-      ENDIF ELSE BEGIN
+           tb = read_sex_table(outpath_file[idx,0]+out_cat, $
+                               outpath_file[idx,0]+out_param)
+           itb = where(tb.number EQ table[objects[i]].number)
+           
+           stamp_file = outpath_file_no_band[idx,0]+setup.stampfile
+;         stamp_file = outpath[idx]+outpre[idx]+out_stamps
+           cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
+                            ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
+                            n_lines(stamp_file), /no_execute)
+           fill_struct, cat, stamp_file
+           icat = where(cat.id EQ table[objects[i]].number)
+           
+           par.x_galfit = par.x_galfit+cat[icat].xlo-1-tb[itb].x_image+ $
+             table[objects[i]].x_image
+           par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-1-tb[itb].x_image+ $
+             table[objects[i]].x_image
+           par.y_galfit = par.y_galfit+cat[icat].ylo-1-tb[itb].y_image+ $
+             table[objects[i]].y_image
+           par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-1-tb[itb].y_image+ $
+             table[objects[i]].y_image
+           
+           fix = ['0', '0', '0', '0', '0', '0', '0']
+       ENDIF ELSE BEGIN
 ;sources without fit will be included as free fit
-         par = [table[objects[i]].x_image, table[objects[i]].y_image, $
-                table[objects[i]].mag_best, $
-                10.^(-0.79)*table[objects[i]].flux_radius^1.87, $
-                2.5, 1-table[objects[i]].ellipticity, $
-                table[objects[i]].theta_image-90.]
-         fix = ['1', '1', '1', '1', '1', '1', '1']
-      ENDELSE
 
+; reading in file works, because it returns the correct FORMAT, but
+; with useless values in it. As they will be replaced here, that does
+; not matter
+           par = read_sersic_results(secout_file, nband)
+           par.x_galfit = table[objects[i]].x_image
+           par.x_galfit_band = fltarr(nband)+table[objects[i]].x_image
+           par.x_galfit_cheb = fltarr(nband)
+           par.x_galfit_cheb[0] = table[objects[i]].x_image
+           par.y_galfit = table[objects[i]].y_image
+           par.y_galfit_band = fltarr(nband)+table[objects[i]].y_image
+           par.y_galfit_cheb = fltarr(nband)
+           par.y_galfit_cheb[0] = table[objects[i]].y_image
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
+           par.mag_galfit = table[objects[i]].mag_best
+           par.mag_galfit_band = fltarr(nband)+table[objects[i]].mag_best
+           par.mag_galfit_cheb = fltarr(nband)
+           par.mag_galfit_cheb[0] = table[objects[i]].mag_best
+           par.re_galfit = 10.^(-0.79)*table[objects[i]].flux_radius^1.87
+           par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[objects[i]].flux_radius^1.87
+           par.re_galfit_cheb = fltarr(nband)
+           par.re_galfit_cheb[0] = 10.^(-0.79)*table[objects[i]].flux_radius^1.87
+           par.n_galfit = 2.5
+           par.n_galfit_band = fltarr(nband)+2.5
+           par.n_galfit_cheb = fltarr(nband)
+           par.n_galfit_cheb[0] = 2.5
+           par.q_galfit = 1-table[objects[i]].ellipticity
+           par.q_galfit_band = fltarr(nband)+1-table[objects[i]].ellipticity
+           par.q_galfit_cheb = fltarr(nband)
+           par.q_galfit_cheb[0] = 1-table[objects[i]].ellipticity
+           par.pa_galfit = table[objects[i]].theta_image-90.
+           par.pa_galfit_band = fltarr(nband)+table[objects[i]].theta_image-90.
+           par.pa_galfit_cheb = fltarr(nband)
+           par.pa_galfit_cheb[0] = table[objects[i]].theta_image-90.
+           
+;; old version, will NOT work, because no structure!
+;         par = [table[objects[i]].x_image, table[objects[i]].y_image, $
+;                table[objects[i]].mag_best, $
+;                10.^(-0.79)*table[objects[i]].flux_radius^1.87, $
+;                2.5, 1-table[objects[i]].ellipticity, $
+;                table[objects[i]].theta_image-90.]
+           fix = ['1', '1', '1', '1', '1', '1', '1']
+       ENDELSE
+       
 ;if the source position is off the frame: fix the position, PA and q
-      IF table[objects[i]].x_image-corner[0] LT 1 OR $
-       table[objects[i]].x_image-corner[0] GT xmax OR $
-       table[objects[i]].y_image-corner[1] LT 1 OR $
-       table[objects[i]].y_image-corner[1] GT ymax THEN BEGIN
-         fix[0] = '0' & fix[1] = '0' & fix[5] = '0' & fix[6] = '0'
-      ENDIF
-
-      IF finite(par[3]) NE 1 THEN par[3] = table[objects[i]].flux_radius > 3
-      IF par[3] LT 0 THEN par[3] = table[objects[i]].flux_radius > 3
-      par[3] = par[3] < conmaxre > 0.3
-      par[4] = par[4] < 8 > 0.2
-      par[5] = par[5] > 0.0001 < 1
-      par[6] = par[6] > (-360) < 360
-
+       IF table[objects[i]].x_image-corner[0] LT 1 OR $
+         table[objects[i]].x_image-corner[0] GT xmax OR $
+         table[objects[i]].y_image-corner[1] LT 1 OR $
+         table[objects[i]].y_image-corner[1] GT ymax THEN BEGIN
+           fix[0] = '0' & fix[1] = '0' & fix[5] = '0' & fix[6] = '0'
+       ENDIF
+       
+; check some constraints and set starting values accordingly of neccessary
+       IF finite(par.re_galfit) NE 1 THEN begin
+           par.re_galfit = table[objects[i]].flux_radius > 3
+           par.re_galfit_band = fltarr(nband)+(table[objects[i]].flux_radius > 3)
+           par.re_galfit_cheb = fltarr(nband)
+           par.re_galfit_cheb[0] = table[objects[i]].flux_radius > 3
+       ENDIF
+       
+       IF par.re_galfit LT 0 THEN BEGIN
+           par.re_galfit = table[objects[i]].flux_radius > 3
+           par.re_galfit_band = fltarr(nband)+(table[objects[i]].flux_radius > 3)
+           par.re_galfit_cheb = fltarr(nband)
+           par.re_galfit_cheb[0] = table[objects[i]].flux_radius > 3    
+       ENDIF
+       par.re_galfit = par.re_galfit < conmaxre > 0.3
+; hard contraints work on ALL bands if this is used below. USED!
+       par.re_galfit_band = par.re_galfit_band < conmaxre > 0.3
+; hard contraints work only on principle band if this is used
+       par.re_galfit_cheb[0] = par.re_galfit_cheb[0] < conmaxre > 0.3
+       par.n_galfit = par.n_galfit < 8 > 0.2
+       par.n_galfit_band = par.n_galfit_band < 8 > 0.2
+       par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < 8 > 0.2
+       par.q_galfit = par.q_galfit > 0.0001 < 1
+       par.q_galfit_band = par.q_galfit_band > 0.0001 < 1
+       par.q_galfit_cheb[0] = par.q_galfit_cheb[0] > 0.0001 < 1
+       par.pa_galfit = par.pa_galfit > (-360) < 360
+       par.pa_galfit_band = par.pa_galfit_band > (-360) < 360
+       par.pa_galfit_cheb[0] = par.pa_galfit_cheb[0] > (-360) < 360
+       
 ;     0  1  2    3   4  5  6   7
 ;par=[x, y, mag, re, n, q, pa, sky]
-      openu, 1, obj_file, /append
-      printf, 1, '# Sersic function'
-      printf, 1, ''
-      printf, 1, ' 0) sersic             # Object type'
-      printf, 1, ' 1) '+round_digit(par[0]-corner[0], 2, /string)+ $
-              '  '+round_digit(par[1]-corner[1], 2, /string)+ $
-              ' '+fix[0]+' '+fix[1]+' # position x, y        [pixel]'
-      printf, 1, ' 3) '+round_digit(par[2], 2, /string)+ $
-              '       '+fix[2]+'       # total magnitude'
-      printf, 1, ' 4) '+round_digit(par[3], 2, /string)+ $
-              '       '+fix[3]+'       #     R_e              [Pixels]'
-      printf, 1, ' 5) '+round_digit(par[4], 2, /string)+ $
-              '       '+fix[4]+'       # Sersic exponent (deVauc=4, expdisk=1)'
-      IF setup_version THEN str = ' 9) ' ELSE str = ' 8) '
-      printf, 1, str+round_digit(par[5], 4, /string)+ $
-              '       '+fix[5]+'       # axis ratio (b/a)'
-      IF setup_version THEN str = '10) ' ELSE str = ' 9) '
-      printf, 1, str+round_digit(par[6], 2, /string)+ $
-              '       '+fix[6]+'       # position angle (PA)  ' + $
-              '[Degrees: Up=0, Left=90]'
-      printf, 1, ' Z) 0                  # output image (see above)'
-      printf, 1, ''
-      close, 1
-   ENDFOR
+       openu, 1, obj_file, /append
+       printf, 1, '# Sersic function'
+       printf, 1, ''
+       printf, 1, ' 0) sersic             # Object type'
 
+; for different GALFIT versions, fit will work, READOUT of parameters
+; will NOT work!
+       band_po=' '
+       if setup.version ge 4 then band_po='band'
+
+       x_po=''
+       x_po_fit=''
+       y_po=''
+       y_po_fit=''
+       FOR b=1,nband DO BEGIN
+           x_po = x_po+round_digit(par.x_galfit_band[b-1]-corner[0],2,/string)
+           if b lt nband then x_po=x_po+','
+           y_po = y_po+round_digit(par.y_galfit_band[b-1]-corner[1],2,/string)
+           if b lt nband then y_po=y_po+','
+       ENDFOR
+       IF fix[0] eq 1 then x_po_fit = strtrim(setup.cheb[0]+1,2) else x_po_fit = '0'
+       IF fix[1] eq 1 then y_po_fit = strtrim(setup.cheb[1]+1,2) else y_po_fit = '0'
+       
+       if setup.version ge 4 then begin
+           printf, 1, ' 1) '+x_po+'  '+x_po_fit+'   band   # position x     [pixel]'
+           printf, 1, ' 2) '+y_po+'  '+y_po_fit+'   band   # position y     [pixel]'
+       endif else begin
+           printf, 1, ' 1) '+x_po+'  '+y_po+'   '+x_po_fit+' '+y_po_fit+'   # position x, y        [pixel]'
+       endelse
+       
+       mag_po=''
+       mag_po_fit=''
+       FOR b=1,nband DO BEGIN
+           mag_po = mag_po+round_digit(par.mag_galfit_band[b-1],2,/string)
+           if b lt nband then mag_po=mag_po+','
+       ENDFOR
+       IF fix[2] eq 1 then mag_po_fit = strtrim(setup.cheb[2]+1,2) else mag_po_fit = '0'
+       printf, 1, ' 3) '+mag_po+'    '+mag_po_fit+'   '+band_po+'    # total magnitude'
+
+       re_po=''
+       re_po_fit=''
+       FOR b=1,nband DO BEGIN
+           re_po = re_po+round_digit(par.re_galfit_band[b-1],2,/string)
+           if b lt nband then re_po=re_po+','
+       ENDFOR
+       IF fix[3] eq 1 then re_po_fit = strtrim(setup.cheb[3]+1,2) else re_po_fit = '0'
+       printf, 1, ' 4) '+re_po+'    '+re_po_fit+'   '+band_po+'       #     R_e              [Pixels]'
+
+       n_po=''
+       n_po_fit=''
+       FOR b=1,nband DO BEGIN
+           n_po = n_po+round_digit(par.n_galfit_band[b-1],2,/string)
+           if b lt nband then n_po=n_po+','
+       ENDFOR
+       IF fix[4] eq 1 then n_po_fit = strtrim(setup.cheb[4]+1,2) else n_po_fit = '0'
+       printf, 1, ' 5) '+n_po+'    '+n_po_fit+'   '+band_po+'       # Sersic exponent (deVauc=4, expdisk=1)'
+
+       q_po=''
+       q_po_fit=''
+       FOR b=1,nband DO BEGIN
+           q_po = q_po+round_digit(par.q_galfit_band[b-1],4,/string)
+           if b lt nband then q_po=q_po+','
+       ENDFOR
+       IF fix[5] eq 1 then q_po_fit = strtrim(setup.cheb[5]+1,2) else q_po_fit = '0'
+       IF setup.version eq 0 THEN str = ' 8) ' ELSE str = ' 9) '
+       printf, 1, str+q_po+'    '+q_po_fit+'   '+band_po+'       # axis ratio (b/a)'
+
+
+       pa_po=''
+       pa_po_fit=''
+       FOR b=1,nband DO BEGIN
+           pa_po = pa_po+round_digit(par.pa_galfit_band[b-1],2,/string)
+           if b lt nband then pa_po=pa_po+','
+       ENDFOR
+       IF fix[6] eq 1 then pa_po_fit = strtrim(setup.cheb[6]+1,2) else pa_po_fit = '0'
+       IF setup_version eq 0 THEN str = '9) ' ELSE str = '10) '
+       printf, 1, str+pa_po+'    '+pa_po_fit+'   '+band_po+'       # position angle (PA) [Degrees: Up=0, Left=90]'
+
+       printf, 1, ' Z) 0                  # output image (see above)'
+       printf, 1, ''
+       close, 1
+   ENDFOR
+   
 ;have to include the contributing sources potentially from other
 ;frames as well.
    n_nums = n_elements(num_contrib)
@@ -1978,11 +2101,14 @@ stop
 ;find the GALFIT output file for the current contributing source
 ;  num_current = integer2string(table[current].number, table.number, /array)
    num_current = round_digit(table[current].number, 0, /str)
-   file_root = strmid(out_file, 0, strlen(out_file)-strlen(num_current))
-   file_root = strmid(file_root, strpos(file_root, '/', /reverse_search)+1, $
-                      strlen(file_root))
+;   file_root = strmid(out_file, 0, strlen(out_file)-strlen(num_current))
+;   file_root = strmid(file_root, strpos(file_root, '/', /reverse_search)+1, $
+;                      strlen(file_root))
 
-   readcol, files, orgim, outpath, format = 'A,X,A,X', comment = '#', /silent
+   read_image_files, setup, orgim, orgweightsxx, outpath, outpath_bandxx, outprexx, $
+     nbandxxx,/silent
+   delvarx, nbandxxx, orgweightsxx, outpath_bandxx, outprexx
+;   readcol, files, orgim, outpath, format = 'A,X,A,X', comment = '#', /silent
    outpath = set_trailing_slash(outpath)
 
    openr, 1, constr_file
@@ -1992,114 +2118,282 @@ stop
    line = strtrim(line, 2)
    line = strmid(line, 0, strpos(line, ' '))
    ctr = fix(line)+1
-
+   
 ;loop over all contributing sources
    FOR i=0ul, n_nums-1 DO BEGIN
-      i_con = where(table.number EQ num_contrib[i] AND $
-                    table.frame EQ frame_contrib[i])
-
-      dum = where(table[objects].number EQ num_contrib[i] AND $
-                  table[objects].frame EQ frame_contrib[i], ct)
-      IF ct GT 0 THEN CONTINUE
-
-      idx = where(orgim EQ table[i_con].frame)
+       i_con = where(table.number EQ num_contrib[i] AND $
+                     table.frame[0] EQ frame_contrib[i])
+       
+       dum = where(table[objects].number EQ num_contrib[i] AND $
+                   table[objects].frame[0] EQ frame_contrib[i], ct)
+       IF ct GT 0 THEN CONTINUE
+       
+       idx = where(orgim[*,0] EQ table[i_con].frame[0])
 ;    objnum = integer2string(table[i_con].number, table.number, /array)
-      objnum = round_digit(table[i_con].number, 0, /str)
-      current_contrib_file = outpath[idx]+file_root+objnum+'.fits'
-
-      IF file_test(current_contrib_file) THEN BEGIN
+       objnum = round_digit(table[i_con].number, 0, /str)
+       current_contrib_file = outpath_galfit[idx]+outpre[idx,1]+objnum+'_'+strtrim(setup.galfit_out,2)+'.fits'
+       
+       IF file_test(current_contrib_file) THEN BEGIN
 ;sources with existing fit will be included as static source
-         par = read_galfit_sersic(current_contrib_file)
+           par = read_sersic_results(current_contrib_file,nband)
 ;problem: position from GALFIT is relative to original postage
 ;stamp. Need to compute offset using SExtractor input for that fit
-         tb = read_sex_table(outpath[idx]+outpre[idx]+out_cat, $
-                             outpath[idx]+outpre[idx]+out_param)
-         itb = where(tb.number EQ table[i_con].number)
-         
-         stamp_file = outpath[idx]+outpre[idx]+out_stamps
-         cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
-                          ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
-                          n_lines(stamp_file), /no_execute)
-         fill_struct, cat, stamp_file
-         icat = where(cat.id EQ table[i_con].number)
-
-         par[0] = par[0]+cat[icat].xlo-1-tb[itb].x_image+table[i_con].x_image
-         par[1] = par[1]+cat[icat].ylo-1-tb[itb].y_image+table[i_con].y_image
-         
-         fix = ['0', '0', '0', '0', '0', '0', '0']
-      ENDIF ELSE BEGIN
+           tb = read_sex_table(outpath_file[idx,0]+out_cat, $
+                               outpath_file[idx,0]+out_param)
+           itb = where(tb.number EQ table[i_con].number)
+           
+           stamp_file = outpath_file_no_band[idx,0]+setup.stampfile
+;         stamp_file = outpath[idx]+outpre[idx]+out_stamps
+           cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
+                            ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
+                            n_lines(stamp_file), /no_execute)
+           fill_struct, cat, stamp_file
+           icat = where(cat.id EQ table[i_con].number)
+           
+           par.x_galfit = par.x_galfit+cat[icat].xlo-1-tb[itb].x_image+table[i_con].x_image
+           par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-1-tb[itb].x_image+ $
+             table[i_con].x_image
+           par.y_galfit = par.y_galfit+cat[icat].ylo-1-tb[itb].y_image+table[i_con].y_image
+           par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-1-tb[itb].y_image+ $
+             table[i_con].y_image
+           
+           fix = ['0', '0', '0', '0', '0', '0', '0']
+       ENDIF ELSE BEGIN
 ;the source might be in the fit_table
-         i_fit = where(fit_table.number EQ num_contrib[i] AND $
-                       fit_table.org_image EQ frame_contrib[i], ct)
-         IF ct GT 0 THEN BEGIN
-            IF fit_table[i_fit].re_galfit GE 0 THEN BEGIN
-               par = [table[i_con].x_image, table[i_con].y_image, $
-                      fit_table[i_fit].mag_galfit, $
-                      fit_table[i_fit].re_galfit, fit_table[i_fit].n_galfit, $
-                      fit_table[i_fit].q_galfit, fit_table[i_fit].pa_galfit]
+           i_fit = where(fit_table.number EQ num_contrib[i] AND $
+                         fit_table.org_image EQ frame_contrib[i], ct)
+           IF ct GT 0 THEN BEGIN
+               IF fit_table[i_fit].re_galfit GE 0 THEN BEGIN
+                   
+; reading in file works, because it returns the correct FORMAT, but
+; with useless values in it. As they will be replaced here, that does
+; not matter
+                   par = read_sersic_results(secout_file, nband)
+; replace correctly!
+                   par.x_galfit = table[i_con].x_image
+                   par.x_galfit_band = fltarr(nband)+table[i_con].x_image
+                   par.x_galfit_cheb = fltarr(nband)
+                   par.x_galfit_cheb[0] = table[i_con].x_image
+                   par.y_galfit = table[i_con].y_image
+                   par.y_galfit_band = fltarr(nband)+table[i_con].y_image
+                   par.y_galfit_cheb = fltarr(nband)
+                   par.y_galfit_cheb[0] = table[i_con].y_image
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
+                   par.mag_galfit = fit_table[i_fit].mag_galfit
+                   par.mag_galfit_band = fit_table[i_fit].mag_galfit_band
+                   par.mag_galfit_cheb = fit_table[i_fit].mag_galfit_cheb
+                   par.re_galfit = fit_table[i_fit].re_galfit
+                   par.re_galfit_band = fit_table[i_fit].re_galfit_band
+                   par.re_galfit_cheb = fit_table[i_fit].re_galfit_cheb
+                   par.n_galfit = fit_table[i_fit].n_galfit
+                   par.n_galfit_band = fit_table[i_fit].n_galfit_band
+                   par.n_galfit_cheb = fit_table[i_fit].n_galfit_cheb
+                   par.q_galfit = fit_table[i_fit].q_galfit
+                   par.q_galfit_band = fit_table[i_fit].q_galfit_band
+                   par.q_galfit_cheb = fit_table[i_fit].q_galfit_cheb
+                   par.pa_galfit = fit_table[i_fit].pa_galfit
+                   par.pa_galfit_band = fit_table[i_fit].pa_galfit_band
+                   par.pa_galfit_cheb = fit_table[i_fit].pa_galfit_cheb
+                   
+;               par = [table[i_con].x_image, table[i_con].y_image, $
+;                      fit_table[i_fit].mag_galfit, $
+;                      fit_table[i_fit].re_galfit, fit_table[i_fit].n_galfit, $
+;                      fit_table[i_fit].q_galfit, fit_table[i_fit].pa_galfit]
 ;if so fixate the fit
-               fix = ['0', '0', '0', '0', '0', '0', '0']
-            ENDIF ELSE BEGIN
+                   fix = ['0', '0', '0', '0', '0', '0', '0']
+               ENDIF ELSE BEGIN
 ;source is in fit_table but no fit exists -> bombed -> free fit
-               par = [table[i_con].x_image, table[i_con].y_image, $
-                      table[i_con].mag_best, $
-                      10.^(-0.79)*table[i_con].flux_radius^1.87, $
-                      2.5, 1-table[i_con].ellipticity, $
-                      table[i_con].theta_image-90.]
+                   par = read_sersic_results(secout_file, nband)
+                   
+                   par.x_galfit = table[i_con].x_image
+                   par.x_galfit_band = fltarr(nband)+table[i_con].x_image
+                   par.x_galfit_cheb = fltarr(nband)
+                   par.x_galfit_cheb[0] = table[i_con].x_image
+                   par.y_galfit = table[i_con].y_image
+                   par.y_galfit_band = fltarr(nband)+table[i_con].y_image
+                   par.y_galfit_cheb = fltarr(nband)
+                   par.y_galfit_cheb[0] = table[i_con].y_image
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
+                   par.mag_galfit = table[i_con].mag_best
+                   par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best
+                   par.mag_galfit_cheb = fltarr(nband)
+                   par.mag_galfit_cheb[0] = table[i_con].mag_best
+                   par.re_galfit = 10.^(-0.79)*table[i_con].flux_radius^1.87
+                   par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[i_con].flux_radius^1.87
+                   par.re_galfit_cheb = fltarr(nband)
+                   par.re_galfit_cheb[0] = 10.^(-0.79)*table[i_con].flux_radius^1.87
+                   par.n_galfit = 2.5
+                   par.n_galfit_band = fltarr(nband)+2.5
+                   par.n_galfit_cheb = fltarr(nband)
+                   par.n_galfit_cheb[0] = 2.5
+                   par.q_galfit = 1-table[i_con].ellipticity
+                   par.q_galfit_band = fltarr(nband)+1-table[i_con].ellipticity
+                   par.q_galfit_cheb = fltarr(nband)
+                   par.q_galfit_cheb[0] = 1-table[i_con].ellipticity
+                   par.pa_galfit = table[i_con].theta_image-90.
+                   par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
+                   par.pa_galfit_cheb = fltarr(nband)
+                   par.pa_galfit_cheb[0] = table[i_con].theta_image-90.
+                   
+;               par = [table[i_con].x_image, table[i_con].y_image, $
+;                      table[i_con].mag_best, $
+;                      10.^(-0.79)*table[i_con].flux_radius^1.87, $
+;                      2.5, 1-table[i_con].ellipticity, $
+;                      table[i_con].theta_image-90.]
+;the source is off the frame so just fit profile and magnitude, position fixed
+                   fix = ['0', '0', '1', '1', '1', '0', '0']
+               ENDELSE
+           ENDIF ELSE BEGIN
+;source is not in fit_table -> free fit
+               par = read_sersic_results(secout_file, nband)
+               
+               par.x_galfit = table[i_con].x_image
+               par.x_galfit_band = fltarr(nband)+table[i_con].x_image
+               par.x_galfit_cheb = fltarr(nband)
+               par.x_galfit_cheb[0] = table[i_con].x_image
+               par.y_galfit = table[i_con].y_image
+               par.y_galfit_band = fltarr(nband)+table[i_con].y_image
+               par.y_galfit_cheb = fltarr(nband)
+               par.y_galfit_cheb[0] = table[i_con].y_image
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
+               par.mag_galfit = table[i_con].mag_best
+               par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best
+               par.mag_galfit_cheb = fltarr(nband)
+               par.mag_galfit_cheb[0] = table[i_con].mag_best
+               par.re_galfit = 10.^(-0.79)*table[i_con].flux_radius^1.87
+               par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[i_con].flux_radius^1.87
+               par.re_galfit_cheb = fltarr(nband)
+               par.re_galfit_cheb[0] = 10.^(-0.79)*table[i_con].flux_radius^1.87
+               par.n_galfit = 2.5
+               par.n_galfit_band = fltarr(nband)+2.5
+               par.n_galfit_cheb = fltarr(nband)
+               par.n_galfit_cheb[0] = 2.5
+               par.q_galfit = 1-table[i_con].ellipticity
+               par.q_galfit_band = fltarr(nband)+1-table[i_con].ellipticity
+               par.q_galfit_cheb = fltarr(nband)
+               par.q_galfit_cheb[0] = 1-table[i_con].ellipticity
+               par.pa_galfit = table[i_con].theta_image-90.
+               par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
+               par.pa_galfit_cheb = fltarr(nband)
+               par.pa_galfit_cheb[0] = table[i_con].theta_image-90.
+               
+;               par = [table[i_con].x_image, table[i_con].y_image, $
+;                      table[i_con].mag_best, $
+;                      10.^(-0.79)*table[i_con].flux_radius^1.87, $
+;                      2.5, 1-table[i_con].ellipticity, $
+;                      table[i_con].theta_image-90.]
 ;the source is off the frame so just fit profile and magnitude
                fix = ['0', '0', '1', '1', '1', '0', '0']
-            ENDELSE
-         ENDIF ELSE BEGIN
-;source is not in fit_table -> free fit
-            par = [table[i_con].x_image, table[i_con].y_image, $
-                   table[i_con].mag_best, $
-                   10.^(-0.79)*table[i_con].flux_radius^1.87, $
-                   2.5, 1-table[i_con].ellipticity, $
-                   table[i_con].theta_image-90.]
-;the source is off the frame so just fit profile and magnitude
-            fix = ['0', '0', '1', '1', '1', '0', '0']
-         ENDELSE
+           ENDELSE
 ;else make it a fully free fit (unless the source is in the fit_table:
 ;then fit only the position, which comes still from SExtractor)
-         IF par[0] GT 1 AND par[0] LT xmax-1 AND $
-          par[1] GT 1 AND par[1] LT ymax-1 THEN BEGIN
-            IF ct GT 0 THEN BEGIN
-               IF fit_table[i_fit].re_galfit GE 0 THEN $
-                fix = ['1', '1', '0', '0', '0', '0', '0'] $
-               ELSE fix = ['1', '1', '1', '1', '1', '1', '1']
-            ENDIF ELSE fix = ['1', '1', '1', '1', '1', '1', '1']
-         ENDIF
-      ENDELSE
+           IF par.x_galfit GT 1 AND par.x_galfit LT xmax-1 AND $
+             par.y_galfit GT 1 AND par.y_galfit LT ymax-1 THEN BEGIN
+               IF ct GT 0 THEN BEGIN
+                   IF fit_table[i_fit].re_galfit GE 0 THEN $
+                     fix = ['1', '1', '0', '0', '0', '0', '0'] $
+                   ELSE fix = ['1', '1', '1', '1', '1', '1', '1']
+               ENDIF ELSE fix = ['1', '1', '1', '1', '1', '1', '1']
+           ENDIF
+       ENDELSE
+       
+       par.re_galfit = par.re_galfit < conmaxre > 0.3
+; hard contraints work on ALL bands if this is used below. USED!!
+       par.re_galfit_band = par.re_galfit_band < conmaxre > 0.3
+; hard contraints work only on principle band if this is used
+       par.re_galfit_cheb[0] = par.re_galfit_cheb[0] < conmaxre > 0.3
+       par.n_galfit = par.n_galfit < 8 > 0.2
+       par.n_galfit_band = par.n_galfit_band < 8 > 0.2
+       par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < 8 > 0.2
+       par.q_galfit = par.q_galfit > 0.0001 < 1
+       par.q_galfit_band = par.q_galfit_band > 0.0001 < 1
+       par.q_galfit_cheb[0] = par.q_galfit_cheb[0] > 0.0001 < 1
+       par.pa_galfit = par.pa_galfit > (-360) < 360
+       par.pa_galfit_band = par.pa_galfit_band > (-360) < 360
+       par.pa_galfit_cheb[0] = par.pa_galfit_cheb[0] > (-360) < 360
 
-      par[3] = par[3] < conmaxre > 0.3
-      par[4] = par[4] < 8 > 0.2
-      par[5] = par[5] > 0.0001 < 1
-      par[6] = par[6] > (-360) < 360
 ;     0  1  2    3   4  5  6   7
 ;par=[x, y, mag, re, n, q, pa, sky]
       openu, 1, obj_file, /append
       printf, 1, '# Sersic function'
       printf, 1, ''
       printf, 1, ' 0) sersic             # Object type'
-      printf, 1, ' 1) '+round_digit(par[0]-corner[0], 2, /string)+ $
-              '  '+round_digit(par[1]-corner[1], 2, /string)+ $
-              ' '+fix[0]+' '+fix[1]+' # position x, y        [pixel]'
-      printf, 1, ' 3) '+round_digit(par[2], 2, /string)+ $
-              '       '+fix[2]+'       # total magnitude'
-      printf, 1, ' 4) '+round_digit(par[3], 2, /string)+ $
-              '       '+fix[3]+'       #     R_e              [Pixels]'
-      printf, 1, ' 5) '+round_digit(par[4], 2, /string)+ $
-              '       '+fix[4]+'       # Sersic exponent (deVauc=4, expdisk=1)'
-      IF setup_version THEN str = ' 9) ' ELSE str = ' 8) '
-      printf, 1, str+round_digit(par[5], 4, /string)+ $
-              '       '+fix[5]+'       # axis ratio (b/a)'
-      IF setup_version THEN str = '10) ' ELSE str = ' 9) '
-      printf, 1, str+round_digit(par[6], 2, /string)+ $
-              '       '+fix[6]+'       # position angle (PA)  ' + $
-              '[Degrees: Up=0, Left=90]'
-      printf, 1, ' Z) 0                  # output image (see above)'
-      printf, 1, ''
-      close, 1
+; for different GALFIT versions, fit will work, READOUT of parameters
+; will NOT work!
+       band_po=' '
+       if setup.version ge 4 then band_po='band'
+
+       x_po=''
+       x_po_fit=''
+       y_po=''
+       y_po_fit=''
+       FOR b=1,nband DO BEGIN
+           x_po = x_po+round_digit(par.x_galfit_band[b-1]-corner[0],2,/string)
+           if b lt nband then x_po=x_po+','
+           y_po = y_po+round_digit(par.y_galfit_band[b-1]-corner[1],2,/string)
+           if b lt nband then y_po=y_po+','
+       ENDFOR
+       IF fix[0] eq 1 then x_po_fit = strtrim(setup.cheb[0]+1,2) else x_po_fit = '0'
+       IF fix[1] eq 1 then y_po_fit = strtrim(setup.cheb[1]+1,2) else y_po_fit = '0'
+       
+       if setup.version ge 4 then begin
+           printf, 1, ' 1) '+x_po+'  '+x_po_fit+'   band   # position x     [pixel]'
+           printf, 1, ' 2) '+y_po+'  '+y_po_fit+'   band   # position y     [pixel]'
+       endif else begin
+           printf, 1, ' 1) '+x_po+'  '+y_po+'   '+x_po_fit+' '+y_po_fit+'   # position x, y        [pixel]'
+       endelse
+
+       mag_po=''
+       mag_po_fit=''
+       FOR b=1,nband DO BEGIN
+           mag_po = mag_po+round_digit(par.mag_galfit_band[b-1],2,/string)
+           if b lt nband then mag_po=mag_po+','
+       ENDFOR
+       IF fix[2] eq 1 then mag_po_fit = strtrim(setup.cheb[2]+1,2) else mag_po_fit = '0'
+       printf, 1, ' 3) '+mag_po+'    '+mag_po_fit+'   '+band_po+'    # total magnitude'
+
+       re_po=''
+       re_po_fit=''
+       FOR b=1,nband DO BEGIN
+           re_po = re_po+round_digit(par.re_galfit_band[b-1],2,/string)
+           if b lt nband then re_po=re_po+','
+       ENDFOR
+       IF fix[3] eq 1 then re_po_fit = strtrim(setup.cheb[3]+1,2) else re_po_fit = '0'
+       printf, 1, ' 4) '+re_po+'    '+re_po_fit+'   '+band_po+'       #     R_e              [Pixels]'
+
+       n_po=''
+       n_po_fit=''
+       FOR b=1,nband DO BEGIN
+           n_po = n_po+round_digit(par.n_galfit_band[b-1],2,/string)
+           if b lt nband then n_po=n_po+','
+       ENDFOR
+       IF fix[4] eq 1 then n_po_fit = strtrim(setup.cheb[4]+1,2) else n_po_fit = '0'
+       printf, 1, ' 5) '+n_po+'    '+n_po_fit+'   '+band_po+'       # Sersic exponent (deVauc=4, expdisk=1)'
+
+       q_po=''
+       q_po_fit=''
+       FOR b=1,nband DO BEGIN
+           q_po = q_po+round_digit(par.q_galfit_band[b-1],4,/string)
+           if b lt nband then q_po=q_po+','
+       ENDFOR
+       IF fix[5] eq 1 then q_po_fit = strtrim(setup.cheb[5]+1,2) else q_po_fit = '0'
+       IF setup.version eq 0 THEN str = ' 8) ' ELSE str = ' 9) '
+       printf, 1, str+q_po+'    '+q_po_fit+'   '+band_po+'       # axis ratio (b/a)'
+
+
+       pa_po=''
+       pa_po_fit=''
+       FOR b=1,nband DO BEGIN
+           pa_po = pa_po+round_digit(par.pa_galfit_band[b-1],2,/string)
+           if b lt nband then pa_po=pa_po+','
+       ENDFOR
+       IF fix[6] eq 1 then pa_po_fit = strtrim(setup.cheb[6]+1,2) else pa_po_fit = '0'
+       IF setup_version eq 0 THEN str = '9) ' ELSE str = '10) '
+       printf, 1, str+pa_po+'    '+pa_po_fit+'   '+band_po+'       # position angle (PA) [Degrees: Up=0, Left=90]'
+
+       printf, 1, ' Z) 0                  # output image (see above)'
+       printf, 1, ''
+       close, 1
 
       dum = where(fix EQ '1', ct)
       IF ct GT 0 THEN BEGIN
@@ -2306,7 +2600,9 @@ PRO read_setup, setup_file, setup
             content = strrep(content, '.', ' ')
             strput, content, '.', pos
             content = strcompress(content, /remove_all)
-            setup.version = (float(content) GE 2.1) ? 1 : 0
+            if float(content) lt 2.1 then setup.version = 0
+            if (float(content) GE 2.1 and float(content) lt 4) then setup.version = 1
+            if float(content) GE 4.0 then setup.version = 4
          END
          'E16)': BEGIN
              for n=0,5 do begin
@@ -2402,6 +2698,11 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
 ; filesnames pointing to other file lists that contain all the images.
    if ncolf eq 5 then begin
        if not keyword_set(silent) then print, 'assuming multi-wavelength dataset. Assuming first line to be for SExtractor, rest for fitting!'
+       if setup.version lt 4 then BEGIN
+           print, 'you seem to be using mulit-wavelength data, but the GALFIT version you have specified only supports one-band data'
+           print, 'This version of galapagos needs GALFIT4 in order to be able to read out the fitting parameters (output has to be in a fits table)'
+           stop
+       ENDIF
        readcol, setup.files, band, wavelength, filelist, zeropoint, exptime, $
          format = 'A,I,A,F,F', comment = '#', /silent      
        nband=fix(n_elements(band)-1)
@@ -2464,12 +2765,13 @@ FUNCTION read_sersic_results, obj, nband
                                 'x_galfit', result[0]._2_XC, 'xerr_galfit', result[0]._2_XC_ERR, $
                                 'y_galfit', result[0]._2_YC, 'yerr_galfit', result[0]._2_YC_ERR, $
 ; adapt PSF
-                                'psf_galfit', strtrim(sxpar(hd, 'PSF_A'),2), $
+                                'psf_galfit', strtrim(sxpar(hd, 'PSF_A'),2), 'sky_galfit', result[0]._1_SKY, $
                                 'mag_galfit_band', result._2_MAG, 'magerr_galfit_band',result._2_MAG_ERR, $
                                 're_galfit_band', result._2_RE, 'reerr_galfit_band', result._2_RE_ERR, $
                                 'n_galfit_band', result._2_N, 'nerr_galfit_band' ,result._2_N_ERR, $
                                 'q_galfit_band', result._2_AR, 'qerr_galfit_band', result._2_AR_ERR, $
                                 'pa_galfit_band', result._2_PA, 'paerr_galfit_band', result._2_PA_ERR, $
+                                'sky_galfit_band', result._1_SKY, $
                                 'x_galfit_band', result._2_XC, 'xerr_galfit_band', result._2_XC_ERR, $
                                 'y_galfit_band', result._2_YC, 'yerr_galfit_band', result._2_YC_ERR, $
                                 'mag_galfit_cheb', res_cheb._2_MAG, 'magerr_galfit_cheb',res_cheb._2_MAG_ERR, $
@@ -2479,6 +2781,7 @@ FUNCTION read_sersic_results, obj, nband
                                 'pa_galfit_cheb', res_cheb._2_PA, 'paerr_galfit_cheb', res_cheb._2_PA_ERR, $
                                 'x_galfit_cheb', res_cheb._2_XC, 'xerr_galfit_cheb', res_cheb._2_XC_ERR, $
                                 'y_galfit_cheb', res_cheb._2_YC, 'yerr_galfit_cheb', res_cheb._2_YC_ERR, $
+                                'sky_galfit_cheb', res_cheb._1_SKY, $
 ; PSF_BAND HAS TO BE ADAPTED!!
                                 'psf_galfit_band', strtrim(sxpar(hd, 'PSF'), 2), $
                                 'chisq_galfit', float(strmid(sxpar(hd, 'CHISQ'),2)), $
@@ -2494,35 +2797,36 @@ FUNCTION read_sersic_results, obj, nband
        psf=strarr(nband)
        for n=0,nband-1 do psf[n]='none'
 
-      feedback = create_struct('mag_galfit', -999, 'magerr_galfit',99999, $
-                                're_galfit', -999, 'reerr_galfit', 99999, $
-                                'n_galfit', -999, 'nerr_galfit' ,99999, $
-                                'q_galfit', -999, 'qerr_galfit', 99999, $
-                                'pa_galfit', -999, 'paerr_galfit', 99999, $
-                                'x_galfit', -999, 'xerr_galfit', 99999, $
-                                'y_galfit', -999, 'yerr_galfit', 99999, $
-                                'psf_galfit', 'none', $
-                                'mag_galfit_band', fltarr(nband)-999, 'magerr_galfit_band',fltarr(nband)+99999, $
-                                're_galfit_band', fltarr(nband)-999, 'reerr_galfit_band', fltarr(nband)+99999, $
-                                'n_galfit_band', fltarr(nband)-999, 'nerr_galfit_band' ,fltarr(nband)+99999, $
-                                'q_galfit_band', fltarr(nband)-999, 'qerr_galfit_band', fltarr(nband)+99999, $
-                                'pa_galfit_band', fltarr(nband)-999, 'paerr_galfit_band', fltarr(nband)+99999, $
-                                'x_galfit_band', fltarr(nband)-999, 'xerr_galfit_band', fltarr(nband)+99999, $
-                                'y_galfit_band', fltarr(nband)-999, 'yerr_galfit_band', fltarr(nband)+99999, $
-                                'mag_galfit_chev', fltarr(nband)-999, 'magerr_galfit_chev',fltarr(nband)+99999, $
-                                're_galfit_chev', fltarr(nband)-999, 'reerr_galfit_chev', fltarr(nband)+99999, $
-                                'n_galfit_chev', fltarr(nband)-999, 'nerr_galfit_chev' ,fltarr(nband)+99999, $
-                                'q_galfit_chev', fltarr(nband)-999, 'qerr_galfit_chev', fltarr(nband)+99999, $
-                                'pa_galfit_chev', fltarr(nband)-999, 'paerr_galfit_chev', fltarr(nband)+99999, $
-                                'x_galfit_chev', fltarr(nband)-999, 'xerr_galfit_chev', fltarr(nband)+99999, $
-                                'y_galfit_chev', fltarr(nband)-999, 'yerr_galfit_chev', fltarr(nband)+99999, $
-; PSF_BAND HAS TO BE ADAPTED!!
+      feedback = create_struct('mag_galfit', -999., 'magerr_galfit',99999., $
+                                're_galfit', -999., 'reerr_galfit', 99999., $
+                                'n_galfit', -999., 'nerr_galfit' ,99999., $
+                                'q_galfit', -999., 'qerr_galfit', 99999., $
+                                'pa_galfit', -999., 'paerr_galfit', 99999., $
+                                'x_galfit', -999., 'xerr_galfit', 99999., $
+                                'y_galfit', -999., 'yerr_galfit', 99999., $
+                                'psf_galfit', 'none', 'sky_galfit', -999., $
+                                'mag_galfit_band', fltarr(nband)-999., 'magerr_galfit_band',fltarr(nband)+99999., $
+                                're_galfit_band', fltarr(nband)-999., 'reerr_galfit_band', fltarr(nband)+99999., $
+                                'n_galfit_band', fltarr(nband)-999., 'nerr_galfit_band' ,fltarr(nband)+99999., $
+                                'q_galfit_band', fltarr(nband)-999., 'qerr_galfit_band', fltarr(nband)+99999., $
+                                'pa_galfit_band', fltarr(nband)-999., 'paerr_galfit_band', fltarr(nband)+99999., $
+                                'x_galfit_band', fltarr(nband)-999., 'xerr_galfit_band', fltarr(nband)+99999., $
+                                'y_galfit_band', fltarr(nband)-999., 'yerr_galfit_band', fltarr(nband)+99999., $
+                                'mag_galfit_cheb', fltarr(nband)-999., 'magerr_galfit_cheb',fltarr(nband)+99999., $
+                                're_galfit_cheb', fltarr(nband)-999., 'reerr_galfit_cheb', fltarr(nband)+99999., $
+                                'n_galfit_cheb', fltarr(nband)-999., 'nerr_galfit_cheb' ,fltarr(nband)+99999., $
+                                'q_galfit_cheb', fltarr(nband)-999., 'qerr_galfit_cheb', fltarr(nband)+99999., $
+                                'pa_galfit_cheb', fltarr(nband)-999., 'paerr_galfit_cheb', fltarr(nband)+99999., $
+                                'x_galfit_cheb', fltarr(nband)-999., 'xerr_galfit_cheb', fltarr(nband)+99999., $
+                                'y_galfit_cheb', fltarr(nband)-999., 'yerr_galfit_cheb', fltarr(nband)+99999., $
+                               'sky_galfit_band', fltarr(nband)-999.,'sky_galfit_cheb', fltarr(nband)-999., $
+   ; PSF_BAND HAS TO BE ADAPTED!!
                                 'psf_galfit_band', psf, $
-                                'chisq_galfit', -99, $
-                                'ndof_galfit', -99, $
-                                'nfree_galfit', -99, $
-                                'nfix_galfit', -99, $
-                                'chi2nu_galfit', -99, $
+                                'chisq_galfit', -99., $
+                                'ndof_galfit', -99., $
+                                'nfree_galfit', -99., $
+                                'nfix_galfit', -99., $
+                                'chi2nu_galfit', -99., $
 ; TO BE ADDED:
 ; #iterations, time
 ; NEIGH_GALFIT HAS TO BE ADAPTED!
@@ -2714,6 +3018,10 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 ;read input files into arrays
    read_image_files, setup, images, weights, outpath, outpath_band, outpre, $
      nband
+; now that number of bands is known, correct number of additional cheb
+; combonents to nband -1
+   setup.cheb=setup.cheb <(nband-1)
+
 ; old single-band version, will not work anymore, as the above doubnles
 ; the array even for single band as elemen [*,0] have to be sextractor
 ; only, no used for fitting!
