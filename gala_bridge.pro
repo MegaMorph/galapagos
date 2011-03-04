@@ -3,7 +3,7 @@ PRO gala_bridge, filein
 ;cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
 ;stamp_param_file, mask_file, im_file, obj_file, 
 ;constr_file, out_file, fittab, nband, outpath_file
-;orgpath_band, orgpath_pre, orgpath_file, orgpath_file_no_band
+;orgpath_band, orgpath_pre, orgpath_galfit, orgpath_file, orgpath_file_no_band
    restore, filein
 
    table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
@@ -54,10 +54,9 @@ for b=1,nband do begin
 
    table.x_image = x+1
    table.y_image = y+1
-;++++++++++++++++++++++++++++++++++
+
+; read in psf to be passed onto procedure
    fits_read, chosen_psf_file[b], psf, psfhead
-; fittab used??? YES
-; fix getsky_loopgala_bridge,'/data/gama/galapagos_multi_wl/tile10_5/t10_5.1558_gf.sav'
 
 ; fix contrib_targets
 ; put b to be passed along!
@@ -68,7 +67,7 @@ for b=1,nband do begin
      setup.galfit_out, setup.outcat, setup.outparam, $
      setup.stampfile, global_sky, global_sigsky, $
      setup.convbox, nums, frames, setup.galexe, fittab, b, $
-     orgpath_pre, outpath_file, outpath_file_no_band
+     orgpath_pre, outpath_file, outpath_file_no_band,, nband
 ;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
 ;   print,table[cur].number
    create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
@@ -81,7 +80,7 @@ for b=1,nband do begin
 endfor
 ;stop
 ;save, /all, filename='/home/boris/IDL/bridge_save.sav'
-;; .run galapagos.pro
+; .run galapagos.pro
 ;restore, '/home/boris/IDL/bridge_save.sav'
   prepare_galfit, setup, objects, setup.files, corner, table, obj_file, $
                    im_file, constr_file, mask_file, chosen_psf_file, $
@@ -94,10 +93,10 @@ endfor
 
 ;spawn the script
 
-   cd, orgpath[idx]
+   cd, outpath_galfit[idx]
    IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file $
    ELSE spawn, setup.galexe+' '+obj_file
-   spawn, 'rm '+orgpath[idx]+'galfit.[0123456789]*'
+   spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
 
 ;   wait, randomu(systime(/seconds))*8+2
 ;   spawn, 'touch '+out_file

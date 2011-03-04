@@ -88,6 +88,7 @@ PRO define_addcol, addcol, nband, pre, cheb
               ['N_GALFIT_BAND', bandfloat], ['NERR_GALFIT_BAND', bandfloat], $
               ['Q_GALFIT_BAND', bandfloat], ['QERR_GALFIT_BAND', bandfloat], $
               ['PA_GALFIT_BAND', bandfloat], ['PAERR_GALFIT_BAND', bandfloat], $
-              ['SKY_GALFIT_BAND', bandfloat], ['PSF_GALFIT_BAND', bandstring]]
+              ['SKY_GALFIT_BAND', bandfloat], ['PSF_GALFIT_BAND', bandstring], $
+              ['SKY_GALFIT_CHEB', bandfloat]]
 ;ENDIF
 END
