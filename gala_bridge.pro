@@ -67,7 +67,7 @@ for b=1,nband do begin
      setup.galfit_out, setup.outcat, setup.outparam, $
      setup.stampfile, global_sky, global_sigsky, $
      setup.convbox, nums, frames, setup.galexe, fittab, b, $
-     orgpath_pre, outpath_file, outpath_file_no_band,, nband
+     orgpath_pre, outpath_file, outpath_file_no_band, nband
 ;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
 ;   print,table[cur].number
    create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
@@ -76,13 +76,17 @@ for b=1,nband do begin
      setup.maglim_gal, setup.maglim_star, $
      setup.stel_slope, setup.stel_zp, objects, corner, $
      b
+   if b eq 1 then begin
+       save_objects = objects
+       save_corner = corner
+   ENDIF       
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§tile10_5/t10_5.3416_obj§§§§§§
 endfor
 ;stop
 ;save, /all, filename='/home/boris/IDL/bridge_save.sav'
 ; .run galapagos.pro
 ;restore, '/home/boris/IDL/bridge_save.sav'
-  prepare_galfit, setup, objects, setup.files, corner, table, obj_file, $
+  prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
                    im_file, constr_file, mask_file, chosen_psf_file, $
                    out_file, sky_file, setup.convbox, setup.zp, $
                    setup.platescl, nums, frames, cur, $
@@ -101,7 +105,7 @@ endfor
 ;   wait, randomu(systime(/seconds))*8+2
 ;   spawn, 'touch '+out_file
 
-;   file_delete, filein
+   file_delete, filein
 
    wait, 1
 END

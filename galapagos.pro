@@ -256,31 +256,31 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
    header = headfits(image)
    exptime = double(sxpar(header, 'EXPTIME'))
    zp_eff = strtrim(zeropoint+2.5*alog10(exptime), 2)
-
-   print, '---using exptime: '+strtrim(exptime, 2)+'s (zp='+zp_eff+') for: '+ $
-          image
-
+   
+   print, '---using exptime: '+strtrim(exptime[0], 2)+'s (zp='+zp_eff[0]+') for: '+ $
+     image
+   
 ;this will produce a checkimage with all the ellipses
    IF chktype NE 'none' THEN BEGIN
-      print, 'starting cold sex check image on image '+image+' ''
-      spawn, sexexe+' '+image+' -c '+cold+ $
-        ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
-        ' -PARAMETERS_NAME '+outparam+ $
-        ' -WEIGHT_IMAGE '+weight+ $
-        ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
-        ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
-        file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
-      IF multi EQ 3 THEN BEGIN
-          print, 'starting hot sex check image'
-          spawn, sexexe+' '+image+' -c '+hot+ $
-            ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
-            ' -PARAMETERS_NAME '+outparam+ $
-            ' -WEIGHT_IMAGE '+weight+ $
-            ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
-            ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
-            file_dirname(check)+'/'+file_basename(check, '.fits')+ $
-            '.hot.fits'
-      ENDIF
+       print, 'starting cold sex check image on image '+image+' '
+       spawn, sexexe+' '+image+' -c '+cold+ $
+         ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
+         ' -PARAMETERS_NAME '+outparam+ $
+         ' -WEIGHT_IMAGE '+weight+ $
+         ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
+         ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
+         file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
+       IF multi EQ 3 THEN BEGIN
+           print, 'starting hot sex check image'
+           spawn, sexexe+' '+image+' -c '+hot+ $
+             ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
+             ' -PARAMETERS_NAME '+outparam+ $
+             ' -WEIGHT_IMAGE '+weight+ $
+             ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
+             ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
+             file_dirname(check)+'/'+file_basename(check, '.fits')+ $
+             '.hot.fits'
+       ENDIF
   ENDIF
   
 ;now start sextractor to create hotcat and coldcat
@@ -289,7 +289,7 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
     ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
     ' -PARAMETERS_NAME '+outparam+ $
     ' -WEIGHT_IMAGE '+weight+ $
-    ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
+    ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
     ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
   IF multi EQ 3 THEN BEGIN
       print, 'starting hot sex'
@@ -297,7 +297,7 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
         ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
         ' -PARAMETERS_NAME '+outparam+ $
         ' -WEIGHT_IMAGE '+weight+ $
-        ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
+        ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
         ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+hotseg
   ENDIF
   
@@ -1132,10 +1132,10 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;8 - not enough measurements, value from SExtractor taken
 ;16 - value from contributing source taken
    sky_flag = 0
-
+   
 ;reset the image
    im = im0
-
+   
 ;get the size of the image
    sz_im = (size(im0))[1:2]
 ;make sure that the image is large enough to compute the sky
@@ -1146,23 +1146,23 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
    IF ct EQ 0 THEN message, 'NO PIXELS TO CALCULATE SKY'
    max_rad = max(sqrt((table[current_obj].x_image-xarr[idx])^2+ $
                       (table[current_obj].y_image-yarr[idx])^2))
-
+   
 ;if the maximum possible radius for the image is exceeded -> start
 ;with 0 and set flag
    IF rad[current_obj] GT max_rad THEN BEGIN
-      rad[current_obj] = 0
-      sky_flag += 1
+       rad[current_obj] = 0
+       sky_flag += 1
    ENDIF
-
+   
 ;see if current source has contributors
 ; this is only done in REFERENCE band, for the other bands, num and
-; frames are input by gala_bridge, to which they have been returned in
+; frames are input by gala_bridge/galapagos, to which they have been returned in
 ; the run on the reference band.
    if b eq 1 then contrib_targets, exptime[1], zero_pt[1], scale, offset, power, table, $
      current_obj, cut, nums, frames, fit_table
    
    contrib_sky = 1e30
-
+   
    IF nums[0] LT 0 THEN BEGIN
 ;no contributing sources found-------------------------------------------------
 ;starting radius for sky calculation is already defined
@@ -1176,144 +1176,143 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;       readcol, files, orgim, outpath, outpre, format = 'A,X,A,A', $
 ;               comment = '#', /silent
        outpath = set_trailing_slash(outpath)
-
+       
 ;total number of contributing sources
-      n_contrib = n_elements(nums)
-
+       n_contrib = n_elements(nums)
+       
 ;array for distance to contributing sources
-      dist = fltarr(n_contrib)
-
+       dist = fltarr(n_contrib)
+       
 ;flag: if set contributing source was subtracted from the image
-      subtract = intarr(n_contrib)
-
+       subtract = intarr(n_contrib)
+       
 ;loop over all contributing sources============================================
-      FOR current_contrib=0ul, n_contrib-1 DO BEGIN
-          i_con = where(table.number EQ nums[current_contrib] AND $
-                        table.frame[1] EQ frames[current_contrib])
-          dist[current_contrib] = $
-            sqrt((table[i_con].x_image-table[current_obj].x_image)^2+ $
-                 (table[i_con].y_image-table[current_obj].y_image)^2)+ $
-            table[i_con].a_image*table[i_con].kron_radius*scale
-          
+       FOR current_contrib=0ul, n_contrib-1 DO BEGIN
+           i_con = where(table.number EQ nums[current_contrib] AND $
+                         table.frame[1] EQ frames[current_contrib])
+           dist[current_contrib] = $
+             sqrt((table[i_con].x_image-table[current_obj].x_image)^2+ $
+                  (table[i_con].y_image-table[current_obj].y_image)^2)+ $
+             table[i_con].a_image*table[i_con].kron_radius*scale
+           
 ;find the GALFIT output file for the current contributing source
-         idx = where(orgim[*,1] EQ table[i_con].frame[1])
-
-         objnum = round_digit(table[i_con].number, 0, /str)
-         current_contrib_file = outpath[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out
-
-         IF file_test(current_contrib_file) THEN BEGIN
+           idx = where(orgim[*,1] EQ table[i_con].frame[1])
+           
+           objnum = round_digit(table[i_con].number, 0, /str)
+           current_contrib_file = outpath[idx]+outpre[idx,1]+objnum+'_'+setup.galfit_out+'.fits'
+           
+           IF file_test(current_contrib_file) THEN BEGIN
 ;a GALFIT result exists for the current contributing source--------------------
-
+               
 ;read in the GALFIT image fitting results from current_file
-; READ_GALFIT_SERSIC!!!! OUTPUT FILE IS DIFFERENT
-; CURRENTLY, ONLY REFERENCE BAND IS READ OUT!
-            par = read_sersic_results(current_contrib_file,nband)
+forward_function read_sersic_results
+               par = read_sersic_results(current_contrib_file,nband)
 ; old format
 ;     0  1  2    3   4  5  6   7
 ;par=[x, y, mag, re, n, q, pa, sky]
-            contrib_sky = [contrib_sky, par.sky_galfit]
-
+               contrib_sky = [contrib_sky, par.sky_galfit_band[b-1]]
+               
 ;subtract the source from the image
 ;takes 1.5 min
 ;            print, systime(), ' subtracting contributing source...'
-
+               
 ;position is in the original postage stamp frame
-            tb = read_sex_table(outpath_file[idx,0]+out_cat, $
-                                outpath_file[0,0]+out_param)
-
-            itb = where(tb.number EQ table[i_con].number)
-
-            stamp_file = outpath_file_no_band[idx,0]+setup.stampfile
+               tb = read_sex_table(outpath_file[idx,0]+out_cat, $
+                                   outpath_file[0,0]+out_param)
+               
+               itb = where(tb.number EQ table[i_con].number)
+               
+               stamp_file = outpath_file_no_band[idx,0]+setup.stampfile
 ; stamp_file = outpath[idx]+outpre[idx]+out_stamps
-            cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
-                             ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
-                             n_lines(stamp_file), /no_execute)
-            fill_struct, cat, stamp_file
-            icat = where(cat.id EQ table[i_con].number)
-
+               cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
+                                ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
+                                n_lines(stamp_file), /no_execute)
+               fill_struct, cat, stamp_file
+               icat = where(cat.id EQ table[i_con].number)
+               
 ; here, the sersic profiles are subtracted
-            par.x_galfit = par.x_galfit+cat[icat].xlo-1-tb[itb].x_image+ $
-              table[i_con].x_image
-            par.y_galfit = par.y_galfit+cat[icat].ylo-1-tb[itb].y_image+ $
-              table[i_con].y_image
-
+               par.x_galfit_band[b-1] = par.x_galfit_band[b-1]+cat[icat].xlo-1-tb[itb].x_image+ $
+                 table[i_con].x_image
+               par.y_galfit_band[b-1] = par.y_galfit_band[b-1]+cat[icat].ylo-1-tb[itb].y_image+ $
+                 table[i_con].y_image
+               
 ;the total flux of the target
 ;+++++++++++++++++
-            ftot = 10.^(-0.4*(par.mag_galfit-zero_pt[b]))*exptime[b]
-
-            kap = (kappa(par.n_galfit))[0]
-            f0 = ftot/(2*!pi*par.re_galfit^2.*exp(kap)*par.n_galfit* $
-                       kap^(-2.*par.n_galfit)*gamma(2.*par.n_galfit)*par.q_galfit)
-
+               ftot = 10.^(-0.4*(par.mag_galfit_band[b-1]-zero_pt[b]))*exptime[b]
+               
+               kap = (kappa(par.n_galfit_band[b-1]))[0]
+               f0 = ftot/(2*!pi*par.re_galfit_band[b-1]^2.*exp(kap)*par.n_galfit_band[b-1]* $
+                          kap^(-2.*par.n_galfit_band[b-1])*gamma(2.*par.n_galfit_band[b-1])*par.q_galfit_band[b-1])
+               
 ;arrays for radius and angle of current contributing source
-            dist_angle, ang_arr, sz_im, par.x_galfit, par.y_galfit
-            rad_arr = cos(ang_arr)^2.
-            ang_arr = sin(temporary(ang_arr))^2./par.q_galfit^2.
-            ang_arr = sqrt(rad_arr+temporary(ang_arr))
-            dist_ellipse, rad_arr, sz_im, par.x_galfit, par.y_galfit, $
-              1./par.q_galfit, par.pa_galfit
-            rad_arr = temporary(rad_arr)*ang_arr
-            obj = f0*exp(-kap*((rad_arr/par.re_galfit)^(1./par.n_galfit)-1.))
-;        obj = sersic_flux(rad_arr, ang_arr, par.q_galfit, f0, par.re_galfit, par.n_galfit)
-            delvarx, rad_arr, ang_arr
-
+               dist_angle, ang_arr, sz_im, par.x_galfit_band[b-1], par.y_galfit_band[b-1]
+               rad_arr = cos(ang_arr)^2.
+               ang_arr = sin(temporary(ang_arr))^2./par.q_galfit_band[b-1]^2.
+               ang_arr = sqrt(rad_arr+temporary(ang_arr))
+               dist_ellipse, rad_arr, sz_im, par.x_galfit_band[b-1], par.y_galfit_band[b-1], $
+                 1./par.q_galfit_band[b-1], par.pa_galfit_band[b-1]
+               rad_arr = temporary(rad_arr)*ang_arr
+               obj = f0*exp(-kap*((rad_arr/par.re_galfit_band[b-1])^(1./par.n_galfit_band[b-1])-1.))
+;        obj = sersic_flux(rad_arr, ang_arr, par.q_galfit_band[b-1], f0, par.re_galfit_band[b-1], par.n_galfit_band[b-1])
+               delvarx, rad_arr, ang_arr
+               
 ;make sure the convolution size is a power of 2
-            cs = 2
-            cb = conv_box/2
-            WHILE cs LT cb DO cs *= 2
-            cs -= 1
-
+               cs = 2
+               cb = conv_box/2
+               WHILE cs LT cb DO cs *= 2
+               cs -= 1
+               
 ;convolution box must be fully inside the postage stamp
-            x0 = round(par.x_galfit-1) > (cs+1) < (sz_im[0]-cs-2)
-            y0 = round(par.y_galfit-1) > (cs+1) < (sz_im[1]-cs-2)
-
+               x0 = round(par.x_galfit_band[b-1]-1) > (cs+1) < (sz_im[0]-cs-2)
+               y0 = round(par.y_galfit_band[b-1]-1) > (cs+1) < (sz_im[1]-cs-2)
+               
 ;convolve the central region of the source with the PSF
-            conv = convolve(obj[x0-cs:x0+cs+1, y0-cs:y0+cs+1], psf)
-            obj[x0-cs:x0+cs+1, y0-cs:y0+cs+1] = conv
-
+               conv = convolve(obj[x0-cs:x0+cs+1, y0-cs:y0+cs+1], psf)
+               obj[x0-cs:x0+cs+1, y0-cs:y0+cs+1] = conv
+               
 ;subtract the contributing source
-            im = temporary(im)-obj
-            delvarx, obj
-
+               im = temporary(im)-obj
+               delvarx, obj
+               
 ;            print, systime(), ' done'
-
+               
 ;set subtract flag
-            subtract[current_contrib] = 1
-
+               subtract[current_contrib] = 1
+               
 ;current contributing source was subtracted from image-------------------------
-         ENDIF
-         
-      ENDFOR
+           ENDIF
+           
+       ENDFOR
 ;loop over all contributing sources============================================
 ;define new starting radius for sky calculation
-      notsubtracted = where(subtract EQ 0, ct)
-      IF ct GT 0 THEN BEGIN
-         new_rad = max(dist[notsubtracted])
+       notsubtracted = where(subtract EQ 0, ct)
+       IF ct GT 0 THEN BEGIN
+           new_rad = max(dist[notsubtracted])
 ;if requested starting radius is outside frame, set flag
-         IF new_rad GT max_rad THEN sky_flag += 2 $
-         ELSE rad[current_obj] = new_rad > rad[current_obj]
-      ENDIF
-
+           IF new_rad GT max_rad THEN sky_flag += 2 $
+           ELSE rad[current_obj] = new_rad > rad[current_obj]
+       ENDIF
+       
 ;contributing sources FOUND----------------------------------------------------
    ENDELSE
 ;array containing radii
    nstep = ulong(max(sz_im)/float(dstep))
    radius = findgen(nstep)*dstep+rad[current_obj]+gap
-
+   
 ;array containing sky in one ring
    ringsky = radius*0
    ringsigma = radius*0
-
+   
 ;this is the loop over different radii
 ;  plot, [0, 0], [0, 0], /nodata, xr = [0, max_rad < 6000], xsty = 1, $
 ;        ysty = 1, chars = 2, xtitle = 'radius', ytitle = 'flux', $
 ;        yr = global_sky+[-global_sigsky*0.3, global_sigsky]
-
+   
 ;  loadct, 39, /silent
-
+   
 ;arrays for the radius, sky, scatter of the last nslope 
    sl_sct = (sl_rad = (sl_sky = fltarr(nslope)))
-
+   
 ;   print,'radii loop'
    last_slope = 1
    slope_change = 0
@@ -1324,140 +1323,139 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;loop over radii ==============================================================
    FOR r=0l, nstep-1 DO BEGIN
 ;first calculate ellipses
-      theta = table[current_obj].theta_image/!radeg
-      xfac = ((rad[current_obj]* $
-               (abs(sin(theta))+(1-table[current_obj].ellipticity)* $
-                abs(cos(theta)))) > 10)+dstep*r+wstep
-      yfac = ((rad[current_obj]* $
-               (abs(cos(theta))+(1-table[current_obj].ellipticity)* $
-                abs(sin(theta)))) > 10)+dstep*r+wstep
-      major = max([xfac, yfac])
-      minor = min([xfac, yfac])
-
-      ang = theta*!radeg
-      cirrange, ang
-      IF ang GT 180 THEN ang -= 180
-      IF ang GT 90 THEN ang -= 180
-      IF abs(ang) LT 45 THEN BEGIN
-         xfac = major & yfac = minor
-      ENDIF ELSE BEGIN
-         xfac = minor & yfac = major
-      ENDELSE
-      xlo = round(table[current_obj].x_image-xfac) > 0 < (sz_im[0]-1)
-      xhi = round(table[current_obj].x_image+xfac) > 0 < (sz_im[0]-1)
-      ylo = round(table[current_obj].y_image-yfac) > 0 < (sz_im[1]-1)
-      yhi = round(table[current_obj].y_image+yfac) > 0 < (sz_im[1]-1)
+       theta = table[current_obj].theta_image/!radeg
+       xfac = ((rad[current_obj]* $
+                (abs(sin(theta))+(1-table[current_obj].ellipticity)* $
+                 abs(cos(theta)))) > 10)+dstep*r+wstep
+       yfac = ((rad[current_obj]* $
+                (abs(cos(theta))+(1-table[current_obj].ellipticity)* $
+                 abs(sin(theta)))) > 10)+dstep*r+wstep
+       major = max([xfac, yfac])
+       minor = min([xfac, yfac])
+       
+       ang = theta*!radeg
+       cirrange, ang
+       IF ang GT 180 THEN ang -= 180
+       IF ang GT 90 THEN ang -= 180
+       IF abs(ang) LT 45 THEN BEGIN
+           xfac = major & yfac = minor
+       ENDIF ELSE BEGIN
+           xfac = minor & yfac = major
+       ENDELSE
+       xlo = round(table[current_obj].x_image-xfac) > 0 < (sz_im[0]-1)
+       xhi = round(table[current_obj].x_image+xfac) > 0 < (sz_im[0]-1)
+       ylo = round(table[current_obj].y_image-yfac) > 0 < (sz_im[1]-1)
+       yhi = round(table[current_obj].y_image+yfac) > 0 < (sz_im[1]-1)
 ;polar coordinates for the current ring
-      dist_ellipse, arr, [xhi-xlo+1, yhi-ylo+1], $
-                    table[current_obj].x_image-xlo, $
-                    table[current_obj].y_image-ylo, $
-                    1./(1.-table[current_obj].ellipticity), $
-                    theta*!radeg-90
+       dist_ellipse, arr, [xhi-xlo+1, yhi-ylo+1], $
+         table[current_obj].x_image-xlo, $
+         table[current_obj].y_image-ylo, $
+         1./(1.-table[current_obj].ellipticity), $
+         theta*!radeg-90
 ;    dist_angle, alp, [xhi-xlo+1, yhi-ylo+1], table[current_obj].x_image-xlo, $
 ;                table[current_obj].y_image-ylo
-      
+       
 ;this index contains all pixels that do not contain object flux inside
 ;the current ring
-      ring_empty_idx = where(arr LE rad[current_obj]+dstep*r+wstep AND $
-                             arr GT rad[current_obj]+dstep*r AND $
-                             map[xlo:xhi, ylo:yhi] EQ 0, ct)
-      delvarx, arr
-
+       ring_empty_idx = where(arr LE rad[current_obj]+dstep*r+wstep AND $
+                              arr GT rad[current_obj]+dstep*r AND $
+                              map[xlo:xhi, ylo:yhi] EQ 0, ct)
+       delvarx, arr
+       
 ;calculate the flux value in the ring as a function of radius
-      IF ct LT 5 THEN BEGIN
+       IF ct LT 5 THEN BEGIN
 ;no pixels to calculate sky
-         ringsky = -1
-         ringsigma = 1e30
-      ENDIF ELSE BEGIN
+           ringsky = -1
+           ringsigma = 1e30
+       ENDIF ELSE BEGIN
 ;define a square image of sky pixels max 250x250 pix^2 in size
-         skyim = (im[xlo:xhi, ylo:yhi])[ring_empty_idx]
-         n_ring = n_elements(ring_empty_idx)
+           skyim = (im[xlo:xhi, ylo:yhi])[ring_empty_idx]
+           n_ring = n_elements(ring_empty_idx)
 ;clip 3 sigma outliers first
-         resistant_mean, skyim, 3, m, s, nr
-         s *= sqrt(n_ring-1-nr)
-         ring_sig_clip = where(skyim GT m-3*s AND skyim LT m+3*s, nw)
-         IF nw GT 4 THEN BEGIN
-            skyim = skyim[ring_sig_clip]
-            n_ring = n_elements(skyim)
+           resistant_mean, skyim, 3, m, s, nr
+           s *= sqrt(n_ring-1-nr)
+           ring_sig_clip = where(skyim GT m-3*s AND skyim LT m+3*s, nw)
+           IF nw GT 4 THEN BEGIN
+               skyim = skyim[ring_sig_clip]
+               n_ring = n_elements(skyim)
 ;reduce size to 250x250 pixels
-            npix = ulong(sqrt(n_ring)) < 250
-            skyim = reform(skyim[randomu(seed, npix^2)*npix^2], npix, npix)
-
-            IF n_elements(uniq(skyim)) LT 5 THEN BEGIN
-               ringsky = mean(skyim)
-               ringsigma = 1e30
-            ENDIF ELSE BEGIN
+               npix = ulong(sqrt(n_ring)) < 250
+               skyim = reform(skyim[randomu(seed, npix^2)*npix^2], npix, npix)
+               
+               IF n_elements(uniq(skyim)) LT 5 THEN BEGIN
+                   ringsky = mean(skyim)
+                   ringsigma = 1e30
+               ENDIF ELSE BEGIN
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-               plothist, skyim, x, y, chars = 2, bin = s*3*2/50., /noplot
-               f = gaussfit(x, y, a, sigma=sig, nterms = 3)
+                   plothist, skyim, x, y, chars = 2, bin = s*3*2/50., /noplot
+                   f = gaussfit(x, y, a, sigma=sig, nterms = 3)
 ;oplot, x, f, col = 250
-               resistant_mean, skyim, 3, ringsky, ringsigma
+                   resistant_mean, skyim, 3, ringsky, ringsigma
 ;ver, ringsky
 ;ver, a[1], col = 250
 ;            print, ringsky, a[1]
-               ringsky = a[1]
-               ringsigma = sig[1]  ;a[2]/(n_elements(x)^2-1)
+                   ringsky = a[1]
+                   ringsigma = sig[1] ;a[2]/(n_elements(x)^2-1)
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-            ENDELSE
-         ENDIF ELSE BEGIN
-            ringsky = -1
-            ringsigma = 1e30
-         ENDELSE
-         delvarx, skyim, ring_empty_idx
-      ENDELSE
-      plotsym, 0, /fill
+               ENDELSE
+           ENDIF ELSE BEGIN
+               ringsky = -1
+               ringsigma = 1e30
+           ENDELSE
+           delvarx, skyim, ring_empty_idx
+       ENDELSE
+       plotsym, 0, /fill
 ;replace one value in the slope arrays
-      sl_rad[r MOD nslope] = radius[r]
-      sl_sky[r MOD nslope] = ringsky
-      sl_sct[r MOD nslope] = ringsigma
-
-      fit = [0, 0]
+       sl_rad[r MOD nslope] = radius[r]
+       sl_sky[r MOD nslope] = ringsky
+       sl_sct[r MOD nslope] = ringsigma
+       
+       fit = [0, 0]
 ;if at least nslope sky values are calculated estimate the slope
-      IF r GE nslope-1 THEN BEGIN
-         good = where(sl_sct LT global_sigsky*3, ct)
+       IF r GE nslope-1 THEN BEGIN
+           good = where(sl_sct LT global_sigsky*3, ct)
 ;calculate slope robustly
-         IF ct GT 1 THEN fit = robust_linefit(sl_rad[good], sl_sky[good])
-         
+           IF ct GT 1 THEN fit = robust_linefit(sl_rad[good], sl_sky[good])
 ;         print, r+1, radius[r], fit[1], n_elements(good)
-
+           
 ;calculate a sky value
-         idx = where(sl_rad GT 0, ct)
+           idx = where(sl_rad GT 0, ct)
 ;check if enough measurements available
-         IF ct GT 3 THEN BEGIN
-            resistant_mean, sl_sky[idx], 3, new_sky
-            new_sky_sig = sqrt(total(sl_sct[idx]^2))/ct
-            IF NOT finite(new_sky_sig) THEN new_sky_sig = 1e30
-            min_sky_flag0 = 0
-         ENDIF ELSE BEGIN
+           IF ct GT 3 THEN BEGIN
+               resistant_mean, sl_sky[idx], 3, new_sky
+               new_sky_sig = sqrt(total(sl_sct[idx]^2))/ct
+               IF NOT finite(new_sky_sig) THEN new_sky_sig = 1e30
+               min_sky_flag0 = 0
+           ENDIF ELSE BEGIN
 ;too few measurements -> take value from SExtractor
-            min_sky_flag0 = 8
-            new_sky = table[current_obj].background
-            new_sky_sig = 999
-         ENDELSE
-         IF new_sky LT min_sky and new_sky_sig lt 1e20 THEN BEGIN
-            min_sky_flag = min_sky_flag0
-            min_sky = new_sky
-            IF ct GT 0 THEN min_sky_rad = mean(sl_rad[idx]) $
-            ELSE min_sky_rad = radius[r]
-            min_sky_sig = new_sky_sig
+               min_sky_flag0 = 8
+               new_sky = table[current_obj].background
+               new_sky_sig = 999
+           ENDELSE
+           IF new_sky LT min_sky and new_sky_sig lt 1e20 THEN BEGIN
+               min_sky_flag = min_sky_flag0
+               min_sky = new_sky
+               IF ct GT 0 THEN min_sky_rad = mean(sl_rad[idx]) $
+               ELSE min_sky_rad = radius[r]
+               min_sky_sig = new_sky_sig
 ;        oploterror, min_sky_rad, min_sky, min_sky_sig, $
 ;                    psym = 8, col = 150, errcol = 150
-         ENDIF
-
+           ENDIF
+           
 ;stop the loop if the slope is positive
-         IF fit[1] GT 0 AND slope_change THEN BREAK
-         IF fit[1] GT 0 AND last_slope LT 0 THEN slope_change++
-         last_slope = fit[1]
-      ENDIF
-
+           IF fit[1] GT 0 AND slope_change THEN BREAK
+           IF fit[1] GT 0 AND last_slope LT 0 THEN slope_change++
+           last_slope = fit[1]
+       ENDIF
+       
 ;    oploterror, radius[r], ringsky, ringsigma, psym = 8
-
+       
 ;break criterium not fulfilled, but image boundary reached -> image
 ;too small -> set flag
-      IF radius[r] GT max_rad THEN BEGIN
-         sky_flag += 4
-         BREAK
-      ENDIF
+       IF radius[r] GT max_rad THEN BEGIN
+           sky_flag += 4
+           BREAK
+       ENDIF
    ENDFOR
 ;loop over radii done==========================================================
 ;   print,'radii loop done'
@@ -1465,44 +1463,44 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
    idx = where(sl_rad GT 0 AND sl_sct lt 1e20, ct)
 ;check if enough measurements available
    IF ct GT 3 THEN BEGIN
-      resistant_mean, sl_sky[idx], 3, new_sky
-      new_sky_sig = sqrt(total(sl_sct[idx]^2))/ct
-      sky_flag0 = 0
+       resistant_mean, sl_sky[idx], 3, new_sky
+       new_sky_sig = sqrt(total(sl_sct[idx]^2))/ct
+       sky_flag0 = 0
    ENDIF ELSE BEGIN
 ;too few measurements -> take value from SExtractor
-      sky_flag0 = 8
-      new_sky = table[current_obj].background
-      new_sky_sig = 999
-      fit = [0, 0]
+       sky_flag0 = 8
+       new_sky = table[current_obj].background
+       new_sky_sig = 999
+       fit = [0, 0]
    ENDELSE
    IF ct GT 0 THEN sky_rad = mean(sl_rad[idx]) ELSE sky_rad = radius[(r-1) >0]
    IF new_sky GT min_sky THEN BEGIN
-      sky_flag0 = min_sky_flag
-      new_sky = min_sky
-      sky_rad = min_sky_rad
-      new_sky_sig = min_sky_sig
+       sky_flag0 = min_sky_flag
+       new_sky = min_sky
+       sky_rad = min_sky_rad
+       new_sky_sig = min_sky_sig
    ENDIF
    sky_flag += sky_flag0
-
+   
 ;  loadct, 39, /silent
 ;  oplot, [0, max_rad], fit[0]+[0, max_rad]*fit[1], col = 150
    
 ;  hor, new_sky, col = 50
 ;  hor, [-1, 1]*2*new_sky_sig+new_sky, linestyle = 2, col = 50
-
+   
 ;   print, new_sky, new_sky_sig
    contrib_sky = min(contrib_sky)
 ;   print, contrib_sky
-
+   
    IF contrib_sky LT new_sky THEN BEGIN
-      new_sky = contrib_sky
-      sky_flag += 16
+       new_sky = contrib_sky
+       sky_flag += 16
    ENDIF
-
+   
 ;write output sky file
    openw, 1, sky_file
    printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
-           sky_flag
+     sky_flag
    close, 1
 END
 
@@ -1854,8 +1852,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
        if b lt nband then SKYG_po2=SKYG_po2+','
    ENDFOR
 ; add BAND here and there!!!
-   printf, 1, ' 2) '+SKYG_po+'    '+SKYG_po2+'        # dsky/dx (sky gradient in x)'
-   printf, 1, ' 3) '+SKYG_po+'    '+SKYG_po2+'        # dsky/dy (sky gradient in y)'
+   printf, 1, ' 2) '+SKYG_po+'    '+SKYG_po2+'  '+band_po+'      # dsky/dx (sky gradient in x)'
+   printf, 1, ' 3) '+SKYG_po+'    '+SKYG_po2+'  '+band_po+'      # dsky/dy (sky gradient in y)'
    printf, 1, ' Z) 0                  # output image'
    printf, 1, ''
    printf, 1, ''
@@ -1896,7 +1894,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
        secout_file = outpath_galfit[idx]+outpre[idx,1]+ $
          round_digit(table[objects[i]].number, 0, /str)+'_'+strtrim(setup.galfit_out,2)+'.fits'
 
-; for some reason needs this to find read_sersic_results as a
+; for some reason needs this is needed to find read_sersic_results as a
 ; function, not a variable. Worked before and still works fine in the
 ; command line.
 ; Baffled!
@@ -1904,7 +1902,7 @@ forward_function read_sersic_results
        IF file_test(secout_file) THEN BEGIN
 ;sources with existing fit will be included as static source
            par = read_sersic_results(secout_file, nband)
-           
+
 ;problem: position from GALFIT is relative to original postage
 ;stamp. Need to compute offset using SExtractor input for that fit
 ;position is in the original postage stamp frame
@@ -1930,7 +1928,8 @@ forward_function read_sersic_results
              table[objects[i]].y_image
            
            fix = ['0', '0', '0', '0', '0', '0', '0']
-       ENDIF ELSE BEGIN
+
+      ENDIF ELSE BEGIN
 ;sources without fit will be included as free fit
 
 ; reading in file works, because it returns the correct FORMAT, but
@@ -2124,6 +2123,7 @@ forward_function read_sersic_results
    
 ;loop over all contributing sources
    FOR i=0ul, n_nums-1 DO BEGIN
+
        i_con = where(table.number EQ num_contrib[i] AND $
                      table.frame[0] EQ frame_contrib[i])
        
@@ -2341,7 +2341,7 @@ forward_function read_sersic_results
        
        if setup.version ge 4 then begin
            printf, 1, ' 1) '+x_po+'  '+x_po_fit+'  '+band_po+'   # position x     [pixel]'
-           printf, 1, ' 2) '+y_po+'  '+y_po_fit+'  '+band+po+'   # position y     [pixel]'
+           printf, 1, ' 2) '+y_po+'  '+y_po_fit+'  '+band_po+'   # position y     [pixel]'
        endif else begin
            printf, 1, ' 1) '+x_po+'  '+y_po+'   '+x_po_fit+' '+y_po_fit+'   # position x, y        [pixel]'
        endelse
@@ -3284,7 +3284,7 @@ IF keyword_set(logfile) THEN $
          ENDIF
          loop++
            
-         statusline, '  currently working on No. '+strtrim(cur+1,2)+' of '+strtrim(n_elements(sexcat),2)+'   '
+         statusline, '  currently working on No. '+strtrim(cur,2)+' of '+strtrim(n_elements(sexcat),2)+'   '
 ;check if current object exists
          ct = 0
 
@@ -3485,6 +3485,7 @@ IF keyword_set(logfile) THEN $
 ;calculate sky for all objects in current frame
          counter=0
          todo = n_elements(where(table.frame[0] eq images[f]))
+
          FOR current_obj=0ul, n_obj-1 DO BEGIN
              
 ;continue if current object is on neighbouring frame
@@ -3517,14 +3518,14 @@ IF keyword_set(logfile) THEN $
             
             IF first THEN BEGIN
                 first = 0
-                
                 print, systime(), ' reading image and estimating global sky values for each band'
 ; loop over band again as in gala_bridge
                 global_sky = fltarr(nband+1)
                 global_sigsky = fltarr(nband+1)
                 for b=1,nband do begin
-;read in image and weight (takes 15sec)
-                    
+
+; read in image and weight (takes 15sec)
+; as now are different bands, this has to be done below in the loop
                     
 ;read in image and weight (takes 15sec)
                     fits_read, table[current_obj].frame[b], im, hd
@@ -3553,7 +3554,7 @@ IF keyword_set(logfile) THEN $
                                     /noderivative, status = status, iter = iter)
                     global_sky[b] = par[1]
                     global_sigsky[b] = par[2]
-                    
+
 ;make sure all positions are relative to the current frame
 ;(neighbouring frames may have negative positions)
                     adxy, hd, table.alpha_j2000, table.delta_j2000, x, y
@@ -3564,13 +3565,13 @@ IF keyword_set(logfile) THEN $
             ENDIF
 ;does a GALFIT obj file exist (cannot test for _gf.fits -> files might
 ;bomb -> endless loop)?
+
             choose_psf, table[current_obj].alpha_j2000, table[current_obj].delta_j2000, $
               psf_struct, table[current_obj].frame, chosen_psf_file, nband         
 
 ; now estimate real skies for the object
+            IF file_test(obj_file) THEN CONTINUE
             for b=1,nband do begin
-                IF file_test(obj_file) THEN CONTINUE
-                
 ; choose closest PSF according to RA & DEC and subtract filename from
 ; structure 'psf_struct'
                 fits_read, chosen_psf_file[b], psf, psfhead
@@ -3591,16 +3592,26 @@ IF keyword_set(logfile) THEN $
                   setup.stampfile, global_sky[b], global_sigsky[b], $
                   setup.convbox, nums, frames, setup.galexe, fittab, b, $
                   orgpath_pre, outpath_file, outpath_file_no_band, nband
-                
+
                 create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
                   im_file[b], table[current_obj].frame[b], current_obj, $
                   setup.neiscl, setup.skyoff, nums, frames, $
                   setup.maglim_gal, setup.maglim_star, $
                   setup.stel_slope, setup.stel_zp, objects, corner, $
                   b
+; saves memory generally, and (for some reasons) prevents IDL from
+; taking up too much memory. Don't quite get that, doesn't even work
+; when at the beginning of this loop.
+delvarx,psf,im,wht,seg,map
+; make sure that deblending is defined by primary band!
+                if b eq 1 then begin
+                    delvarx, save_objects, save_corner
+                    save_objects = objects
+                    save_corner = corner
+                ENDIF       
             ENDFOR
-            
-            prepare_galfit, setup, objects, setup.files, corner, table, $
+
+            prepare_galfit, setup, save_objects, setup.files, save_corner, table, $
               obj_file, im_file, constr_file, mask_file, $
               chosen_psf_file, out_file, sky_file, setup.convbox, $
               setup.zp, setup.platescl, nums, frames, $
@@ -3608,7 +3619,7 @@ IF keyword_set(logfile) THEN $
               setup.stampfile, setup.conmaxre, setup.conminm, $
               setup.conmaxm, fittab, setup.version, nband, orgpre ;, n_constrained = n_constrained
 
-            cd, outpath_g4alfit[idx]
+            cd, outpath_galfit[idx]
 ;            print, setup.galexe
             IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file $
             ELSE spawn, setup.galexe+' '+obj_file
@@ -3712,7 +3723,12 @@ ENDIF
           ELSE out = out[good]
       ENDIF
       
+ out=remove_tags(out,'PSF_GALFIT_BAND')
+ out=remove_tags(out,'ORG_IMAGE_BAND')
+; out=remove_tags(out,'ORG_IMAGE')
+; out=remove_tags(out,'FILE_GALFIT')
       mwrfits, out, setup.outdir+setup.cat, /silent, /create
+stop
   ENDIF
   d = check_math()
 ;   stop
