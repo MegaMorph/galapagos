@@ -77,6 +77,7 @@ for b=1,nband do begin
      setup.stel_slope, setup.stel_zp, objects, corner, $
      b
    if b eq 1 then begin
+       delvarx, save_objects, save_corner
        save_objects = objects
        save_corner = corner
    ENDIF       

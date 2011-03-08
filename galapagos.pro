@@ -1158,7 +1158,8 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ; this is only done in REFERENCE band, for the other bands, num and
 ; frames are input by gala_bridge/galapagos, to which they have been returned in
 ; the run on the reference band.
-   if b eq 1 then contrib_targets, exptime[1], zero_pt[1], scale, offset, power, table, $
+   if b eq 1 then $
+     contrib_targets, exptime[b], zero_pt[b], scale, offset, power, table, $
      current_obj, cut, nums, frames, fit_table
    
    contrib_sky = 1e30
@@ -3589,7 +3590,7 @@ IF keyword_set(logfile) THEN $
                   setup.cut, setup.files, psf, setup.dstep, $
                   setup.wstep, setup.gap, setup.nslope, sky_file[b], $
                   setup.galfit_out, setup.outcat, setup.outparam, $
-                  setup.stampfile, global_sky[b], global_sigsky[b], $
+                  setup.stampfile, global_sky[b+1], global_sigsky[b+1], $
                   setup.convbox, nums, frames, setup.galexe, fittab, b, $
                   orgpath_pre, outpath_file, outpath_file_no_band, nband
 
