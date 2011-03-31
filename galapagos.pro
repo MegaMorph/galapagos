@@ -2448,7 +2448,10 @@ END
 PRO read_setup, setup_file, setup
 ;read in the main setup file
 ;example:
-
+   if file_test(setup_file) eq 0 then begin
+       print, 'input file does not exist'
+       stop
+   ENDIF
 
    ON_IOERROR, bad_input
 
@@ -2558,6 +2561,7 @@ PRO read_setup, setup_file, setup
 
          'A00)': setup.files = content
          'A01)': setup.outdir = set_trailing_slash(content)
+
          'B00)': setup.dosex = (content EQ 'execute') ? 1 : 0
          'B01)': setup.sexexe = content
          'B02)': setup.sexout = content
@@ -2783,7 +2787,7 @@ FUNCTION read_sersic_results, obj, nband
        res_cheb=mrdfits(obj[0], 'FINAL_CHEB',/silent)
        hd = headfits(obj[0], exten = nband+1)
        comp=1
-       repeat comp = comp +1 until tag_exist(result, '_'+strtrim(comp,2)+'_MAG') eq 0
+       repeat comp = comp +1 until tag_exist(result, 'COMP'+strtrim(comp,2)+'_MAG') eq 0
 ; delete feedback, just in case the format of one is different,
 ; avoiding crash
        delvarx, feedback
@@ -3727,7 +3731,7 @@ ENDIF
 ;         out[i].org_image = tab[i].tile
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-         update_table, out, tab, i, out_file, nband, setup /final
+         update_table, out, tab, i, out_file, nband, setup, /final
 
 ;         res = read_sersic_results(out_file,nband)
 ;         idx = where(finite(res) NE 1, ct)
@@ -3784,7 +3788,6 @@ ENDIF
  out=remove_tags(out,'PSF_GALFIT_BAND')
  out=remove_tags(out,'ORG_IMAGE_BAND')
       mwrfits, out, setup.outdir+setup.cat, /silent, /create
-stop
   ENDIF
   d = check_math()
 ;   stop
