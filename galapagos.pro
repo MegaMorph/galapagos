@@ -1868,6 +1868,10 @@ PRO prepare_galfit, objects, files, corner, table0, obj_file, im_file, $
       printf, 1, ' 1) '+round_digit(par[0]-corner[0], 2, /string)+ $
               '  '+round_digit(par[1]-corner[1], 2, /string)+ $
               ' '+fix[0]+' '+fix[1]+' # position x, y        [pixel]'
+;      printf, 1, ' 1) '+round_digit(par[0]-corner[0], 2, /string)+ $
+;              '  '+fix[0]+' # position x        [pixel]'
+;      printf, 1, ' 2) '+round_digit(par[1]-corner[1], 2, /string)+ $
+;              '  '+fix[1]+' # position y        [pixel]'
       printf, 1, ' 3) '+round_digit(par[2], 2, /string)+ $
               '       '+fix[2]+'       # total magnitude'
       printf, 1, ' 4) '+round_digit(par[3], 2, /string)+ $
