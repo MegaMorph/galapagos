@@ -59,7 +59,6 @@ for b=1,nband do begin
    fits_read, chosen_psf_file[b], psf, psfhead
 
 ; fix contrib_targets
-; put b to be passed along!
    getsky_loop, setup, cur, table, rad, im, hd, map, setup.expt, $
      setup.zp, setup.neiscl, setup.skyoff, setup.power, $
      setup.cut, setup.files, psf, setup.dstep, $
@@ -83,7 +82,7 @@ for b=1,nband do begin
    ENDIF       
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§tile10_5/t10_5.3416_obj§§§§§§
 endfor
-;stop
+
 ;save, /all, filename='/home/boris/IDL/bridge_save.sav'
 ; .run galapagos.pro
 ;restore, '/home/boris/IDL/bridge_save.sav'

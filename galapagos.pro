@@ -1,4 +1,3 @@
-
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
@@ -1868,7 +1867,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
    delvarx, nbandxxx
 ; define all paths and names again
    outpath = set_trailing_slash(outpath) 
-   outpath_galfit = outpath[*,0]+setup.galfit_out_path
+   outpath_galfit = strtrim(outpath[*,0]+setup.galfit_out_path,2)
    outpath_band = set_trailing_slash(outpath_band)
    outpath_pre = outpath_band+outpre
    outpath_file = outpath
@@ -1924,7 +1923,7 @@ forward_function read_sersic_results_old_galfit
                             n_lines(stamp_file), /no_execute)
            fill_struct, cat, stamp_file
            icat = where(cat.id EQ table[objects[i]].number)
-           
+          
            par.x_galfit = par.x_galfit+cat[icat].xlo-1-tb[itb].x_image+ $
              table[objects[i]].x_image
            par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-1-tb[itb].x_image+ $
@@ -2008,11 +2007,11 @@ forward_function read_sersic_results_old_galfit
            par.re_galfit_cheb = fltarr(nband)
            par.re_galfit_cheb[0] = table[objects[i]].flux_radius > 3    
        ENDIF
-       par.re_galfit = par.re_galfit < conmaxre > 0.3
+       par.re_galfit = par.re_galfit < float(conmaxre) > 0.3
 ; hard contraints work on ALL bands if this is used below. USED!
-       par.re_galfit_band = par.re_galfit_band < conmaxre > 0.3
+       par.re_galfit_band = par.re_galfit_band < float(conmaxre) > 0.3
 ; hard contraints work only on principle band if this is used
-       par.re_galfit_cheb[0] = par.re_galfit_cheb[0] < conmaxre > 0.3
+       par.re_galfit_cheb[0] = par.re_galfit_cheb[0] < float(conmaxre) > 0.3
        par.n_galfit = par.n_galfit < 8 > 0.2
        par.n_galfit_band = par.n_galfit_band < 8 > 0.2
        par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < 8 > 0.2
@@ -2022,7 +2021,7 @@ forward_function read_sersic_results_old_galfit
        par.pa_galfit = par.pa_galfit > (-360) < 360
        par.pa_galfit_band = par.pa_galfit_band > (-360) < 360
        par.pa_galfit_cheb[0] = par.pa_galfit_cheb[0] > (-360) < 360
-       
+
 ;     0  1  2    3   4  5  6   7
 ;par=[x, y, mag, re, n, q, pa, sky]
        openu, 1, obj_file, /append
@@ -2895,12 +2894,31 @@ forward_function read_sersic_results_old_galfit
 ;          if ct ne 1 then print, 'something wrong'
 ;          if ct ne 1 then stop
 ;          print, name_fittab[tagidx], name_res[j]
-          wh=where(finite(res.(j)) ne 1, ct)
-          if ct gt 0 then res[wh].(j)=-99999.
+          type=size(res.(j))
+; if keyword is INT
+          if type[1] eq 2 or type[1] eq 3 then begin
+              wh=where(finite(res.(j)) ne 1, ct)
+              if ct gt 0 then res[wh].(j)=-99999
+          ENDIF
+; if keyword is FLOAT
+          if type[1] eq 4 then begin
+              wh=where(finite(res.(j)) ne 1, ct)
+              if ct gt 0 then res[wh].(j)=-99999.
+          ENDIF
+; if keyword is DOUBLE
+          if type[1] eq 5 then begin
+              wh=where(finite(res.(j)) ne 1, ct)
+              if ct gt 0 then res[wh].(j)=double(-99999.)
+          ENDIF
+; if keyword is STRING
+          if type[1] eq 7 then begin
+              wh=where(res.(j) eq ' ', ct)
+              if ct gt 0 then res[wh].(j)='null'
+          ENDIF
 ;          if ct gt 0 then print, 'changed'
           fittab[i].(tagidx) = res.(j)          
       ENDFOR
-;stop
+
   ENDIF
 END
 
@@ -2942,27 +2960,27 @@ FUNCTION read_sersic_results_old_galfit, obj
        nfix_galfit = float(strmid(sxpar(hd, 'NFIX'),2))
        chi2nu_galfit = float(strmid(sxpar(hd, 'CHI2NU'),2))
    ENDIF ELSE BEGIN
-       mag = -999
-       magerr = 99999
-       re = -1
-       reerr = 99999
-       n = -1
-       nerr = 99999
-       q = -1
-       qerr = 99999
-       pa = 0
-       paerr = 99999
-       x = 0
-       xerr = 99999
-       y = 0
-       yerr = 99999
-       sky = -999
-       neigh_galfit = -99
-       chisq_galfit = -99
-       ndof_galfit = -99
-       nfree_galfit = -99
-       nfix_galfit = -99
-       chi2nu_galfit = -99
+       mag = -999.
+       magerr = 99999.
+       re = -1.
+       reerr = 99999.
+       n = -1.
+       nerr = 99999.
+       q = -1.
+       qerr = 99999.
+       pa = 0.
+       paerr = 99999.
+       x = 0.
+       xerr = 99999.
+       y = 0.
+       yerr = 99999.
+       sky = -999.
+       neigh_galfit = -99.
+       chisq_galfit = -99.
+       ndof_galfit = -99.
+       nfree_galfit = -99.
+       nfix_galfit = -99.
+       chi2nu_galfit = -99.
        psf='none'
    ENDELSE
    
@@ -3094,7 +3112,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 ; outpath_pre:  /data/gama/galapagos_multi_wl_test_3.2/tile10_5/t10_5.
 ; outpath_file: /data/gama/galapagos_multi_wl_test_3.2/tile10_5/t10_5.v.
    outpath = set_trailing_slash(outpath)
-   outpath_galfit = outpath[*,0]+setup.galfit_out_path
+   outpath_galfit = strtrim(outpath[*,0]+setup.galfit_out_path,2)
    outpath_band = set_trailing_slash(outpath_band)
    outpath_pre = outpath_band+outpre
    outpath_file = outpath
@@ -3354,8 +3372,8 @@ IF keyword_set(logfile) THEN $
          IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[*,0], ct)
          IF ct GT 0 THEN BEGIN
             objnum = round_digit(table[cur].number, 0, /str)
-            obj_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.obj)[0]
-            out_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out)[0]
+            obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
+            out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
 ;check if file was done successfully or bombed
             IF file_test(obj_file) THEN BEGIN
 ;print, obj_file+' found.'
@@ -3381,8 +3399,8 @@ IF keyword_set(logfile) THEN $
 ;read in feedback data
                idx = where(table[bridge_obj[free[0]]].frame EQ orgim[*,0])
                objnum = round_digit(table[bridge_obj[free[0]]].number, 0, /str)
-               obj_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.obj)[0]
-               out_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out)[0]
+               obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
+               out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
 ;               out_file = (outpath_galfit[idx]+orgpre[idx]+setup.galfit_out+objnum)[0]+'.fits'
 ;               obj_file = (outpath_galfit[idx]+orgpre[idx]+setup.obj+objnum)[0]
 
@@ -3419,19 +3437,20 @@ IF keyword_set(logfile) THEN $
             objnum = round_digit(table[cur].number, 0, /str)
 ;galfit masks
             mask_file = strarr(nband+1)
-            for q=1,nband do mask_file[q] = (outpath_galfit[idx]+outpre[idx,1]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
+            for q=1,nband do mask_file[q] = (outpath_galfit[idx]+outpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
 ;galfit obj file
-            obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
+            obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
 ;galfit constraint file
-            constr_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.constr)[0]
+            constr_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.constr)[0]
 ;galfit input file
             im_file = strarr(nband+1)
             for q=1,nband do im_file[q] = (orgpath_pre[idx,q]+objnum+'_'+setup.stamp_pre[q])[0]
+
 ;galfit output path
-            out_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out)[0]
+            out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
 ;sky summary file
             sky_file = strarr(nband+1)
-            for q=1,nband do sky_file[q] = (outpath_galfit[idx]+outpre[idx,1]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+            for q=1,nband do sky_file[q] = (outpath_galfit[idx]+outpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
 
 ; choose closest PSF according to RA & DEC and subtract filename from
 ; structure 'psf_struct'
