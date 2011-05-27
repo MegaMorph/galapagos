@@ -1,4 +1,3 @@
-
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ;==============================================================================
@@ -259,26 +258,26 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
 
 ;this will produce a checkimage with all the ellipses
    IF chktype NE 'none' THEN BEGIN
-      print, 'starting cold sex check image on image '+image+' ''
-      spawn, sexexe+' '+image+' -c '+cold+ $
-        ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
-        ' -PARAMETERS_NAME '+outparam+ $
-        ' -WEIGHT_IMAGE '+weight+ $
-        ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
-        ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
-        file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
-      IF multi EQ 3 THEN BEGIN
-          print, 'starting hot sex check image'
-          spawn, sexexe+' '+image+' -c '+hot+ $
-            ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
-            ' -PARAMETERS_NAME '+outparam+ $
-            ' -WEIGHT_IMAGE '+weight+ $
-            ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
-            ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
-            file_dirname(check)+'/'+file_basename(check, '.fits')+ $
-            '.hot.fits'
-      ENDIF
-  ENDIF
+       print, 'starting cold sex check image on image '+image+' ''
+       spawn, sexexe+' '+image+' -c '+cold+ $
+         ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
+         ' -PARAMETERS_NAME '+outparam+ $
+         ' -WEIGHT_IMAGE '+weight+ $
+         ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
+         ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
+         file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
+       IF multi EQ 3 THEN BEGIN
+           print, 'starting hot sex check image'
+           spawn, sexexe+' '+image+' -c '+hot+ $
+             ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
+             ' -PARAMETERS_NAME '+outparam+ $
+             ' -WEIGHT_IMAGE '+weight+ $
+             ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff+ $
+             ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
+             file_dirname(check)+'/'+file_basename(check, '.fits')+ $
+             '.hot.fits'
+       ENDIF
+   ENDIF
   
 ;now start sextractor to create hotcat and coldcat
   print, 'starting cold sex'
@@ -531,7 +530,6 @@ PRO cut_stamps, image, param, outpath, pre
                     nobj, /no_execute)
 
    fill_struct, cat, param
-
 
 ;  ndigits = fix(alog10(max(cat.id)))+1
    FOR i=0ul, nobj-1 DO BEGIN
@@ -1095,7 +1093,7 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
                  scale, offset, power, cut, files, psf, dstep, wstep, gap, $
                  nslope, sky_file, out_file, out_cat, out_param, out_stamps, $
                  global_sky, global_sigsky, conv_box, nums, frames, galexe, $
-                 fit_table
+                 fit_table, seed
 ;current_obj: idx of the current object in table
 ;table: sextractor table (frame of current object and surrounding
 ;neighbouring frames)
@@ -1332,10 +1330,10 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
       yhi = round(table[current_obj].y_image+yfac) > 0 < (sz_im[1]-1)
 ;polar coordinates for the current ring
       dist_ellipse, arr, [xhi-xlo+1, yhi-ylo+1], $
-                    table[current_obj].x_image-xlo, $
-                    table[current_obj].y_image-ylo, $
-                    1./(1.-table[current_obj].ellipticity), $
-                    theta*!radeg-90
+        table[current_obj].x_image-xlo, $
+        table[current_obj].y_image-ylo, $
+        1./(1.-table[current_obj].ellipticity), $
+        theta*!radeg-90
 ;    dist_angle, alp, [xhi-xlo+1, yhi-ylo+1], table[current_obj].x_image-xlo, $
 ;                table[current_obj].y_image-ylo
       
@@ -1359,18 +1357,20 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
          resistant_mean, skyim, 3, m, s, nr
          s *= sqrt(n_ring-1-nr)
          ring_sig_clip = where(skyim GT m-3*s AND skyim LT m+3*s, nw)
+
          IF nw GT 4 THEN BEGIN
             skyim = skyim[ring_sig_clip]
             n_ring = n_elements(skyim)
 ;reduce size to 250x250 pixels
             npix = ulong(sqrt(n_ring)) < 250
             skyim = reform(skyim[randomu(seed, npix^2)*npix^2], npix, npix)
+; THIS LINE IS WHERE THINGS GO WRONG!!!!!
 
             IF n_elements(uniq(skyim)) LT 5 THEN BEGIN
                ringsky = mean(skyim)
                ringsigma = 1e30
             ENDIF ELSE BEGIN
-;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+; HERE THE HISTORGAMS OF SKYIM LOOK DIFFERENT!!!!;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                plothist, skyim, x, y, chars = 2, bin = s*3*2/50., /noplot
                f = gaussfit(x, y, a, sigma=sig, nterms = 3)
 ;oplot, x, f, col = 250
@@ -1400,8 +1400,7 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
          good = where(sl_sct LT global_sigsky*3, ct)
 ;calculate slope robustly
          IF ct GT 1 THEN fit = robust_linefit(sl_rad[good], sl_sky[good])
-         
-;         print, r+1, radius[r], fit[1], n_elements(good)
+         ;         print, r+1, radius[r], fit[1], n_elements(good)
 
 ;calculate a sky value
          idx = where(sl_rad GT 0, ct)
@@ -1742,6 +1741,8 @@ PRO prepare_galfit, objects, files, corner, table0, obj_file, im_file, $
    openw, 1, obj_file
    printf, 1, '# IMAGE PARAMETERS'
    printf, 1, 'A) '+im_file+'.fits'
+;   printf, 1, 'A1) r        # only NEW GALFIT'
+;   printf, 1, 'A2) 2000     # only NEW GALFIT'
    printf, 1, 'B) '+out_file+'.fits'
    printf, 1, 'C) none                # Noise image name ' + $
            '(made from data if blank or "none")'
@@ -2526,27 +2527,29 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 ;==============================================================================
 ;create postage stamp description files 
    IF setup.dostamps THEN BEGIN
-      FOR i=0ul, nframes-1 DO BEGIN
-         create_stamp_file, images[i], $
-                            outpath_pre[i]+setup.outcat, $
-                            outpath_pre[i]+setup.outparam, $
-                            outpath_pre[i]+setup.stampfile, $
-                            setup.stampsize
-         cut_stamps, images[i], $
-                     outpath_pre[i]+setup.stampfile, $
-                     outpath[i], $
-                     outpre[i]+setup.stamp_pre
-      ENDFOR
+seed=1
+; SEED FOR RANDOM NUMBER GENERATOR in getsky_loop!
+       FOR i=0ul, nframes-1 DO BEGIN
+           create_stamp_file, images[i], $
+             outpath_pre[i]+setup.outcat, $
+             outpath_pre[i]+setup.outparam, $
+             outpath_pre[i]+setup.stampfile, $
+             setup.stampsize
+           cut_stamps, images[i], $
+             outpath_pre[i]+setup.stampfile, $
+             outpath[i], $
+             outpre[i]+setup.stamp_pre
+       ENDFOR
 ;create skymap files 
-      FOR i=0ul, nframes-1 DO BEGIN
-         create_skymap, weights[i], $
-                        outpath_pre[i]+setup.outseg, $
-                        outpath_pre[i]+setup.outcat, $
-                        outpath_pre[i]+setup.outparam, $
-                        outpath_pre[i]+setup.skymap, $
-                        setup.skyscl, $
-                        setup.skyoff
-      ENDFOR
+       FOR i=0ul, nframes-1 DO BEGIN
+           create_skymap, weights[i], $
+             outpath_pre[i]+setup.outseg, $
+             outpath_pre[i]+setup.outcat, $
+             outpath_pre[i]+setup.outparam, $
+             outpath_pre[i]+setup.skymap, $
+             setup.skyscl, $
+             setup.skyoff
+       ENDFOR
       IF keyword_set(logfile) THEN $
        update_log, logfile, 'Postage stamps... done!'
    ENDIF
@@ -2712,10 +2715,13 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
             
             fits_read, chosen_psf_file, psf
 
+; change seed for random in getsky_loop
+            randxxx=randomu(seed,1)
+            delvarx, randxxx 
 ; create sav file for gala_bridge to read in
             save, cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file,$
                   sky_file, stamp_param_file, mask_file, im_file, obj_file, $
-                  constr_file, mask_file, out_file, fittab, filename=out_file+'.sav'
+                  constr_file, mask_file, out_file, fittab, seed, filename=out_file+'.sav'
             
             IF setup.max_proc GT 1 THEN BEGIN
                 IF keyword_set(logfile) THEN $
@@ -2888,7 +2894,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
                          setup.wstep, setup.gap, setup.nslope, sky_file, $
                          setup.galfit_out, setup.outcat, setup.outparam, $
                          setup.stampfile, global_sky, global_sigsky, $
-                         setup.convbox, nums, frames, setup.galexe, fittab
+                         setup.convbox, nums, frames, setup.galexe, fittab, seed
 
             create_mask, table, wht, seg, stamp_param_file, mask_file, $
                          im_file, table[current_obj].frame, current_obj, $
