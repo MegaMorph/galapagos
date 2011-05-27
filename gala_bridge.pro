@@ -3,7 +3,8 @@ PRO gala_bridge, filein
 ;cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
 ;stamp_param_file, mask_file, im_file, obj_file, 
 ;constr_file, out_file, fittab, nband, outpath_file
-;orgpath_band, orgpath_pre, orgpath_galfit, orgpath_file, orgpath_file_no_band
+;orgpath_band, orgpath_pre, orgpath_galfit, orgpath_file,
+;orgpath_file_no_band, seed
    restore, filein
 
    table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
@@ -66,7 +67,7 @@ for b=1,nband do begin
      setup.galfit_out, setup.outcat, setup.outparam, $
      setup.stampfile, global_sky, global_sigsky, $
      setup.convbox, nums, frames, setup.galexe, fittab, b, $
-     orgpath_pre, outpath_file, outpath_file_no_band, nband
+     orgpath_pre, outpath_file, outpath_file_no_band, nband, seed
 ;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
 ;   print,table[cur].number
    create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
@@ -105,7 +106,7 @@ endfor
 ;   wait, randomu(systime(/seconds))*8+2
 ;   spawn, 'touch '+out_file
 
-   file_delete, filein
+;   file_delete, filein
 
    wait, 1
 END

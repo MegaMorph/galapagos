@@ -572,6 +572,7 @@ PRO create_skymap, whtfile, segfile, sex, sexparam, mapfile, scale, offset
 
 ;now calculate sextractor ellipses and mark object positions
    table = read_sex_table(sex, sexparam)
+
    theta = table.theta_image/!radeg
    rad = table.a_image*table.kron_radius*scale+offset
    FOR i=0ul, n_elements(table)-1 DO BEGIN
@@ -1003,7 +1004,7 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
 ;      ENDFOR
 
   ENDIF
-;+++++++++++++++++++++++++++++++=  
+
   ftot = 10.^(-0.4*(mag-zeropt))*exptime
   kap = (kappa(n))[0]
   f0 = ftot/(2*!pi*re^2.*exp(kap)*n*kap^(-2.*n)*gamma(2.*n)*q)
@@ -1097,7 +1098,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
                  nslope, sky_file, out_file, out_cat, out_param, out_stamps, $
                  global_sky, global_sigsky, conv_box, nums, frames, galexe, $
                  fit_table, b, orgpath_pre, outpath_file, outpath_file_no_band, $
-                 nband
+                 nband, seed
 ;current_obj: idx of the current object in table
 ;table: sextractor table (frame of current object and surrounding
 ;neighbouring frames)
@@ -1205,7 +1206,8 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;a GALFIT result exists for the current contributing source--------------------
                
 ;read in the GALFIT image fitting results from current_file
-forward_function read_sersic_results
+forward_function read_sersic_results  ; not quite sure why this is needed
+forward_function read_sersic_results_old_galfit  ; not quite sure why this is needed
 ;               par = read_sersic_results(current_contrib_file,nband)
                IF setup.version ge 4 then par = read_sersic_results(current_contrib_file,nband)
                IF setup.version lt 4 then par = read_sersic_results_old_galfit(current_contrib_file)      
@@ -1239,12 +1241,12 @@ forward_function read_sersic_results
                  table[i_con].y_image
                
 ;the total flux of the target
-;+++++++++++++++++
                ftot = 10.^(-0.4*(par.mag_galfit_band[b-1]-zero_pt[b]))*exptime[b]
                
                kap = (kappa(par.n_galfit_band[b-1]))[0]
                f0 = ftot/(2*!pi*par.re_galfit_band[b-1]^2.*exp(kap)*par.n_galfit_band[b-1]* $
-                          kap^(-2.*par.n_galfit_band[b-1])*gamma(2.*par.n_galfit_band[b-1])*par.q_galfit_band[b-1])
+                          kap^(-2.*par.n_galfit_band[b-1])*gamma(2.*par.n_galfit_band[b-1])* $
+                          par.q_galfit_band[b-1])
                
 ;arrays for radius and angle of current contributing source
                dist_angle, ang_arr, sz_im, par.x_galfit_band[b-1], par.y_galfit_band[b-1]
@@ -1522,6 +1524,7 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
 ;   print, systime()
 
    rad = table.a_image*table.kron_radius*scale+offset
+
    readcol, paramfile, $
             pnum, px, py, pxlo, pxhi, pylo, pyhi, $
             comment = '#', format = 'I,F,F,L,L,L,L', /silent
@@ -2679,7 +2682,7 @@ bad_input:
    message, 'Invalid Entry in '+setup_file
 END
 
-PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nband, silent=silent
+PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nband, silent=silent, firstread=firstread
 ; reads in the image file and returns the results to galapagos
 
 ; count number of columns in file
@@ -2705,23 +2708,25 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
 ; setup.stamp_pre is used and stays as given in C02)
 ; outpre is read in from the filelist
 ; exposure time and zeropoint read from setup file
-       hlppre=setup.stamp_pre
-       setup=remove_tags(setup,'stamp_pre')
-       add_tag, setup, 'stamp_pre', [hlppre, hlppre], setup2
-       setup=setup2
-       hlpzp=setup.zp
-       if not tag_exist(setup, 'wavelength') then begin
-           add_tag, setup, 'wavelength', [0,0], setup2
+       if keyword_set(firstread) then begin 
+           if not tag_exist(setup, 'wavelength') then begin
+               add_tag, setup, 'wavelength', [0,0], setup2
+               setup=setup2
+           endif
+           hlppre=setup.stamp_pre
+           setup=remove_tags(setup,'stamp_pre')
+           add_tag, setup, 'stamp_pre', [hlppre, hlppre], setup2
            setup=setup2
+           hlpzp=setup.zp
+           setup=remove_tags(setup,'zp')
+           add_tag, setup, 'zp', [hlpzp, hlpzp], setup2
+           setup=setup2
+           hlpexp=setup.expt
+           setup=remove_tags(setup,'expt')
+           add_tag, setup, 'expt', [hlpexp, hlpexp], setup2
+           setup=setup2
+           delvarx, setup2
        endif
-       setup=remove_tags(setup,'zp')
-       add_tag, setup, 'zp', [hlpzp, hlpzp], setup2
-       setup=setup2
-       hlpexp=setup.expt
-       setup=remove_tags(setup,'expt')
-       add_tag, setup, 'expt', [hlpexp, hlpexp], setup2
-       setup=setup2
-       delvarx, setup2
        nband=1
 ; wavelength
 ; band
@@ -2747,23 +2752,25 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
        outpath_band=strarr(n_elements(hlpimages),nband+1)
        outpre=strarr(n_elements(hlpimages),nband+1)
        cnt=intarr(nband+1)
-       setup=remove_tags(setup,'stamp_pre')
-       add_tag, setup, 'stamp_pre', band, setup2
-       setup=setup2
-       if not tag_exist(setup, 'wavelength') then begin
-; setup=remove_tags(setup,'wavelength')
-           add_tag, setup, 'wavelength', wavelength, setup2
-           setup=setup2
-       endif
 
-       setup=remove_tags(setup,'zp')
-       add_tag, setup, 'zp', zeropoint, setup2
-       setup=setup2
-       setup=remove_tags(setup,'expt')
-       add_tag, setup, 'expt', exptime, setup2
-       setup=setup2
-       delvarx, setup2
-      for b=0,nband do begin
+       if keyword_set(firstread) then begin
+           setup=remove_tags(setup,'stamp_pre')
+           add_tag, setup, 'stamp_pre', band, setup2
+           setup=setup2
+           if not tag_exist(setup, 'wavelength') then begin
+; setup=remove_tags(setup,'wavelength')
+               add_tag, setup, 'wavelength', wavelength, setup2
+               setup=setup2
+           endif
+           setup=remove_tags(setup,'zp')
+           add_tag, setup, 'zp', zeropoint, setup2
+           setup=setup2
+           setup=remove_tags(setup,'expt')
+           add_tag, setup, 'expt', exptime, setup2
+           setup=setup2
+           delvarx, setup2
+       endif
+       for b=0,nband do begin
            readcol, filelist[b], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
              format = 'A,A,A,A', comment = '#', /silent
            cnt[b]=n_elements(hlpimages)
@@ -3087,7 +3094,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 ;==============================================================================   
 ;read input files into arrays
    read_image_files, setup, images, weights, outpath, outpath_band, outpre, $
-     nband
+     nband,/firstread
 ; now that number of bands is known, correct number of additional cheb
 ; combonents to nband -1
    setup.cheb=setup.cheb <(nband-1)
@@ -3245,7 +3252,7 @@ IF keyword_set(logfile) THEN $
 ;==============================================================================
 ;create postage stamp description files 
    IF setup.dostamps THEN BEGIN
-       FOR i=0ul, nframes-1 DO BEGIN
+      FOR i=0ul, nframes-1 DO BEGIN
            create_stamp_file, images[i,0], $
              outpath_file[i,0]+setup.outcat, $
              outpath_file[i,0]+setup.outparam, $
@@ -3273,8 +3280,10 @@ IF keyword_set(logfile) THEN $
          update_log, logfile, 'Postage stamps... done!'
    ENDIF 
 ;==============================================================================
-;measure sky and run galfit
-   IF setup.dosky THEN BEGIN
+; SEED FOR RANDOM NUMBER GENERATOR in getsky_loop!
+ seed=1
+;measure sky and run galfit 
+  IF setup.dosky THEN BEGIN
        IF keyword_set(logfile) THEN $
         update_log, logfile, 'Beginning sky loop...'
 ;;==============================================================================
@@ -3458,14 +3467,18 @@ IF keyword_set(logfile) THEN $
            choose_psf, table[cur].alpha_j2000, table[cur].delta_j2000, $
                         psf_struct, table[cur].frame, chosen_psf_file, nband
 
+; change seed for random in getsky_loop
+            randxxx=randomu(seed,1)
+            delvarx, randxxx 
 ; create sav file for gala_bridge to read in
            save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
              sky_file, stamp_param_file, mask_file, im_file, obj_file, $
              constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
              outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
-             orgpath_band, orgpath_file, $
+             orgpath_band, orgpath_file, seed,$
              filename=out_file+'.sav'
 
+;stop
             IF setup.max_proc GT 1 THEN BEGIN
                 IF keyword_set(logfile) THEN $
                  update_log, logfile, 'Starting new bridge... ('+out_file+')'
@@ -3665,14 +3678,14 @@ IF keyword_set(logfile) THEN $
 ;read the skymap
                 fits_read, orgpath_file_no_band[idx,b]+setup.skymap+'.fits', map
 
-                getsky_loop, setup, current_obj, table, rad, im, hd, map, setup.expt, $
+               getsky_loop, setup, current_obj, table, rad, im, hd, map, setup.expt, $
                   setup.zp, setup.neiscl, setup.skyoff, setup.power, $
                   setup.cut, setup.files, psf, setup.dstep, $
                   setup.wstep, setup.gap, setup.nslope, sky_file[b], $
                   setup.galfit_out, setup.outcat, setup.outparam, $
-                  setup.stampfile, global_sky[b+1], global_sigsky[b+1], $
+                  setup.stampfile, global_sky[b], global_sigsky[b], $
                   setup.convbox, nums, frames, setup.galexe, fittab, b, $
-                  orgpath_pre, outpath_file, outpath_file_no_band, nband
+                  orgpath_pre, outpath_file, outpath_file_no_band, nband, seed
 
                 create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
                   im_file[b], table[current_obj].frame[b], current_obj, $
