@@ -3073,6 +3073,8 @@ PRO start_log, logfile, message
 END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile
+start=systime(0)
+print, 'start: '+start
    IF n_params() LE 1 THEN gala_pro = 'galapagos'
 ;   gala_pro = '/home/boris/IDL/gala/galapagos.pro'
 ;   logfile = '/data/gama/galapagos_multi_wlgalapagos.log'
@@ -3468,8 +3470,9 @@ IF keyword_set(logfile) THEN $
                         psf_struct, table[cur].frame, chosen_psf_file, nband
 
 ; change seed for random in getsky_loop
-            randxxx=randomu(seed,1)
-            delvarx, randxxx 
+;            randxxx=randomu(seed,1)
+;            delvarx, randxxx 
+            seed=table[cur].number
 ; create sav file for gala_bridge to read in
            save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
              sky_file, stamp_param_file, mask_file, im_file, obj_file, $
@@ -3678,7 +3681,8 @@ IF keyword_set(logfile) THEN $
 ;read the skymap
                 fits_read, orgpath_file_no_band[idx,b]+setup.skymap+'.fits', map
 
-               getsky_loop, setup, current_obj, table, rad, im, hd, map, setup.expt, $
+                seed=table[current_obj].number
+                getsky_loop, setup, current_obj, table, rad, im, hd, map, setup.expt, $
                   setup.zp, setup.neiscl, setup.skyoff, setup.power, $
                   setup.cut, setup.files, psf, setup.dstep, $
                   setup.wstep, setup.gap, setup.nslope, sky_file[b], $
@@ -3823,6 +3827,9 @@ ENDIF
   ENDIF
   d = check_math()
 ;   stop
+
+print, 'Start: '+start
+print, 'End  : '+systime(0)
 END
 ;==============================================================================
 ;==============================================================================
