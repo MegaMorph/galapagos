@@ -1364,13 +1364,11 @@ PRO getsky_loop, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
 ;reduce size to 250x250 pixels
             npix = ulong(sqrt(n_ring)) < 250
             skyim = reform(skyim[randomu(seed, npix^2)*npix^2], npix, npix)
-; THIS LINE IS WHERE THINGS GO WRONG!!!!!
 
             IF n_elements(uniq(skyim)) LT 5 THEN BEGIN
                ringsky = mean(skyim)
                ringsigma = 1e30
             ENDIF ELSE BEGIN
-; HERE THE HISTORGAMS OF SKYIM LOOK DIFFERENT!!!!;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                plothist, skyim, x, y, chars = 2, bin = s*3*2/50., /noplot
                f = gaussfit(x, y, a, sigma=sig, nterms = 3)
 ;oplot, x, f, col = 250
@@ -2006,6 +2004,10 @@ PRO prepare_galfit, objects, files, corner, table0, obj_file, im_file, $
       printf, 1, ' 1) '+round_digit(par[0]-corner[0], 2, /string)+ $
               '  '+round_digit(par[1]-corner[1], 2, /string)+ $
               ' '+fix[0]+' '+fix[1]+' # position x, y        [pixel]'
+;      printf, 1, ' 1) '+round_digit(par[0]-corner[0], 2, /string)+ $
+;              '  '+fix[0]+' # position x        [pixel]'
+;      printf, 1, ' 2) '+round_digit(par[1]-corner[1], 2, /string)+ $
+;              '  '+fix[1]+' # position y        [pixel]'
       printf, 1, ' 3) '+round_digit(par[2], 2, /string)+ $
               '       '+fix[2]+'       # total magnitude'
       printf, 1, ' 4) '+round_digit(par[3], 2, /string)+ $
@@ -2375,6 +2377,8 @@ PRO start_log, logfile, message
 END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile
+start=systime(0)
+print, 'Start: '+start
    IF n_params() LE 1 THEN gala_pro = 'galapagos'
 ;   gala_pro = '/home/gems/gala/galapagos.pro'
 ;   logfile = '/cosmos1/arobaina/cosmos/setup/galapagos.log'
@@ -2527,8 +2531,6 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile
 ;==============================================================================
 ;create postage stamp description files 
    IF setup.dostamps THEN BEGIN
-seed=1
-; SEED FOR RANDOM NUMBER GENERATOR in getsky_loop!
        FOR i=0ul, nframes-1 DO BEGIN
            create_stamp_file, images[i], $
              outpath_pre[i]+setup.outcat, $
@@ -2555,7 +2557,9 @@ seed=1
    ENDIF
 ;==============================================================================
 ;measure sky and run galfit
-   IF setup.dosky THEN BEGIN
+ ; SEED FOR RANDOM NUMBER GENERATOR in getsky_loop!
+ seed=1
+  IF setup.dosky THEN BEGIN
        IF keyword_set(logfile) THEN $
         update_log, logfile, 'Beginning sky loop...'
 ;;==============================================================================
@@ -2716,8 +2720,9 @@ seed=1
             fits_read, chosen_psf_file, psf
 
 ; change seed for random in getsky_loop
-            randxxx=randomu(seed,1)
-            delvarx, randxxx 
+;            randxxx=randomu(seed,1)
+;            delvarx, randxxx 
+            seed=table[cur].number
 ; create sav file for gala_bridge to read in
             save, cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file,$
                   sky_file, stamp_param_file, mask_file, im_file, obj_file, $
@@ -2888,6 +2893,7 @@ seed=1
                         psf_struct, table[current_obj].frame, chosen_psf_file            
             fits_read, chosen_psf_file, psf
 
+            seed=table[current_obj].number
             getsky_loop, current_obj, table, rad, im, hd, map, setup.expt, $
                          setup.zp, setup.neiscl, setup.skyoff, setup.power, $
                          setup.cut, setup.files, psf, setup.dstep, $
@@ -3005,6 +3011,8 @@ print, ' '
    ENDIF
    d = check_math()
 ;   stop
+print, 'Start: '+start
+print, 'End  : '+systime(0)
 END
 ;==============================================================================
 ;==============================================================================
