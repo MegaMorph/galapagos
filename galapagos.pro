@@ -1208,7 +1208,6 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;read in the GALFIT image fitting results from current_file
 forward_function read_sersic_results  ; not quite sure why this is needed
 forward_function read_sersic_results_old_galfit  ; not quite sure why this is needed
-;               par = read_sersic_results(current_contrib_file,nband)
                IF setup.version ge 4 then par = read_sersic_results(current_contrib_file,nband)
                IF setup.version lt 4 then par = read_sersic_results_old_galfit(current_contrib_file)      
 ; old format
@@ -1908,7 +1907,6 @@ forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
        IF file_test(secout_file) THEN BEGIN
 ;sources with existing fit will be included as static source
-;           par = read_sersic_results(secout_file, nband)
            IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
            IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
 
@@ -1944,7 +1942,6 @@ forward_function read_sersic_results_old_galfit
 ; reading in file works, because it returns the correct FORMAT, but
 ; with useless values in it. As they will be replaced here, that does
 ; not matter
-;           par = read_sersic_results(secout_file, nband)
 forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
            IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
@@ -2151,7 +2148,6 @@ forward_function read_sersic_results_old_galfit
        
        IF file_test(current_contrib_file) THEN BEGIN
 ;sources with existing fit will be included as static source
-;           par = read_sersic_results(current_contrib_file,nband)
 forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
            IF setup.version ge 4 then par = read_sersic_results(current_contrib_file,nband)
@@ -2188,7 +2184,6 @@ forward_function read_sersic_results_old_galfit
 ; reading in file works, because it returns the correct FORMAT, but
 ; with useless values in it. As they will be replaced here, that does
 ; not matter
-;                   par = read_sersic_results(secout_file, nband)
 forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
                    IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
@@ -2227,7 +2222,6 @@ forward_function read_sersic_results_old_galfit
                    fix = ['0', '0', '0', '0', '0', '0', '0']
                ENDIF ELSE BEGIN
 ;source is in fit_table but no fit exists -> bombed -> free fit
-;                   par = read_sersic_results(secout_file, nband)
 forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
                    IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
@@ -2273,7 +2267,6 @@ forward_function read_sersic_results_old_galfit
                ENDELSE
            ENDIF ELSE BEGIN
 ;source is not in fit_table -> free fit
-;               par = read_sersic_results(secout_file, nband)
 forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
                IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
@@ -2832,7 +2825,7 @@ FUNCTION read_sersic_results, obj, nband
 ; TO BE ADDED:
 ; #iterations, time
 ; NEIGH_GALFIT HAS TO BE ADAPTED!
-                                'neigh_galfit', comp-3)
+                                'neigh_galfit', comp-3, 'flag_galfit', 2)
    ENDIF ELSE BEGIN
        psf=strarr(nband)
        for n=0,nband-1 do psf[n]='none'
@@ -2870,12 +2863,113 @@ FUNCTION read_sersic_results, obj, nband
 ; TO BE ADDED:
 ; #iterations, time
 ; NEIGH_GALFIT HAS TO BE ADAPTED!
-                                'neigh_galfit', -99)
+                                'neigh_galfit', -99, 'flag_galfit', 1)
    ENDELSE
    return, feedback
 ;[mag, magerr, re, reerr, n, nerr, q, qerr, pa, paerr, $
 ;            x, xerr, y, yerr, sky, neigh_galfit, chisq_galfit, ndof_galfit, $
 ;            nfree_galfit, nfix_galfit, chi2nu_galfit]
+END
+
+FUNCTION read_sersic_results_old_galfit, obj
+   IF file_test(obj) THEN BEGIN
+       hd = headfits(obj, exten = 2)
+       mag0 = sxpar(hd, '2_MAG')
+       mag = float(strmid(mag0, 0, strpos(mag0, '+/-')))
+       magerr = float(strmid(mag0, strpos(mag0, '+/-')+3, strlen(mag0)))
+       re0 = sxpar(hd, '2_RE')
+       re = float(strmid(re0, 0, strpos(re0, '+/-')))
+       reerr = float(strmid(re0, strpos(re0, '+/-')+3, strlen(re0)))
+       n0 = sxpar(hd, '2_N')
+       n = float(strmid(n0, 0, strpos(n0, '+/-')))
+       nerr = float(strmid(n0, strpos(n0, '+/-')+3, strlen(n0)))
+       q0 = sxpar(hd, '2_AR')
+       q = float(strmid(q0, 0, strpos(q0, '+/-')))
+       qerr = float(strmid(q0, strpos(q0, '+/-')+3, strlen(q0)))
+       pa0 = sxpar(hd, '2_PA')
+       pa = float(strmid(pa0, 0, strpos(pa0, '+/-')))
+       paerr = float(strmid(pa0, strpos(pa0, '+/-')+3, strlen(pa0)))
+       x0 = sxpar(hd, '2_XC')
+       x = float(strmid(x0, 0, strpos(x0, '+/-')))
+       xerr = float(strmid(x0, strpos(x0, '+/-')+3, strlen(x0)))
+       y0 = sxpar(hd, '2_YC')
+       y = float(strmid(y0, 0, strpos(y0, '+/-')))
+       yerr = float(strmid(y0, strpos(y0, '+/-')+3, strlen(y0)))
+       s0 = sxpar(hd, '1_SKY')
+       sky = float(strmid(s0, 1, strpos(s0, ']')))
+       psf0 = sxpar(hd, 'PSF') 
+       psf= strtrim(psf0, 2)
+; find number of neighbors
+       comp=0
+       repeat comp = comp +1 until sxpar(hd, 'COMP_'+strtrim(comp,2)) eq '0'
+       neigh_galfit = comp-3
+       flag_galfit = 2
+       chisq_galfit = float(strmid(sxpar(hd, 'CHISQ'),2)) 
+       ndof_galfit = float(strmid(sxpar(hd, 'NDOF'),2))
+       nfree_galfit = float(strmid(sxpar(hd, 'NFREE'),2))
+       nfix_galfit = float(strmid(sxpar(hd, 'NFIX'),2))
+       chi2nu_galfit = float(strmid(sxpar(hd, 'CHI2NU'),2))
+   ENDIF ELSE BEGIN
+       mag = -999.
+       magerr = 99999.
+       re = -1.
+       reerr = 99999.
+       n = -1.
+       nerr = 99999.
+       q = -1.
+       qerr = 99999.
+       pa = 0.
+       paerr = 99999.
+       x = 0.
+       xerr = 99999.
+       y = 0.
+       yerr = 99999.
+       sky = -999.
+       neigh_galfit = -99.
+       flag_galfit = 1
+       chisq_galfit = -99.
+       ndof_galfit = -99.
+       nfree_galfit = -99.
+       nfix_galfit = -99.
+       chi2nu_galfit = -99.
+       psf='none'
+   ENDELSE
+   
+;   return, [mag, magerr, re, reerr, n, nerr, q, qerr, pa, paerr, $
+;            x, xerr, y, yerr, sky, neigh_galfit, chisq_galfit, ndof_galfit, $
+;            nfree_galfit, nfix_galfit, chi2nu_galfit]
+   feedback = create_struct('mag_galfit', mag, 'magerr_galfit', magerr, $
+                            're_galfit', re, 'reerr_galfit', reerr, $
+                            'n_galfit', n, 'nerr_galfit', nerr, $
+                            'q_galfit', q, 'qerr_galfit', qerr, $
+                            'pa_galfit', pa, 'paerr_galfit', paerr, $
+                            'x_galfit', x, 'xerr_galfit', xerr, $
+                            'y_galfit', y, 'yerr_galfit', yerr, $
+                            'psf_galfit', psf, 'sky_galfit', sky, $
+                            'mag_galfit_band', mag, 'magerr_galfit_band', magerr, $
+                            're_galfit_band', re, 'reerr_galfit_band', reerr, $
+                            'n_galfit_band', n, 'nerr_galfit_band', nerr, $
+                            'q_galfit_band', q, 'qerr_galfit_band', qerr, $
+                            'pa_galfit_band', pa, 'paerr_galfit_band', paerr, $
+                            'sky_galfit_band', sky, $
+                            'x_galfit_band', x, 'xerr_galfit_band', xerr, $
+                            'y_galfit_band', y, 'yerr_galfit_band', yerr, $
+                            'mag_galfit_cheb', mag, 'magerr_galfit_cheb', magerr, $
+                            're_galfit_cheb', re, 'reerr_galfit_cheb', reerr, $
+                            'n_galfit_cheb', n, 'nerr_galfit_cheb', nerr, $
+                            'q_galfit_cheb', q, 'qerr_galfit_cheb', qerr, $
+                            'pa_galfit_cheb', pa, 'paerr_galfit_cheb', paerr, $
+                            'x_galfit_cheb', x, 'xerr_galfit_cheb', xerr, $
+                            'y_galfit_cheb', y, 'yerr_galfit_cheb', yerr, $
+                            'sky_galfit_cheb', sky, $
+                            'psf_galfit_band', psf, $
+                            'chisq_galfit', chisq_galfit, $
+                            'ndof_galfit', ndof_galfit, $
+                            'nfree_galfit', nfree_galfit, $
+                            'nfix_galfit', nfix_galfit, $
+                            'chi2nu_galfit', chi2nu_galfit, $
+                            'neigh_galfit', neigh_galfit, 'flag_galfit', flag_galfit)
+     return, feedback
 END
 
 PRO update_table, fittab, table, i, out_file, nband, setup, final = final
@@ -2925,107 +3019,9 @@ forward_function read_sersic_results_old_galfit
 ;          if ct gt 0 then print, 'changed'
           fittab[i].(tagidx) = res.(j)          
       ENDFOR
+      fittab[i].flag_galfit = res.flag_galfit
 
   ENDIF
-END
-
-FUNCTION read_sersic_results_old_galfit, obj
-   IF file_test(obj) THEN BEGIN
-       hd = headfits(obj, exten = 2)
-       mag0 = sxpar(hd, '2_MAG')
-       mag = float(strmid(mag0, 0, strpos(mag0, '+/-')))
-       magerr = float(strmid(mag0, strpos(mag0, '+/-')+3, strlen(mag0)))
-       re0 = sxpar(hd, '2_RE')
-       re = float(strmid(re0, 0, strpos(re0, '+/-')))
-       reerr = float(strmid(re0, strpos(re0, '+/-')+3, strlen(re0)))
-       n0 = sxpar(hd, '2_N')
-       n = float(strmid(n0, 0, strpos(n0, '+/-')))
-       nerr = float(strmid(n0, strpos(n0, '+/-')+3, strlen(n0)))
-       q0 = sxpar(hd, '2_AR')
-       q = float(strmid(q0, 0, strpos(q0, '+/-')))
-       qerr = float(strmid(q0, strpos(q0, '+/-')+3, strlen(q0)))
-       pa0 = sxpar(hd, '2_PA')
-       pa = float(strmid(pa0, 0, strpos(pa0, '+/-')))
-       paerr = float(strmid(pa0, strpos(pa0, '+/-')+3, strlen(pa0)))
-       x0 = sxpar(hd, '2_XC')
-       x = float(strmid(x0, 0, strpos(x0, '+/-')))
-       xerr = float(strmid(x0, strpos(x0, '+/-')+3, strlen(x0)))
-       y0 = sxpar(hd, '2_YC')
-       y = float(strmid(y0, 0, strpos(y0, '+/-')))
-       yerr = float(strmid(y0, strpos(y0, '+/-')+3, strlen(y0)))
-       s0 = sxpar(hd, '1_SKY')
-       sky = float(strmid(s0, 1, strpos(s0, ']')))
-       psf0 = sxpar(hd, 'PSF') 
-       psf= strtrim(psf0, 2)
-; find number of neighbors
-       comp=0
-       repeat comp = comp +1 until sxpar(hd, 'COMP_'+strtrim(comp,2)) eq '0'
-       neigh_galfit = comp-3
-       chisq_galfit = float(strmid(sxpar(hd, 'CHISQ'),2)) 
-       ndof_galfit = float(strmid(sxpar(hd, 'NDOF'),2))
-       nfree_galfit = float(strmid(sxpar(hd, 'NFREE'),2))
-       nfix_galfit = float(strmid(sxpar(hd, 'NFIX'),2))
-       chi2nu_galfit = float(strmid(sxpar(hd, 'CHI2NU'),2))
-   ENDIF ELSE BEGIN
-       mag = -999.
-       magerr = 99999.
-       re = -1.
-       reerr = 99999.
-       n = -1.
-       nerr = 99999.
-       q = -1.
-       qerr = 99999.
-       pa = 0.
-       paerr = 99999.
-       x = 0.
-       xerr = 99999.
-       y = 0.
-       yerr = 99999.
-       sky = -999.
-       neigh_galfit = -99.
-       chisq_galfit = -99.
-       ndof_galfit = -99.
-       nfree_galfit = -99.
-       nfix_galfit = -99.
-       chi2nu_galfit = -99.
-       psf='none'
-   ENDELSE
-   
-;   return, [mag, magerr, re, reerr, n, nerr, q, qerr, pa, paerr, $
-;            x, xerr, y, yerr, sky, neigh_galfit, chisq_galfit, ndof_galfit, $
-;            nfree_galfit, nfix_galfit, chi2nu_galfit]
-   feedback = create_struct('mag_galfit', mag, 'magerr_galfit', magerr, $
-                            're_galfit', re, 'reerr_galfit', reerr, $
-                            'n_galfit', n, 'nerr_galfit', nerr, $
-                            'q_galfit', q, 'qerr_galfit', qerr, $
-                            'pa_galfit', pa, 'paerr_galfit', paerr, $
-                            'x_galfit', x, 'xerr_galfit', xerr, $
-                            'y_galfit', y, 'yerr_galfit', yerr, $
-                            'psf_galfit', psf, 'sky_galfit', sky, $
-                            'mag_galfit_band', mag, 'magerr_galfit_band', magerr, $
-                            're_galfit_band', re, 'reerr_galfit_band', reerr, $
-                            'n_galfit_band', n, 'nerr_galfit_band', nerr, $
-                            'q_galfit_band', q, 'qerr_galfit_band', qerr, $
-                            'pa_galfit_band', pa, 'paerr_galfit_band', paerr, $
-                            'sky_galfit_band', sky, $
-                            'x_galfit_band', x, 'xerr_galfit_band', xerr, $
-                            'y_galfit_band', y, 'yerr_galfit_band', yerr, $
-                            'mag_galfit_cheb', mag, 'magerr_galfit_cheb', magerr, $
-                            're_galfit_cheb', re, 'reerr_galfit_cheb', reerr, $
-                            'n_galfit_cheb', n, 'nerr_galfit_cheb', nerr, $
-                            'q_galfit_cheb', q, 'qerr_galfit_cheb', qerr, $
-                            'pa_galfit_cheb', pa, 'paerr_galfit_cheb', paerr, $
-                            'x_galfit_cheb', x, 'xerr_galfit_cheb', xerr, $
-                            'y_galfit_cheb', y, 'yerr_galfit_cheb', yerr, $
-                            'sky_galfit_cheb', sky, $
-                            'psf_galfit_band', psf, $
-                            'chisq_galfit', chisq_galfit, $
-                            'ndof_galfit', ndof_galfit, $
-                            'nfree_galfit', nfree_galfit, $
-                            'nfix_galfit', nfix_galfit, $
-                            'chi2nu_galfit', chi2nu_galfit, $
-                            'neigh_galfit', neigh_galfit)
-     return, feedback
 END
 
 ;PRO update_table_old_galfit, fittab, table, i, out_file
@@ -3072,7 +3068,7 @@ PRO start_log, logfile, message
    free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_PRO, logfile=logfile
+PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 start=systime(0)
 print, 'start: '+start
    IF n_params() LE 1 THEN gala_pro = 'galapagos'
@@ -3154,7 +3150,7 @@ print, 'start: '+start
    IF NOT file_test(setup.outdir) THEN $
     spawn, 'mkdirhier '+setup.outdir
    FOR i=0ul, n_elements(outpath_band)-1 DO IF NOT file_test(outpath_band[i]) THEN spawn, 'mkdirhier '+outpath_band[i]
-   FOR i=0, n_elements(outpath_galfit)-1 DO IF NOT file_test(outpath_galfit[i]) THEN spawn, 'mkdirhier '+outpath_galfit[i]
+   FOR i=0ul, n_elements(outpath_galfit)-1 DO IF NOT file_test(outpath_galfit[i]) THEN spawn, 'mkdirhier '+outpath_galfit[i]
 IF keyword_set(logfile) THEN $
     update_log, logfile, 'Initialisation... done!'
 ;===============================================================================
@@ -3283,7 +3279,7 @@ IF keyword_set(logfile) THEN $
    ENDIF 
 ;==============================================================================
 ; SEED FOR RANDOM NUMBER GENERATOR in getsky_loop!
- seed=1
+ seed=1  ;not actually used at the moment. At the moment 'cur' is passed as the seed
 ;measure sky and run galfit 
   IF setup.dosky THEN BEGIN
        IF keyword_set(logfile) THEN $
@@ -3315,8 +3311,10 @@ IF keyword_set(logfile) THEN $
       table=remove_tags(table,'frame')
       add_tag, table, 'frame', strarr(nband+1), table2
       table=table2
-      delvarx, table2
       table.frame = tableim
+      add_tag, table, 'flag_galfit', intarr(1), table2
+      table=table2
+      delvarx, table2
 
       fittab = read_sex_param(outpath_file[0,0]+setup.outparam, nbr, $
                               add_column = addcol)
@@ -3347,7 +3345,7 @@ IF keyword_set(logfile) THEN $
 ;calculate sky for the brightest objects
 ;******************************************************************************
 ;******************************************************************************
-;current object
+;current object (will be used and overwritten by the neue, optimized, queue)
       cur = 0l
 ;create object array for child processes 
       bridge_arr = objarr(setup.max_proc)
@@ -3364,6 +3362,11 @@ IF keyword_set(logfile) THEN $
 ;       bridge_arr[i] = obj_new('IDL_IDLBridge', output=setup.outdir+'bridge'+ $
 ;                               strtrim(i, 2)+'.ttmp')
 
+      if keyword_set(plot) then begin
+          loadct,39,/silent
+          plot, fittab.alpha_j2000, fittab.delta_j2000, psym=3
+      endif
+
 ;loop over all objects
       loop = 0l
       REPEAT BEGIN
@@ -3374,39 +3377,83 @@ IF keyword_set(logfile) THEN $
              strtrim(bridge_arr[i]->status(), 2)
          ENDIF
          loop++
-           
-         statusline, '  currently working on No. '+strtrim(cur,2)+' of '+strtrim(n_elements(sexcat),2)+'   '
+
+         if keyword_set(plot) then begin
+             plot, fittab.alpha_j2000, fittab.delta_j2000, psym=3
+             done=where(table.flag_galfit eq 2, countdone)
+             if countdone ge 1 then begin
+                 plots, table[done].alpha_j2000, table[done].delta_j2000, psym=1, col=135, thick=1.5, symsize=0.6
+             endif
+             progress=where(table.flag_galfit eq 1, countprogress)
+             if countprogress ge 1 then begin
+                 plots, table[progress].alpha_j2000, table[progress].delta_j2000, psym=1, col=235, symsize=0.4
+                 for q=0,n_elements(progress)-1 do tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
+                   table[progress[q]].alpha_j2000, table[progress[q]].delta_j2000, col=235,/data
+             endif
+         endif
+
+;         statusline, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit gt 0))+1,2)+' of '+strtrim(n_elements(sexcat),2)+'   '
+;         print, '  currently working on No. '+strtrim(loop,2)+' of '+strtrim(n_elements(sexcat),2)+'   '
+
 ;check if current object exists
+         todo=where(table.flag_galfit eq 0)
+         if todo[0] eq -1 then begin
+             FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
+             goto, loopend
+         ENDIF
          ct = 0
 
 ;         IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[0,0], ct)
-         IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[*,0], ct)
+;         IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[*,0], ct)
+         IF todo[0] LT nbr THEN idx = where(table[todo[0]].frame EQ orgim[*,0], ct)
          IF ct GT 0 THEN BEGIN
-            objnum = round_digit(table[cur].number, 0, /str)
+;            objnum = round_digit(table[cur].number, 0, /str)
+            objnum = round_digit(table[todo[0]].number, 0, /str)
             obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
             out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
 ;check if file was done successfully or bombed
             IF file_test(obj_file) THEN BEGIN
-;print, obj_file+' found.'
-;print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'
-               update_table, fittab, table, cur, out_file+'.fits', nband, setup
-               cur++
-               IF cur LT nbr THEN CONTINUE
+print, obj_file+' found.'
+print, 'Updating table now! ('+strtrim(todo[0], 2)+'/'+strtrim(nbr, 1)+')'
+               table[todo[0]].flag_galfit=2
+               update_table, fittab, table, todo[0], out_file+'.fits', nband, setup
+;               cur++
+;               IF cur LT nbr THEN CONTINUE
+               IF n_elements(todo) ne 1 then begin
+                   IF todo[1] ne -1 THEN CONTINUE
+               ENDIF
             ENDIF
          ENDIF
 
+loopstart:
 ;get status of bridge elements
          FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
          
 ;check for free bridges
          free = where(bridge_use eq 0, ct)
+; overplot dark rings for finished objects to vanish from plot
+        if keyword_set(plot) then begin
+             finished=where(bridge_obj ne -1 and bridge_use eq 0, finct)
+             if finct gt 0 then begin
+                 for q=0,finct-1 do tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
+                   table[bridge_obj[finished[q]]].alpha_j2000, table[bridge_obj[finished[q]]].delta_j2000, col=0,/data
+                 plots, table[bridge_obj[finished]].alpha_j2000, table[bridge_obj[finished]].delta_j2000, psym=1
+             endif
+         endif
 
-         IF ct GT 0 AND cur LT nbr THEN BEGIN
+;         IF ct GT 0 AND cur LT nbr THEN BEGIN
+         IF ct GT 0 AND todo[0] ne -1  THEN BEGIN
 ;at least one bridge is free --> start new object
 ;the available bridge is free[0]
             
 ;treat finished objects first
             IF bridge_obj[free[0]] GE 0 THEN BEGIN
+                if keyword_set(plot) then begin
+                    plots, table[bridge_obj[free[0]]].alpha_j2000,table[bridge_obj[free[0]]].delta_J2000, psym=1, col=135, thick=2, symsize=2
+                    tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
+                      table[bridge_obj[free[0]]].alpha_J2000, table[bridge_obj[free[0]]].delta_J2000, col=0,/data
+                ENDIF
+
 ;read in feedback data
                idx = where(table[bridge_obj[free[0]]].frame EQ orgim[*,0])
                objnum = round_digit(table[bridge_obj[free[0]]].number, 0, /str)
@@ -3419,7 +3466,7 @@ IF keyword_set(logfile) THEN $
                update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', nband, setup
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
-               
+
 ;clear object
                bridge_obj[free[0]] = -1
 ;clear position of finished object
@@ -3430,15 +3477,61 @@ IF keyword_set(logfile) THEN $
 ; CHANGE ORDER OF OBJECTS HERE!
             filled = where(finite(bridge_pos[0, *]) EQ 1 AND $
                            bridge_use GT 0, ct)
+            ob=0l
             IF ct GT 0 THEN BEGIN
-               gcirc, 1, table[cur].alpha_j2000/15d, table[cur].delta_j2000, $
+;*** old version *****
+;               gcirc, 1, table[cur].alpha_j2000/15d, table[cur].delta_j2000, $
+;                      bridge_pos[0, filled]/15d, bridge_pos[1, filled], dist
+
+                blockfac=0.5
+                blocked=-1
+                REPEAT BEGIN
+;                    FOR i=0, max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
+;                    filled = where(finite(bridge_pos[0, *]) EQ 1 AND bridge_use GT 0, ct)
+; get distance to all active objects
+                    if n_elements(blocked) gt 1 then $
+                      gcirc, 1, table[blocked[1:n_elements(blocked)-1]].alpha_j2000/15d, $
+                        table[blocked[1:n_elements(blocked)-1]].delta_j2000, $
+                        bridge_pos[0, filled]/15d, bridge_pos[1, filled], dist_block
+                    if n_elements(blocked) eq 1 then dist_block = 2*setup.min_dist
+; can be simplified when the plots are taken out!
+                    IF min(dist_block) lt blockfac*setup.min_dist THEN begin
+                        if keyword_set(plot) then begin
+                            plots, table[todo[ob]].alpha_J2000, table[todo[ob]].delta_J2000,psym=4, col=160, symsize=2
+                            tvellipse, blockfac*setup.min_dist/3600., blockfac*setup.min_dist/3600., table[todo[ob]].alpha_J2000, table[todo[ob]].delta_J2000, col=160,/data
+                        ENDIF
+                        blocked = [[blocked],todo[ob]]
+                    ENDIF
+                    gcirc, 1, table[todo[ob]].alpha_j2000/15d, table[todo[ob]].delta_j2000, $
                       bridge_pos[0, filled]/15d, bridge_pos[1, filled], dist
-               IF min(dist) LT setup.min_dist THEN CONTINUE
+                    IF min(dist) LT setup.min_dist THEN begin
+                        if keyword_set(plot) then begin
+                            plots, table[todo[ob]].alpha_J2000, table[todo[ob]].delta_J2000,psym=4, col=200, symsize=2
+                            tvellipse, setup.min_dist/3600., setup.min_dist/3600., table[todo[ob]].alpha_J2000, table[todo[ob]].delta_J2000, col=200,/data
+                        ENDIF
+                        blocked = [[blocked],todo[ob]]
+                    ENDIF
+                    ob++
+                    if ob eq n_elements(todo) then begin
+                        wait, 1
+                        ob=0l
+print, 'starting over'
+goto, loopstart
+                    ENDIF
+
+                ENDREP UNTIL (min(dist) gt setup.min_dist and min(dist_block) gt blockfac*setup.min_dist) or ob ge n_elements(todo)-1
+;                ENDREP UNTIL min(dist) gt setup.min_dist or ob ge n_elements(todo)
+                IF min(dist) LT setup.min_dist or min(dist_block) lt blockfac*setup.min_dist THEN CONTINUE
             ENDIF
+            ob=ob-1>0
+            cur=todo[ob]
+
             
 ;store position of new object
             bridge_pos[*, free[0]] = [table[cur].alpha_j2000, $
                                       table[cur].delta_j2000]
+            table[cur].flag_galfit = 1
+         print, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(sexcat),2)+'   '
             
 ;find the matching filenames
             idx = where(table[cur].frame EQ orgim[*,0])
@@ -3474,13 +3567,13 @@ IF keyword_set(logfile) THEN $
 ;            delvarx, randxxx 
             seed=table[cur].number
 ; create sav file for gala_bridge to read in
-           save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
-             sky_file, stamp_param_file, mask_file, im_file, obj_file, $
-             constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
-             outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
-             orgpath_band, orgpath_file, seed,$
+            save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
+              sky_file, stamp_param_file, mask_file, im_file, obj_file, $
+              constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
+              outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
+              orgpath_band, orgpath_file, seed,$
              filename=out_file+'.sav'
-
+            
 ;stop
             IF setup.max_proc GT 1 THEN BEGIN
                 IF keyword_set(logfile) THEN $
@@ -3493,23 +3586,32 @@ IF keyword_set(logfile) THEN $
                 'gala_bridge, "'+out_file+'.sav"', /nowait
             ENDIF ELSE BEGIN
                 IF keyword_set(logfile) THEN $
-                 update_log, logfile, 'Starting next object... ('+out_file+')'
-               cd, orgpath[idx,0]
-               gala_bridge, out_file+'.sav'
-               file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
-                            /allow_nonexistent, /noexpand_path
+                  update_log, logfile, 'Starting next object... ('+out_file+')'
+                cd, orgpath[idx,0]
+                gala_bridge, out_file+'.sav'
+                file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
+                  /allow_nonexistent, /noexpand_path
             ENDELSE
+            if keyword_set(plot) then begin
+                plots, table[cur].alpha_J2000,table[cur].delta_J2000, psym=4, col=0, symsize=2
+                plots, table[cur].alpha_J2000,table[cur].delta_J2000, psym=1, col=235
+                tvellipse, smallfac*setup.min_dist, smallfac*setup.min_dist, ra[todo[ob]], dec[todo[ob]],col=0,/data
+                tvellipse, setup.min_dist/3600., setup.min_dist/3600., table[cur].alpha_J2000,table[cur].delta_J2000, col=235,/data
+                tvellipse, blockfac*setup.min_dist/3600., blockfac*setup.min_dist/3600., table[cur].alpha_J2000,table[cur].delta_J2000, col=0,/data
+            ENDIF
             bridge_obj[free[0]] = cur
 ;switch to next object
-            cur++
+;            cur++
          ENDIF ELSE BEGIN
 ;all bridges are busy --> wait    
             wait, 1
          ENDELSE
-         
+
+loopend:
 ;stop when all done and no bridge in use any more
-; CHANGE THIS FOR NEW FITTING ORDER AS WELL!!
-     ENDREP UNTIL cur GE nbr AND total(bridge_use) EQ 0
+; CHANGED THIS FOR NEW FITTING ORDER AS WELL!!
+;     ENDREP UNTIL cur GE nbr AND total(bridge_use) EQ 0
+     ENDREP UNTIL todo[0] eq -1 AND total(bridge_use) EQ 0
 
 ;have to read in the last batch of objects
       remain = where(bridge_obj ge 0, ct)
@@ -3522,7 +3624,15 @@ IF keyword_set(logfile) THEN $
 ;            obj_file = (orgpath[idx]+orgpre[idx]+setup.obj+objnum)[0]
             obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
             out_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out)[0]
-
+            
+            if keyword_set(plot) then begin
+                plots, table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, psym=1, col=135, thick=2, symsize=2
+                tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
+                  table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, col=0,/data
+            ENDIF
+            bridge_obj[remain[i]] = -1
+            bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
+            
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
             update_table, fittab, table, bridge_obj[remain[i]], out_file,nband, setup
@@ -3531,7 +3641,9 @@ IF keyword_set(logfile) THEN $
          ENDFOR
       ENDIF
 
-; DONE TO HERE ================================================================
+
+; DONE TO HERE, WILL NOT NEED NEW QUEUE IN BATCH MODE< ONLY ONE
+; PROCESSOR USED THERE  =======================================================
 ;==============================================================================
 ;==============================================================================
 ;read in batch list
@@ -3830,6 +3942,8 @@ ENDIF
 
 print, 'Start: '+start
 print, 'End  : '+systime(0)
+stop
+
 END
 ;==============================================================================
 ;==============================================================================
