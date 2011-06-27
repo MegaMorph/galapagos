@@ -3595,7 +3595,7 @@ goto, loopstart
             if keyword_set(plot) then begin
                 plots, table[cur].alpha_J2000,table[cur].delta_J2000, psym=4, col=0, symsize=2
                 plots, table[cur].alpha_J2000,table[cur].delta_J2000, psym=1, col=235
-                tvellipse, smallfac*setup.min_dist, smallfac*setup.min_dist, ra[todo[ob]], dec[todo[ob]],col=0,/data
+                tvellipse, blockfac*setup.min_dist, blockfac*setup.min_dist, ra[todo[ob]], dec[todo[ob]],col=0,/data
                 tvellipse, setup.min_dist/3600., setup.min_dist/3600., table[cur].alpha_J2000,table[cur].delta_J2000, col=235,/data
                 tvellipse, blockfac*setup.min_dist/3600., blockfac*setup.min_dist/3600., table[cur].alpha_J2000,table[cur].delta_J2000, col=0,/data
             ENDIF
