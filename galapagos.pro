@@ -2829,8 +2829,8 @@ FUNCTION read_sersic_results, obj, nband
    ENDIF ELSE BEGIN
        psf=strarr(nband)
        for n=0,nband-1 do psf[n]='none'
-
-      feedback = create_struct('mag_galfit', -999., 'magerr_galfit',99999., $
+       
+       feedback = create_struct('mag_galfit', -999., 'magerr_galfit',99999., $
                                 're_galfit', -1., 'reerr_galfit', 99999., $
                                 'n_galfit', -1., 'nerr_galfit' ,99999., $
                                 'q_galfit', -1., 'qerr_galfit', 99999., $
@@ -2977,51 +2977,53 @@ PRO update_table, fittab, table, i, out_file, nband, setup, final = final
 ; CHANGED SEVERELY!!!! MULTI_BAND AND POSSIBILITY FOR B/D
 ; DECOMPOSITION
 ; REMEMBER TO STORE SOME VALUES TWICE!!!
-   IF file_test(out_file) THEN BEGIN
-      if keyword_set(final) then fittab[i].org_image = table[i].tile
-      if not keyword_set(final) then fittab[i].org_image = table[i].frame[0]
-      fittab[i].file_galfit = out_file
-;stop
+if not file_test(out_file) then table[i].flag_galfit=1
+
+IF file_test(out_file) THEN BEGIN
+    if keyword_set(final) then fittab[i].org_image = table[i].tile
+    if not keyword_set(final) then fittab[i].org_image = table[i].frame[0]
+    
+    table[i].flag_galfit=2
+    fittab[i].file_galfit = out_file
 forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
-      IF setup.version ge 4 then res = read_sersic_results(out_file,nband)
-      IF setup.version lt 4 then res = read_sersic_results_old_galfit(out_file)      
-;stop
-      name_fittab = tag_names(fittab)
-      name_res = tag_names(res)
-
-      for j=0,n_elements(name_res)-1 do begin
-          tagidx=where(name_fittab eq name_res[j], ct)
+    IF setup.version ge 4 then res = read_sersic_results(out_file,nband)
+    IF setup.version lt 4 then res = read_sersic_results_old_galfit(out_file)      
+    name_fittab = tag_names(fittab)
+    name_res = tag_names(res)
+    
+    for j=0,n_elements(name_res)-1 do begin
+        tagidx=where(name_fittab eq name_res[j], ct)
 ;          if ct ne 1 then print, 'something wrong'
 ;          if ct ne 1 then stop
 ;          print, name_fittab[tagidx], name_res[j]
-          type=size(res.(j))
+        type=size(res.(j))
 ; if keyword is INT
-          if type[1] eq 2 or type[1] eq 3 then begin
-              wh=where(finite(res.(j)) ne 1, ct)
-              if ct gt 0 then res[wh].(j)=-99999
-          ENDIF
+        if type[1] eq 2 or type[1] eq 3 then begin
+            wh=where(finite(res.(j)) ne 1, ct)
+            if ct gt 0 then res[wh].(j)=-99999
+        ENDIF
 ; if keyword is FLOAT
-          if type[1] eq 4 then begin
-              wh=where(finite(res.(j)) ne 1, ct)
-              if ct gt 0 then res[wh].(j)=-99999.
-          ENDIF
+        if type[1] eq 4 then begin
+            wh=where(finite(res.(j)) ne 1, ct)
+            if ct gt 0 then res[wh].(j)=-99999.
+        ENDIF
 ; if keyword is DOUBLE
-          if type[1] eq 5 then begin
-              wh=where(finite(res.(j)) ne 1, ct)
-              if ct gt 0 then res[wh].(j)=double(-99999.)
-          ENDIF
+        if type[1] eq 5 then begin
+            wh=where(finite(res.(j)) ne 1, ct)
+            if ct gt 0 then res[wh].(j)=double(-99999.)
+        ENDIF
 ; if keyword is STRING
-          if type[1] eq 7 then begin
-              wh=where(res.(j) eq ' ', ct)
-              if ct gt 0 then res[wh].(j)='null'
-          ENDIF
+        if type[1] eq 7 then begin
+            wh=where(res.(j) eq ' ', ct)
+            if ct gt 0 then res[wh].(j)='null'
+        ENDIF
 ;          if ct gt 0 then print, 'changed'
-          fittab[i].(tagidx) = res.(j)          
-      ENDFOR
-      fittab[i].flag_galfit = res.flag_galfit
-
-  ENDIF
+        fittab[i].(tagidx) = res.(j)          
+    ENDFOR
+    fittab[i].flag_galfit = res.flag_galfit
+    
+ENDIF
 END
 
 ;PRO update_table_old_galfit, fittab, table, i, out_file
@@ -3366,179 +3368,165 @@ IF keyword_set(logfile) THEN $
           loadct,39,/silent
           plot, fittab.alpha_j2000, fittab.delta_j2000, psym=3
       endif
-
+      
 ;loop over all objects
       loop = 0l
+; define smaller radius for blocking if too close to blocked objects
+      blockfac=0.5
       REPEAT BEGIN
-         IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
-            update_log, logfile, 'last in cue... '+strtrim(cur, 2)
-            FOR i=0, setup.max_proc-1 DO $
-             update_log, logfile, 'Bridge status... '+ $
-             strtrim(bridge_arr[i]->status(), 2)
-         ENDIF
-         loop++
-
-         if keyword_set(plot) then begin
-             plot, fittab.alpha_j2000, fittab.delta_j2000, psym=3
-             done=where(table.flag_galfit eq 2, countdone)
-             if countdone ge 1 then begin
-                 plots, table[done].alpha_j2000, table[done].delta_j2000, psym=1, col=135, thick=1.5, symsize=0.6
-             endif
-             progress=where(table.flag_galfit eq 1, countprogress)
-             if countprogress ge 1 then begin
-                 plots, table[progress].alpha_j2000, table[progress].delta_j2000, psym=1, col=235, symsize=0.4
-                 for q=0,n_elements(progress)-1 do tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
-                   table[progress[q]].alpha_j2000, table[progress[q]].delta_j2000, col=235,/data
-             endif
-         endif
-
+          IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
+              update_log, logfile, 'last in cue... '+strtrim(cur, 2)
+              FOR i=0, setup.max_proc-1 DO $
+                update_log, logfile, 'Bridge status... '+ $
+                strtrim(bridge_arr[i]->status(), 2)
+          ENDIF
+          loop++
+          
 ;         statusline, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit gt 0))+1,2)+' of '+strtrim(n_elements(sexcat),2)+'   '
 ;         print, '  currently working on No. '+strtrim(loop,2)+' of '+strtrim(n_elements(sexcat),2)+'   '
-
+          
 ;check if current object exists
-         todo=where(table.flag_galfit eq 0)
-         if todo[0] eq -1 then begin
-             FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
-             goto, loopend
-         ENDIF
-         ct = 0
-
+          todo=where(table.flag_galfit eq 0)
+          if todo[0] eq -1 then begin
+              FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
+              goto, loopend
+          ENDIF
+          ct = 0
+          
 ;         IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[0,0], ct)
 ;         IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[*,0], ct)
-         IF todo[0] LT nbr THEN idx = where(table[todo[0]].frame EQ orgim[*,0], ct)
-         IF ct GT 0 THEN BEGIN
+          IF todo[0] LT nbr THEN idx = where(table[todo[0]].frame EQ orgim[*,0], ct)
+          IF ct GT 0 THEN BEGIN
 ;            objnum = round_digit(table[cur].number, 0, /str)
-            objnum = round_digit(table[todo[0]].number, 0, /str)
-            obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
-            out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
+              objnum = round_digit(table[todo[0]].number, 0, /str)
+              obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
+              out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
 ;check if file was done successfully or bombed
-            IF file_test(obj_file) THEN BEGIN
-print, obj_file+' found.'
-print, 'Updating table now! ('+strtrim(todo[0], 2)+'/'+strtrim(nbr, 1)+')'
-               table[todo[0]].flag_galfit=2
-               update_table, fittab, table, todo[0], out_file+'.fits', nband, setup
+              IF file_test(obj_file) THEN BEGIN
+                  print, obj_file+' found.'
+                  print, 'Updating table now! ('+strtrim(todo[0], 2)+'/'+strtrim(nbr, 1)+')'
+                  update_table, fittab, table, todo[0], out_file+'.fits', nband, setup
+
+;                  if file_test(out_file+'fits') then table[todo[0]].flag_galfit=2
+;                  if not file_test(out_file+'fits') then table[todo[0]].flag_galfit=1
+
 ;               cur++
 ;               IF cur LT nbr THEN CONTINUE
-               IF n_elements(todo) ne 1 then begin
-                   IF todo[1] ne -1 THEN CONTINUE
-               ENDIF
-            ENDIF
-         ENDIF
-
+                  IF n_elements(todo) ne 1 then begin
+                      IF todo[1] ne -1 THEN CONTINUE
+                  ENDIF
+              ENDIF
+          ENDIF
+          
 loopstart:
 ;get status of bridge elements
-         FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
-         
+          FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
+          
 ;check for free bridges
-         free = where(bridge_use eq 0, ct)
-; overplot dark rings for finished objects to vanish from plot
-        if keyword_set(plot) then begin
-             finished=where(bridge_obj ne -1 and bridge_use eq 0, finct)
-             if finct gt 0 then begin
-                 for q=0,finct-1 do tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
-                   table[bridge_obj[finished[q]]].alpha_j2000, table[bridge_obj[finished[q]]].delta_j2000, col=0,/data
-                 plots, table[bridge_obj[finished]].alpha_j2000, table[bridge_obj[finished]].delta_j2000, psym=1
-             endif
-         endif
-
+          free = where(bridge_use eq 0, ct)
+          
 ;         IF ct GT 0 AND cur LT nbr THEN BEGIN
-         IF ct GT 0 AND todo[0] ne -1  THEN BEGIN
+          IF ct GT 0 AND todo[0] ne -1  THEN BEGIN
 ;at least one bridge is free --> start new object
 ;the available bridge is free[0]
-            
+              
 ;treat finished objects first
-            IF bridge_obj[free[0]] GE 0 THEN BEGIN
-                if keyword_set(plot) then begin
-                    plots, table[bridge_obj[free[0]]].alpha_j2000,table[bridge_obj[free[0]]].delta_J2000, psym=1, col=135, thick=2, symsize=2
-                    tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
-                      table[bridge_obj[free[0]]].alpha_J2000, table[bridge_obj[free[0]]].delta_J2000, col=0,/data
-                ENDIF
-
+              IF bridge_obj[free[0]] GE 0 THEN BEGIN
 ;read in feedback data
-               idx = where(table[bridge_obj[free[0]]].frame EQ orgim[*,0])
-               objnum = round_digit(table[bridge_obj[free[0]]].number, 0, /str)
-               obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
-               out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
+                  idx = where(table[bridge_obj[free[0]]].frame EQ orgim[*,0])
+                  objnum = round_digit(table[bridge_obj[free[0]]].number, 0, /str)
+                  obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
+                  out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
 ;               out_file = (outpath_galfit[idx]+orgpre[idx]+setup.galfit_out+objnum)[0]+'.fits'
 ;               obj_file = (outpath_galfit[idx]+orgpre[idx]+setup.obj+objnum)[0]
-
+                  
 ;check if file was done successfully or bombed
-               update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', nband, setup
+                  update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', nband, setup
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
-
+                  
 ;clear object
-               bridge_obj[free[0]] = -1
+                  bridge_obj[free[0]] = -1
 ;clear position of finished object
-               bridge_pos[*, free[0]]= [!values.F_NAN, !values.F_NAN]
-            ENDIF
-            
+                  bridge_pos[*, free[0]]= [!values.F_NAN, !values.F_NAN]
+              ENDIF
+              
 ;check if current position is far enough from bridge positions
 ; CHANGE ORDER OF OBJECTS HERE!
-            filled = where(finite(bridge_pos[0, *]) EQ 1 AND $
-                           bridge_use GT 0, ct)
-            ob=0l
-            IF ct GT 0 THEN BEGIN
+              filled = where(finite(bridge_pos[0, *]) EQ 1 AND $
+                             bridge_use GT 0, ct)
+              ob=0l
+              blocked=-1
+              IF ct GT 0 THEN BEGIN
 ;*** old version *****
 ;               gcirc, 1, table[cur].alpha_j2000/15d, table[cur].delta_j2000, $
 ;                      bridge_pos[0, filled]/15d, bridge_pos[1, filled], dist
-
-                blockfac=0.5
-                blocked=-1
-                REPEAT BEGIN
-;                    FOR i=0, max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
-;                    filled = where(finite(bridge_pos[0, *]) EQ 1 AND bridge_use GT 0, ct)
+                  
+                  REPEAT BEGIN
 ; get distance to all active objects
-                    if n_elements(blocked) gt 1 then $
-                      gcirc, 1, table[blocked[1:n_elements(blocked)-1]].alpha_j2000/15d, $
-                        table[blocked[1:n_elements(blocked)-1]].delta_j2000, $
-                        bridge_pos[0, filled]/15d, bridge_pos[1, filled], dist_block
-                    if n_elements(blocked) eq 1 then dist_block = 2*setup.min_dist
+                      gcirc, 1, table[todo[ob]].alpha_j2000/15d, table[todo[ob]].delta_j2000, $
+                        bridge_pos[0, filled]/15d, bridge_pos[1, filled], dist
+; get distance to all blocked objects
+                      if n_elements(blocked) gt 1 then $
+                        gcirc, 1, table[todo[ob]].alpha_j2000/15d, table[todo[ob]].delta_j2000, $
+                        table[blocked[1:n_elements(blocked)-1]].alpha_j2000/15d, $
+                        table[blocked[1:n_elements(blocked)-1]].delta_j2000, dist_block
+                      if n_elements(blocked) eq 1 then dist_block = 2*setup.min_dist
 ; can be simplified when the plots are taken out!
-                    IF min(dist_block) lt blockfac*setup.min_dist THEN begin
-                        if keyword_set(plot) then begin
-                            plots, table[todo[ob]].alpha_J2000, table[todo[ob]].delta_J2000,psym=4, col=160, symsize=2
-                            tvellipse, blockfac*setup.min_dist/3600., blockfac*setup.min_dist/3600., table[todo[ob]].alpha_J2000, table[todo[ob]].delta_J2000, col=160,/data
-                        ENDIF
-                        blocked = [[blocked],todo[ob]]
-                    ENDIF
-                    gcirc, 1, table[todo[ob]].alpha_j2000/15d, table[todo[ob]].delta_j2000, $
-                      bridge_pos[0, filled]/15d, bridge_pos[1, filled], dist
-                    IF min(dist) LT setup.min_dist THEN begin
-                        if keyword_set(plot) then begin
-                            plots, table[todo[ob]].alpha_J2000, table[todo[ob]].delta_J2000,psym=4, col=200, symsize=2
-                            tvellipse, setup.min_dist/3600., setup.min_dist/3600., table[todo[ob]].alpha_J2000, table[todo[ob]].delta_J2000, col=200,/data
-                        ENDIF
-                        blocked = [[blocked],todo[ob]]
-                    ENDIF
-                    ob++
-                    if ob eq n_elements(todo) then begin
-                        wait, 1
-                        ob=0l
+                      IF min(dist) LT setup.min_dist or min(dist_block) lt blockfac*setup.min_dist THEN BEGIN
+                          blocked = [[blocked],todo[ob]]
+                      ENDIF
+
+                      ob++
+                      if ob eq n_elements(todo) then begin
+                          wait, 1
+                          ob=0l
 print, 'starting over'
 goto, loopstart
-                    ENDIF
-
-                ENDREP UNTIL (min(dist) gt setup.min_dist and min(dist_block) gt blockfac*setup.min_dist) or ob ge n_elements(todo)-1
+                      ENDIF
+                      
+                  ENDREP UNTIL (min(dist) gt setup.min_dist and min(dist_block) gt blockfac*setup.min_dist) or ob ge n_elements(todo)-1
+                  IF min(dist) LT setup.min_dist or min(dist_block) lt blockfac*setup.min_dist THEN CONTINUE
 ;                ENDREP UNTIL min(dist) gt setup.min_dist or ob ge n_elements(todo)
-                IF min(dist) LT setup.min_dist or min(dist_block) lt blockfac*setup.min_dist THEN CONTINUE
-            ENDIF
-            ob=ob-1>0
-            cur=todo[ob]
-
-            
+;                IF min(dist) LT setup.min_dist THEN CONTINUE
+              ENDIF
+              ob=ob-1>0
+              cur=todo[ob]
+              
 ;store position of new object
-            bridge_pos[*, free[0]] = [table[cur].alpha_j2000, $
-                                      table[cur].delta_j2000]
-            table[cur].flag_galfit = 1
-         print, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(sexcat),2)+'   '
-            
+              bridge_obj[free[0]] = cur
+              bridge_pos[*, free[0]] = [table[cur].alpha_j2000, $
+                                        table[cur].delta_j2000]
+              table[cur].flag_galfit = 1
+              print, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(sexcat),2)+'   '
+              
+              if keyword_set(plot) then begin
+                  plot, table.alpha_J2000,table.delta_J2000, psym=3
+                  if n_elements(blocked) gt 1 then begin
+                      plots, table[blocked[1:n_elements(blocked)-1]].alpha_J2000,table[blocked[1:n_elements(blocked)-1]].delta_J2000, psym=4, col=200, symsize=2
+                      for r=1,n_elements(blocked)-1 do tvellipse, blockfac*setup.min_dist/3600., blockfac*setup.min_dist/3600., table[blocked[r]].alpha_J2000,table[blocked[r]].delta_J2000,col=200,/data
+                  ENDIF                
+                  done=where(table.flag_galfit eq 2, count)
+                  if count ge 1 then begin
+                      plots, table[done].alpha_J2000,table[done].delta_J2000, psym=1, col=135, thick=2, symsize=0.5
+                  endif
+                  plots, bridge_pos[0,*], bridge_pos[1,*], psym=1, col=235
+                  for q=0,n_elements(bridge_pos[0,*])-1 do tvellipse, setup.min_dist/3600., setup.min_dist/3600., bridge_pos[0,q], bridge_pos[1,q], col=235,/data,thick=2
+                  
+;                plots, table[cur].alpha_J2000,table[cur].delta_J2000, psym=4, col=0, symsize=2
+;                plots, table[cur].alpha_J2000,table[cur].delta_J2000, psym=1, col=235
+;                tvellipse, blockfac*setup.min_dist, blockfac*setup.min_dist, table[todo[ob]].alpha_j2000, table[todo[ob]].delta_j2000,col=0,/data
+;                tvellipse, blockfac*setup.min_dist/3600., blockfac*setup.min_dist/3600., table[cur].alpha_J2000,table[cur].delta_J2000, col=0,/data
+;                tvellipse, setup.min_dist/3600., setup.min_dist/3600., table[cur].alpha_J2000,table[cur].delta_J2000, col=235,/data
+;                if n_elements(blocked) ge 2 then plots, table[blocked[1:n_elements(blocked)-1]].alpha_J2000,table[blocked[1:n_elements(blocked)-1]].delta_J2000, psym=4, col=200, symsize=2
+              ENDIF
+              
 ;find the matching filenames
-            idx = where(table[cur].frame EQ orgim[*,0])
- ;define the file names for the:
+              idx = where(table[cur].frame EQ orgim[*,0])
+;define the file names for the:
 ;postage stamp parameters
-            stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
-            objnum = round_digit(table[cur].number, 0, /str)
+              stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
+              objnum = round_digit(table[cur].number, 0, /str)
 ;galfit masks
             mask_file = strarr(nband+1)
             for q=1,nband do mask_file[q] = (outpath_galfit[idx]+outpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
@@ -3592,19 +3580,11 @@ goto, loopstart
                 file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
                   /allow_nonexistent, /noexpand_path
             ENDELSE
-            if keyword_set(plot) then begin
-                plots, table[cur].alpha_J2000,table[cur].delta_J2000, psym=4, col=0, symsize=2
-                plots, table[cur].alpha_J2000,table[cur].delta_J2000, psym=1, col=235
-                tvellipse, blockfac*setup.min_dist, blockfac*setup.min_dist, ra[todo[ob]], dec[todo[ob]],col=0,/data
-                tvellipse, setup.min_dist/3600., setup.min_dist/3600., table[cur].alpha_J2000,table[cur].delta_J2000, col=235,/data
-                tvellipse, blockfac*setup.min_dist/3600., blockfac*setup.min_dist/3600., table[cur].alpha_J2000,table[cur].delta_J2000, col=0,/data
-            ENDIF
-            bridge_obj[free[0]] = cur
 ;switch to next object
 ;            cur++
          ENDIF ELSE BEGIN
-;all bridges are busy --> wait    
-            wait, 1
+;all bridges are busy --> wait 
+wait, 1
          ENDELSE
 
 loopend:
