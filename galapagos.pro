@@ -3314,7 +3314,7 @@ IF keyword_set(logfile) THEN $
       add_tag, table, 'frame', strarr(nband+1), table2
       table=table2
       table.frame = tableim
-      add_tag, table, 'flag_galfit', intarr(1), table2
+      add_tag, table, 'flag_galfit', 0, table2
       table=table2
       delvarx, table2
 
