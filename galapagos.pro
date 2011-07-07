@@ -3506,7 +3506,7 @@ goto, loopstart
                       plots, table[blocked[1:n_elements(blocked)-1]].alpha_J2000,table[blocked[1:n_elements(blocked)-1]].delta_J2000, psym=4, col=200, symsize=2
                       for r=1,n_elements(blocked)-1 do tvellipse, blockfac*setup.min_dist/3600., blockfac*setup.min_dist/3600., table[blocked[r]].alpha_J2000,table[blocked[r]].delta_J2000,col=200,/data
                   ENDIF                
-                  done=where(table.flag_galfit eq 2, count)
+                  done=where(table.flag_galfit ge 1, count)
                   if count ge 1 then begin
                       plots, table[done].alpha_J2000,table[done].delta_J2000, psym=1, col=135, thick=2, symsize=0.5
                   endif
@@ -3922,7 +3922,6 @@ ENDIF
 
 print, 'Start: '+start
 print, 'End  : '+systime(0)
-stop
 
 END
 ;==============================================================================
