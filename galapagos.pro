@@ -3409,16 +3409,9 @@ IF keyword_set(logfile) THEN $
               IF file_test(obj_file) THEN BEGIN
                   print, obj_file+' found.'
                   print, 'Updating table now! ('+strtrim(todo[0], 2)+'/'+strtrim(nbr, 1)+')'
-<<<<<<< HEAD
-                  update_table, fittab, table, todo[0], out_file+'.fits', nband, setup
-                  
-;                  if file_test(out_file+'fits') then table[todo[0]].flag_galfit=2
-;                  if not file_test(out_file+'fits') then table[todo[0]].flag_galfit=1
-                  
-=======
+
                   update_table, fittab, table, todo[0], out_file+'.fits', obj_file, sky_file, nband, setup
 
->>>>>>> 015444ebb134c299ffdc533979bc0430189b2d4d
 ;               cur++
 ;               IF cur LT nbr THEN CONTINUE
                   IF n_elements(todo) ne 1 then CONTINUE
@@ -3564,19 +3557,6 @@ loopstart:
 ;            delvarx, randxxx 
               seed=table[cur].number
 ; create sav file for gala_bridge to read in
-<<<<<<< HEAD
-              save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
-                sky_file, stamp_param_file, mask_file, im_file, obj_file, $
-                constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
-                outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
-                orgpath_band, orgpath_file, seed,$
-                filename=out_file+'.sav'
-              
-;stop
-              IF setup.max_proc GT 1 THEN BEGIN
-                  IF keyword_set(logfile) THEN $
-                    update_log, logfile, 'Starting new bridge... ('+out_file+')'
-=======
             save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
               sky_file, stamp_param_file, mask_file, im_file, obj_file, $
               constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
@@ -3587,7 +3567,6 @@ loopstart:
             IF setup.max_proc GT 1 THEN BEGIN
                 IF keyword_set(logfile) THEN $
                  update_log, logfile, 'Starting new bridge... ('+out_file+')'
->>>>>>> 015444ebb134c299ffdc533979bc0430189b2d4d
 ; print, 'starting new object at '+systime(0)
                   bridge_arr[free[0]]->execute, 'astrolib'
 ;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
