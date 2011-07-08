@@ -327,8 +327,10 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
       hot_cxy = hot_table.cxy_image / hot_table.kron_radius^2.
       nhot = n_elements(hot_table)
 
-      fits_read, coldseg, segim, seghd
-      fits_read, hotseg, segim_hot, seghd_hot
+;      fits_read, coldseg, segim, seghd
+;      fits_read, hotseg, segim_hot, seghd_hot
+      segim = readfits(coldseg, seghd, /silent)
+      segim_hot = readfits(hotseg, seghd_hot, /silent)
 
       FOR i=0ul, ncold-1 DO BEGIN
          idx = where(cold_cxx[i]*(hot_table.x_image- $
@@ -383,7 +385,8 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
       table_all = table_all[e]
 
       ntot = n_elements(table_all)
-      fits_read, outseg, segim_org, seghd
+;      fits_read, outseg, segim_org, seghd
+      segim_org = readfits(outseg, seghd, /silent)
       segim = segim_org*0
 
       FOR i=0ul, ntot-1 DO BEGIN
@@ -407,7 +410,8 @@ FUNCTION calc_dist_to_edge, file, catalogue
 ;currently efficiency is optimised for 7000*7000 pix images
 
 ;get image size to calculate central position
-   fits_read, file, im, hd, exten_no=0
+;   fits_read, file, im, hd, exten_no=0
+   im = readfits(file, hd, exten_no=0, /silent)
    xsz = float(sxpar(hd, 'NAXIS1'))
    ysz = float(sxpar(hd, 'NAXIS2'))
    xcnt = xsz*0.5
@@ -521,7 +525,8 @@ PRO cut_stamps, image, param, outpath, pre, post
 ;OUTPATH. PRE is a string that gets prepended to the individual
 ;postage stamp file names (e.g. 'v'+'123.fits' --> 'v123.fits')
 
-   fits_read, image, im, hd
+;   fits_read, image, im, hd
+   im = readfits(image, hd, /silent)
    nx = sxpar(hd, 'NAXIS1')
    ny = sxpar(hd, 'NAXIS2')
 
@@ -561,8 +566,10 @@ PRO create_skymap, whtfile, segfile, sex, sexparam, mapfile, scale, offset
 ; 0 means sky
 ;>1 means number of objects
 
-   fits_read, whtfile, wht, hd
-   fits_read, segfile, seg, hd
+;   fits_read, whtfile, wht, hd
+;   fits_read, segfile, seg, hd
+   wht = readfits(whtfile, hd,/silent)
+   seg = readfits(segfile, hd,/silent)
 
    nx = n_elements(wht[*, 0])
    ny = n_elements(wht[0, *])
@@ -1098,7 +1105,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
                  nslope, sky_file, out_file, out_cat, out_param, out_stamps, $
                  global_sky, global_sigsky, conv_box, nums, frames, galexe, $
                  fit_table, b, orgpath_pre, outpath_file, outpath_file_no_band, $
-                 nband, seed
+                 nband, xarr, yarr, seed
 ;current_obj: idx of the current object in table
 ;table: sextractor table (frame of current object and surrounding
 ;neighbouring frames)
@@ -1133,20 +1140,20 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;16 - value from contributing source taken
    sky_flag = 0
    
-;reset the image
+; rename image so im0 isn't changed
    im = im0
-   
+
 ;get the size of the image
-   sz_im = (size(im0))[1:2]
+   sz_im = (size(im))[1:2]
 ;make sure that the image is large enough to compute the sky
 ;compute max radius possible in current image
-   xarr = (lindgen(sz_im[0], sz_im[1]) MOD sz_im[0])+1
-   yarr = (transpose(lindgen(sz_im[1], sz_im[0]) MOD sz_im[1]))+1
    idx = where(map EQ 0, ct)
    IF ct EQ 0 THEN message, 'NO PIXELS TO CALCULATE SKY'
+
+; This following line takes >1 seconds! (has to be done here, as map
+; (and idx) could be different for each band)
    max_rad = max(sqrt((table[current_obj].x_image-xarr[idx])^2+ $
                       (table[current_obj].y_image-yarr[idx])^2))
-   
 ;if the maximum possible radius for the image is exceeded -> start
 ;with 0 and set flag
    IF rad[current_obj] GT max_rad THEN BEGIN
@@ -1371,7 +1378,8 @@ forward_function read_sersic_results_old_galfit  ; not quite sure why this is ne
            ringsky = -1
            ringsigma = 1e30
        ENDIF ELSE BEGIN
-;define a square image of sky pixels max 250x250 pix^2 in size
+;define a square image of sky pixels max 250x250 pix^2 in size (to
+;make procedure faster)
            skyim = (im[xlo:xhi, ylo:yhi])[ring_empty_idx]
            n_ring = n_elements(ring_empty_idx)
 ;clip 3 sigma outliers first
@@ -1431,6 +1439,7 @@ forward_function read_sersic_results_old_galfit  ; not quite sure why this is ne
                min_sky_flag0 = 0
            ENDIF ELSE BEGIN
 ;too few measurements -> take value from SExtractor
+; why SExtractor and not previous curvefit value?
                min_sky_flag0 = 8
                new_sky = table[current_obj].background
                new_sky_sig = 999
@@ -1462,6 +1471,7 @@ forward_function read_sersic_results_old_galfit  ; not quite sure why this is ne
    ENDFOR
 ;loop over radii done==========================================================
 ;   print,'radii loop done'
+
 ;get sky from last nslope measurements
    idx = where(sl_rad GT 0 AND sl_sct lt 1e20, ct)
 ;check if enough measurements available
@@ -1501,10 +1511,10 @@ forward_function read_sersic_results_old_galfit  ; not quite sure why this is ne
    ENDIF
    
 ;write output sky file
-   openw, 1, sky_file
-   printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
-     sky_flag
-   close, 1
+;   openw, 1, sky_file
+;   printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
+;     sky_flag
+;   close, 1
 END
 
 PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
@@ -1843,6 +1853,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
        if b lt nband then SKY_po=SKY_po+','
        if b lt nband then SKY_po2=SKY_po2+','
    ENDFOR
+print, SKY_po
    band_po=' '
    if setup.version ge 4 and nband gt 1 then band_po='band'
    printf, 1, ' 1) '+SKY_po+'    '+SKY_po2+'  '+band_po+'       # sky background       [ADU counts]'
@@ -3708,14 +3719,16 @@ loopend:
 ; as now are different bands, this has to be done below in the loop
                     
 ;read in image and weight (takes 15sec)
-                    fits_read, table[current_obj].frame[b], im, hd
+;                    fits_read, table[current_obj].frame[b], im, hd
+                    im = readfits(table[current_obj].frame[b], hd,/silent)
 ;                    print, systime(), ' done'
                     
 ;image size
                     sz_im = (size(im))[1:2]
                     
 ;read the skymap
-                    fits_read, orgpath_file_no_band[idx,b]+setup.skymap+'.fits', map
+;                    fits_read, orgpath_file_no_band[idx,b]+setup.skymap+'.fits', map
+                    map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', xxhd,/silent)
                     
 ;rad is the minimum starting radius for the sky calculation (outside
 ;the aperture of the object)
@@ -3754,15 +3767,21 @@ loopend:
             for b=1,nband do begin
 ; choose closest PSF according to RA & DEC and subtract filename from
 ; structure 'psf_struct'
-                fits_read, chosen_psf_file[b], psf, psfhead
+;                fits_read, chosen_psf_file[b], psf, psfhead
+                psf = readfits(chosen_psf_file[b], psfhead,/silent)
                 
 ;read in image and weight again (takes 15sec)
-                fits_read, table[current_obj].frame[b], im, hd
-                fits_read, orgwht[idx,b], wht, whd
+;                fits_read, table[current_obj].frame[b], im, hd
+;                fits_read, orgwht[idx,b], wht, whd
+                im = readfits(table[current_obj].frame[b], hd,/silent)
+                wht = readfits(orgwht[idx,b], whd,/silent)
+
 ;read segmentation map (needed for excluding neighbouring sources)
-                fits_read, orgpath_file[idx,0]+setup.outseg, seg
+;                fits_read, orgpath_file[idx,0]+setup.outseg, seg
+                seg = readfits(orgpath_file[idx,0]+setup.outseg, xxhd,/silent)
 ;read the skymap
-                fits_read, orgpath_file_no_band[idx,b]+setup.skymap+'.fits', map
+;                fits_read, orgpath_file_no_band[idx,b]+setup.skymap+'.fits', map
+                map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', xxhd,/silent)
 
                 seed=table[current_obj].number
                 getsky_loop, setup, current_obj, table, rad, im, hd, map, setup.expt, $
