@@ -363,7 +363,7 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
 ;                IF segim[idx[j]] EQ 0 THEN segim[idx[j]] = off+i
 ;prefer hot pixels in output segmentation map
             segim[idx] = off+i
-         ENDIF
+        ENDIF
          hot_table[i].number = off+i
       ENDFOR
       writefits, outseg, segim, seghd
@@ -2972,12 +2972,35 @@ FUNCTION read_sersic_results_old_galfit, obj
      return, feedback
 END
 
-PRO update_table, fittab, table, i, out_file, nband, setup, final = final
+PRO update_table, fittab, table, i, out_file, obj_file, sky_file, nband, setup, final = final
 ; THIS WHOLE ROUTINE HAS TO BE CHANGED AS THE TABLE FORMAT HAS BEEN
 ; CHANGED SEVERELY!!!! MULTI_BAND AND POSSIBILITY FOR B/D
 ; DECOMPOSITION
 ; REMEMBER TO STORE SOME VALUES TWICE!!!
-if not file_test(out_file) then table[i].flag_galfit=1
+if not file_test(out_file) then begin
+    if not file_test(obj_file) then begin
+; object has not been started
+        table[i].flag_galfit = 0
+        fittab[i].flag_galfit = 0
+    endif else begin
+; object has been started -> crashed
+        table[i].flag_galfit = 1
+        fittab[i].flag_galfit = 1
+; read sky file!!!
+       for b=1,nband do begin
+; check whether it exists first
+           if file_test(sky_file[b]) eq 1 then begin
+               openr, 99, sky_file[b]
+               readf, 99, sky, dsky, minrad, maxrad, flag
+               close, 99
+               fittab[i].sky_galfit_band[b-1] = round_digit(sky,3)
+               if b eq 1 then $
+                   fittab[i].sky_galfit = round_digit(sky,3)
+           endif
+       endfor
+    ENDELSE
+    
+ENDIF
 
 IF file_test(out_file) THEN BEGIN
     if keyword_set(final) then fittab[i].org_image = table[i].tile
@@ -3025,38 +3048,6 @@ forward_function read_sersic_results_old_galfit
     
 ENDIF
 END
-
-;PRO update_table_old_galfit, fittab, table, i, out_file
-;   IF file_test(out_file) THEN BEGIN
-;      fittab[i].org_image = table[i].frame
-;      res = read_sersic_results_old_galfit(out_file,psf)
-;      idx0 = where(finite(res) NE 1, ct)
-;      IF ct GT 0 THEN res[idx0] = -99999.
-;      fittab[i].file_galfit = out_file
-;      fittab[i].x_galfit = res[10]
-;      fittab[i].xerr_galfit = res[11]
-;      fittab[i].y_galfit = res[12]
-;      fittab[i].yerr_galfit = res[13]
-;      fittab[i].mag_galfit = res[0]
-;      fittab[i].magerr_galfit = res[1]
-;      fittab[i].re_galfit = res[2]
-;      fittab[i].reerr_galfit = res[3]
-;      fittab[i].n_galfit = res[4]
-;      fittab[i].nerr_galfit = res[5]
-;      fittab[i].q_galfit = res[6]
-;      fittab[i].qerr_galfit = res[7]
-;      fittab[i].pa_galfit = res[8]
-;      fittab[i].paerr_galfit = res[9]
-;      fittab[i].sky_galfit = res[14]
-;      fittab[i].psf_galfit = psf
-;      fittab[i].neigh_galfit = res[15]
-;      fittab[i].chisq_galfit = res[16]
-;      fittab[i].ndof_galfit = res[17]
-;      fittab[i].nfree_galfit = res[18]
-;      fittab[i].nfix_galfit = res[19]
-;      fittab[i].chi2nu_galfit = res[20]
-;  ENDIF
-;END
 
 PRO update_log, logfile, message
    openw, lun, logfile, /get_lun, /append
@@ -3401,20 +3392,18 @@ IF keyword_set(logfile) THEN $
               objnum = round_digit(table[todo[0]].number, 0, /str)
               obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
               out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
+              sky_file = strarr(nband+1)
+              for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
 ;check if file was done successfully or bombed
               IF file_test(obj_file) THEN BEGIN
                   print, obj_file+' found.'
                   print, 'Updating table now! ('+strtrim(todo[0], 2)+'/'+strtrim(nbr, 1)+')'
-                  update_table, fittab, table, todo[0], out_file+'.fits', nband, setup
-
-;                  if file_test(out_file+'fits') then table[todo[0]].flag_galfit=2
-;                  if not file_test(out_file+'fits') then table[todo[0]].flag_galfit=1
+                  update_table, fittab, table, todo[0], out_file+'.fits', obj_file, sky_file, nband, setup
 
 ;               cur++
 ;               IF cur LT nbr THEN CONTINUE
-                  IF n_elements(todo) ne 1 then begin
-                      IF todo[1] ne -1 THEN CONTINUE
-                  ENDIF
+                  IF n_elements(todo) ne 1 then CONTINUE
+                  IF n_elements(todo) eq 1 then goto, loopend
               ENDIF
           ENDIF
           
@@ -3439,9 +3428,11 @@ loopstart:
                   out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
 ;               out_file = (outpath_galfit[idx]+orgpre[idx]+setup.galfit_out+objnum)[0]+'.fits'
 ;               obj_file = (outpath_galfit[idx]+orgpre[idx]+setup.obj+objnum)[0]
-                  
+                  sky_file = strarr(nband+1)
+                  for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+ 
 ;check if file was done successfully or bombed
-                  update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', nband, setup
+                  update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
                   
@@ -3478,7 +3469,13 @@ loopstart:
                       ENDIF
 
                       ob++
-                      if ob eq n_elements(todo) then begin
+;;;;;;;;;;;;;;;;;;;;;;; this next line might still not be ideal
+;; this version does not fit the last item in parallel mode
+;                      if ob eq n_elements(todo) then begin
+; this version checks for distance as well, I THINK this should work!
+; the distance is still secured afterward by the until statement!
+                      if ob eq n_elements(todo) and $
+                        (min(dist) lt setup.min_dist or min(dist_block) lt blockfac*setup.min_dist) then begin
                           wait, 1
                           ob=0l
 print, 'starting over'
@@ -3512,13 +3509,6 @@ goto, loopstart
                   endif
                   plots, bridge_pos[0,*], bridge_pos[1,*], psym=1, col=235
                   for q=0,n_elements(bridge_pos[0,*])-1 do tvellipse, setup.min_dist/3600., setup.min_dist/3600., bridge_pos[0,q], bridge_pos[1,q], col=235,/data,thick=2
-                  
-;                plots, table[cur].alpha_J2000,table[cur].delta_J2000, psym=4, col=0, symsize=2
-;                plots, table[cur].alpha_J2000,table[cur].delta_J2000, psym=1, col=235
-;                tvellipse, blockfac*setup.min_dist, blockfac*setup.min_dist, table[todo[ob]].alpha_j2000, table[todo[ob]].delta_j2000,col=0,/data
-;                tvellipse, blockfac*setup.min_dist/3600., blockfac*setup.min_dist/3600., table[cur].alpha_J2000,table[cur].delta_J2000, col=0,/data
-;                tvellipse, setup.min_dist/3600., setup.min_dist/3600., table[cur].alpha_J2000,table[cur].delta_J2000, col=235,/data
-;                if n_elements(blocked) ge 2 then plots, table[blocked[1:n_elements(blocked)-1]].alpha_J2000,table[blocked[1:n_elements(blocked)-1]].delta_J2000, psym=4, col=200, symsize=2
               ENDIF
               
 ;find the matching filenames
@@ -3604,7 +3594,9 @@ loopend:
 ;            obj_file = (orgpath[idx]+orgpre[idx]+setup.obj+objnum)[0]
             obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
             out_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out)[0]
-            
+            sky_file = strarr(nband+1)
+            for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+           
             if keyword_set(plot) then begin
                 plots, table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, psym=1, col=135, thick=2, symsize=2
                 tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
@@ -3615,7 +3607,7 @@ loopend:
             
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
-            update_table, fittab, table, bridge_obj[remain[i]], out_file,nband, setup
+            update_table, fittab, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
          ENDFOR
@@ -3827,6 +3819,9 @@ ENDIF
       tab = read_sex_table(setup.outdir+setup.sexcomb, $
                            outpath_file[0,0]+setup.outparam, $
                            add_col = ['TILE', '" "'])
+      add_tag, tab, 'flag_galfit', 0, tab2
+      tab=tab2
+      delvarx, tab2
 
       ntab = n_elements(tab)
       out = read_sex_param(outpath_file[0,0]+setup.outparam, ntab, $
@@ -3856,38 +3851,14 @@ ENDIF
          out_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+ $
                      setup.galfit_out)[0]+'.fits'
 
+         obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
+         sky_file = strarr(nband+1)
+         for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+
 ;         out[i].org_image = tab[i].tile
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-         update_table, out, tab, i, out_file, nband, setup, /final
+         update_table, out, tab, i, out_file, obj_file, sky_file, nband, setup, /final
 
-;         res = read_sersic_results(out_file,nband)
-;         idx = where(finite(res) NE 1, ct)
-;         IF ct GT 0 THEN res[idx] = -99999.
-;
-;         out[i].file_galfit = out_file
-;         out[i].x_galfit = res[10]
-;         out[i].xerr_galfit = res[11]
-;         out[i].y_galfit = res[12]
-;         out[i].yerr_galfit = res[13]
-;         out[i].mag_galfit = res[0]
-;         out[i].magerr_galfit = res[1]
-;         out[i].re_galfit = res[2]
-;         out[i].reerr_galfit = res[3]
-;         out[i].n_galfit = res[4]
-;         out[i].nerr_galfit = res[5]
-;         out[i].q_galfit = res[6]
-;         out[i].qerr_galfit = res[7]
-;         out[i].pa_galfit = res[8]
-;         out[i].paerr_galfit = res[9]
-;         out[i].sky_galfit = res[14]
-;         out[i].psf_galfit = psf
-;         out[i].neigh_galfit = res[15]
-;         out[i].chisq_galfit = res[16]
-;         out[i].ndof_galfit = res[17]
-;         out[i].nfree_galfit = res[18]
-;         out[i].nfix_galfit = res[19]
-;         out[i].chi2nu_galfit = res[20]
       ENDFOR
       print, ' '
       IF file_test(setup.bad) THEN BEGIN
@@ -3922,7 +3893,7 @@ ENDIF
 
 print, 'Start: '+start
 print, 'End  : '+systime(0)
-
+stop
 END
 ;==============================================================================
 ;==============================================================================
