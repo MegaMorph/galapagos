@@ -3551,8 +3551,7 @@ goto, loopstart
               outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
               orgpath_band, orgpath_file, seed,$
              filename=out_file+'.sav'
-            
-;stop
+
             IF setup.max_proc GT 1 THEN BEGIN
                 IF keyword_set(logfile) THEN $
                  update_log, logfile, 'Starting new bridge... ('+out_file+')'
@@ -3889,11 +3888,9 @@ ENDIF
       mwrfits, out, setup.outdir+setup.cat, /silent, /create
   ENDIF
   d = check_math()
-;   stop
 
 print, 'Start: '+start
 print, 'End  : '+systime(0)
-stop
 END
 ;==============================================================================
 ;==============================================================================
