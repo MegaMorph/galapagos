@@ -327,8 +327,10 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
       hot_cxy = hot_table.cxy_image / hot_table.kron_radius^2.
       nhot = n_elements(hot_table)
 
-      fits_read, coldseg, segim, seghd
-      fits_read, hotseg, segim_hot, seghd_hot
+;      fits_read, coldseg, segim, seghd
+;      fits_read, hotseg, segim_hot, seghd_hot
+      segim = readfits(coldseg, seghd, /silent)
+      segim_hot = readfits(hotseg, seghd_hot, /silent)
 
       FOR i=0ul, ncold-1 DO BEGIN
          idx = where(cold_cxx[i]*(hot_table.x_image- $
@@ -363,7 +365,7 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
 ;                IF segim[idx[j]] EQ 0 THEN segim[idx[j]] = off+i
 ;prefer hot pixels in output segmentation map
             segim[idx] = off+i
-         ENDIF
+        ENDIF
          hot_table[i].number = off+i
       ENDFOR
       writefits, outseg, segim, seghd
@@ -383,7 +385,8 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
       table_all = table_all[e]
 
       ntot = n_elements(table_all)
-      fits_read, outseg, segim_org, seghd
+;      fits_read, outseg, segim_org, seghd
+      segim_org = readfits(outseg, seghd, /silent)
       segim = segim_org*0
 
       FOR i=0ul, ntot-1 DO BEGIN
@@ -407,7 +410,8 @@ FUNCTION calc_dist_to_edge, file, catalogue
 ;currently efficiency is optimised for 7000*7000 pix images
 
 ;get image size to calculate central position
-   fits_read, file, im, hd, exten_no=0
+;   fits_read, file, im, hd, exten_no=0
+   im = readfits(file, hd, exten_no=0, /silent)
    xsz = float(sxpar(hd, 'NAXIS1'))
    ysz = float(sxpar(hd, 'NAXIS2'))
    xcnt = xsz*0.5
@@ -521,7 +525,8 @@ PRO cut_stamps, image, param, outpath, pre, post
 ;OUTPATH. PRE is a string that gets prepended to the individual
 ;postage stamp file names (e.g. 'v'+'123.fits' --> 'v123.fits')
 
-   fits_read, image, im, hd
+;   fits_read, image, im, hd
+   im = readfits(image, hd, /silent)
    nx = sxpar(hd, 'NAXIS1')
    ny = sxpar(hd, 'NAXIS2')
 
@@ -561,8 +566,10 @@ PRO create_skymap, whtfile, segfile, sex, sexparam, mapfile, scale, offset
 ; 0 means sky
 ;>1 means number of objects
 
-   fits_read, whtfile, wht, hd
-   fits_read, segfile, seg, hd
+;   fits_read, whtfile, wht, hd
+;   fits_read, segfile, seg, hd
+   wht = readfits(whtfile, hd,/silent)
+   seg = readfits(segfile, hd,/silent)
 
    nx = n_elements(wht[*, 0])
    ny = n_elements(wht[0, *])
@@ -1098,7 +1105,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
                  nslope, sky_file, out_file, out_cat, out_param, out_stamps, $
                  global_sky, global_sigsky, conv_box, nums, frames, galexe, $
                  fit_table, b, orgpath_pre, outpath_file, outpath_file_no_band, $
-                 nband, seed
+                 nband, xarr, yarr, seed
 ;current_obj: idx of the current object in table
 ;table: sextractor table (frame of current object and surrounding
 ;neighbouring frames)
@@ -1133,20 +1140,20 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;16 - value from contributing source taken
    sky_flag = 0
    
-;reset the image
+; rename image so im0 isn't changed
    im = im0
-   
+
 ;get the size of the image
-   sz_im = (size(im0))[1:2]
+   sz_im = (size(im))[1:2]
 ;make sure that the image is large enough to compute the sky
 ;compute max radius possible in current image
-   xarr = (lindgen(sz_im[0], sz_im[1]) MOD sz_im[0])+1
-   yarr = (transpose(lindgen(sz_im[1], sz_im[0]) MOD sz_im[1]))+1
    idx = where(map EQ 0, ct)
    IF ct EQ 0 THEN message, 'NO PIXELS TO CALCULATE SKY'
+
+; This following line takes >1 seconds! (has to be done here, as map
+; (and idx) could be different for each band)
    max_rad = max(sqrt((table[current_obj].x_image-xarr[idx])^2+ $
                       (table[current_obj].y_image-yarr[idx])^2))
-   
 ;if the maximum possible radius for the image is exceeded -> start
 ;with 0 and set flag
    IF rad[current_obj] GT max_rad THEN BEGIN
@@ -1371,7 +1378,8 @@ forward_function read_sersic_results_old_galfit  ; not quite sure why this is ne
            ringsky = -1
            ringsigma = 1e30
        ENDIF ELSE BEGIN
-;define a square image of sky pixels max 250x250 pix^2 in size
+;define a square image of sky pixels max 250x250 pix^2 in size (to
+;make procedure faster)
            skyim = (im[xlo:xhi, ylo:yhi])[ring_empty_idx]
            n_ring = n_elements(ring_empty_idx)
 ;clip 3 sigma outliers first
@@ -1431,6 +1439,7 @@ forward_function read_sersic_results_old_galfit  ; not quite sure why this is ne
                min_sky_flag0 = 0
            ENDIF ELSE BEGIN
 ;too few measurements -> take value from SExtractor
+; why SExtractor and not previous curvefit value?
                min_sky_flag0 = 8
                new_sky = table[current_obj].background
                new_sky_sig = 999
@@ -1462,6 +1471,7 @@ forward_function read_sersic_results_old_galfit  ; not quite sure why this is ne
    ENDFOR
 ;loop over radii done==========================================================
 ;   print,'radii loop done'
+
 ;get sky from last nslope measurements
    idx = where(sl_rad GT 0 AND sl_sct lt 1e20, ct)
 ;check if enough measurements available
@@ -1501,10 +1511,10 @@ forward_function read_sersic_results_old_galfit  ; not quite sure why this is ne
    ENDIF
    
 ;write output sky file
-   openw, 1, sky_file
-   printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
-     sky_flag
-   close, 1
+;   openw, 1, sky_file
+;   printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
+;     sky_flag
+;   close, 1
 END
 
 PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
@@ -1843,6 +1853,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
        if b lt nband then SKY_po=SKY_po+','
        if b lt nband then SKY_po2=SKY_po2+','
    ENDFOR
+print, SKY_po
    band_po=' '
    if setup.version ge 4 and nband gt 1 then band_po='band'
    printf, 1, ' 1) '+SKY_po+'    '+SKY_po2+'  '+band_po+'       # sky background       [ADU counts]'
@@ -2972,12 +2983,35 @@ FUNCTION read_sersic_results_old_galfit, obj
      return, feedback
 END
 
-PRO update_table, fittab, table, i, out_file, nband, setup, final = final
+PRO update_table, fittab, table, i, out_file, obj_file, sky_file, nband, setup, final = final
 ; THIS WHOLE ROUTINE HAS TO BE CHANGED AS THE TABLE FORMAT HAS BEEN
 ; CHANGED SEVERELY!!!! MULTI_BAND AND POSSIBILITY FOR B/D
 ; DECOMPOSITION
 ; REMEMBER TO STORE SOME VALUES TWICE!!!
-if not file_test(out_file) then table[i].flag_galfit=1
+if not file_test(out_file) then begin
+    if not file_test(obj_file) then begin
+; object has not been started
+        table[i].flag_galfit = 0
+        fittab[i].flag_galfit = 0
+    endif else begin
+; object has been started -> crashed
+        table[i].flag_galfit = 1
+        fittab[i].flag_galfit = 1
+; read sky file!!!
+       for b=1,nband do begin
+; check whether it exists first
+           if file_test(sky_file[b]) eq 1 then begin
+               openr, 99, sky_file[b]
+               readf, 99, sky, dsky, minrad, maxrad, flag
+               close, 99
+               fittab[i].sky_galfit_band[b-1] = round_digit(sky,3)
+               if b eq 1 then $
+                   fittab[i].sky_galfit = round_digit(sky,3)
+           endif
+       endfor
+    ENDELSE
+    
+ENDIF
 
 IF file_test(out_file) THEN BEGIN
     if keyword_set(final) then fittab[i].org_image = table[i].tile
@@ -3025,38 +3059,6 @@ forward_function read_sersic_results_old_galfit
     
 ENDIF
 END
-
-;PRO update_table_old_galfit, fittab, table, i, out_file
-;   IF file_test(out_file) THEN BEGIN
-;      fittab[i].org_image = table[i].frame
-;      res = read_sersic_results_old_galfit(out_file,psf)
-;      idx0 = where(finite(res) NE 1, ct)
-;      IF ct GT 0 THEN res[idx0] = -99999.
-;      fittab[i].file_galfit = out_file
-;      fittab[i].x_galfit = res[10]
-;      fittab[i].xerr_galfit = res[11]
-;      fittab[i].y_galfit = res[12]
-;      fittab[i].yerr_galfit = res[13]
-;      fittab[i].mag_galfit = res[0]
-;      fittab[i].magerr_galfit = res[1]
-;      fittab[i].re_galfit = res[2]
-;      fittab[i].reerr_galfit = res[3]
-;      fittab[i].n_galfit = res[4]
-;      fittab[i].nerr_galfit = res[5]
-;      fittab[i].q_galfit = res[6]
-;      fittab[i].qerr_galfit = res[7]
-;      fittab[i].pa_galfit = res[8]
-;      fittab[i].paerr_galfit = res[9]
-;      fittab[i].sky_galfit = res[14]
-;      fittab[i].psf_galfit = psf
-;      fittab[i].neigh_galfit = res[15]
-;      fittab[i].chisq_galfit = res[16]
-;      fittab[i].ndof_galfit = res[17]
-;      fittab[i].nfree_galfit = res[18]
-;      fittab[i].nfix_galfit = res[19]
-;      fittab[i].chi2nu_galfit = res[20]
-;  ENDIF
-;END
 
 PRO update_log, logfile, message
    openw, lun, logfile, /get_lun, /append
@@ -3401,20 +3403,26 @@ IF keyword_set(logfile) THEN $
               objnum = round_digit(table[todo[0]].number, 0, /str)
               obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
               out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
+              sky_file = strarr(nband+1)
+              for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
 ;check if file was done successfully or bombed
               IF file_test(obj_file) THEN BEGIN
                   print, obj_file+' found.'
                   print, 'Updating table now! ('+strtrim(todo[0], 2)+'/'+strtrim(nbr, 1)+')'
+<<<<<<< HEAD
                   update_table, fittab, table, todo[0], out_file+'.fits', nband, setup
                   
 ;                  if file_test(out_file+'fits') then table[todo[0]].flag_galfit=2
 ;                  if not file_test(out_file+'fits') then table[todo[0]].flag_galfit=1
                   
+=======
+                  update_table, fittab, table, todo[0], out_file+'.fits', obj_file, sky_file, nband, setup
+
+>>>>>>> 015444ebb134c299ffdc533979bc0430189b2d4d
 ;               cur++
 ;               IF cur LT nbr THEN CONTINUE
-                  IF n_elements(todo) ne 1 then begin
-                      IF todo[1] ne -1 THEN CONTINUE
-                  ENDIF
+                  IF n_elements(todo) ne 1 then CONTINUE
+                  IF n_elements(todo) eq 1 then goto, loopend
               ENDIF
           ENDIF
           
@@ -3439,9 +3447,11 @@ loopstart:
                   out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
 ;               out_file = (outpath_galfit[idx]+orgpre[idx]+setup.galfit_out+objnum)[0]+'.fits'
 ;               obj_file = (outpath_galfit[idx]+orgpre[idx]+setup.obj+objnum)[0]
-                  
+                  sky_file = strarr(nband+1)
+                  for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+ 
 ;check if file was done successfully or bombed
-                  update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', nband, setup
+                  update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
                   
@@ -3478,7 +3488,13 @@ loopstart:
                       ENDIF
                       
                       ob++
-                      if ob eq n_elements(todo) then begin
+;;;;;;;;;;;;;;;;;;;;;;; this next line might still not be ideal
+;; this version does not fit the last item in parallel mode
+;                      if ob eq n_elements(todo) then begin
+; this version checks for distance as well, I THINK this should work!
+; the distance is still secured afterward by the until statement!
+                      if ob eq n_elements(todo) and $
+                        (min(dist) lt setup.min_dist or min(dist_block) lt blockfac*setup.min_dist) then begin
                           wait, 1
                           ob=0l
                           print, 'starting over'
@@ -3506,19 +3522,12 @@ loopstart:
                       plots, table[blocked[1:n_elements(blocked)-1]].alpha_J2000,table[blocked[1:n_elements(blocked)-1]].delta_J2000, psym=4, col=200, symsize=2
                       for r=1,n_elements(blocked)-1 do tvellipse, blockfac*setup.min_dist/3600., blockfac*setup.min_dist/3600., table[blocked[r]].alpha_J2000,table[blocked[r]].delta_J2000,col=200,/data
                   ENDIF                
-                  done=where(table.flag_galfit eq 2, count)
+                  done=where(table.flag_galfit ge 1, count)
                   if count ge 1 then begin
                       plots, table[done].alpha_J2000,table[done].delta_J2000, psym=1, col=135, thick=2, symsize=0.5
                   endif
                   plots, bridge_pos[0,*], bridge_pos[1,*], psym=1, col=235
                   for q=0,n_elements(bridge_pos[0,*])-1 do tvellipse, setup.min_dist/3600., setup.min_dist/3600., bridge_pos[0,q], bridge_pos[1,q], col=235,/data,thick=2
-                  
-;                plots, table[cur].alpha_J2000,table[cur].delta_J2000, psym=4, col=0, symsize=2
-;                plots, table[cur].alpha_J2000,table[cur].delta_J2000, psym=1, col=235
-;                tvellipse, blockfac*setup.min_dist, blockfac*setup.min_dist, table[todo[ob]].alpha_j2000, table[todo[ob]].delta_j2000,col=0,/data
-;                tvellipse, blockfac*setup.min_dist/3600., blockfac*setup.min_dist/3600., table[cur].alpha_J2000,table[cur].delta_J2000, col=0,/data
-;                tvellipse, setup.min_dist/3600., setup.min_dist/3600., table[cur].alpha_J2000,table[cur].delta_J2000, col=235,/data
-;                if n_elements(blocked) ge 2 then plots, table[blocked[1:n_elements(blocked)-1]].alpha_J2000,table[blocked[1:n_elements(blocked)-1]].delta_J2000, psym=4, col=200, symsize=2
               ENDIF
               
 ;find the matching filenames
@@ -3555,6 +3564,7 @@ loopstart:
 ;            delvarx, randxxx 
               seed=table[cur].number
 ; create sav file for gala_bridge to read in
+<<<<<<< HEAD
               save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
                 sky_file, stamp_param_file, mask_file, im_file, obj_file, $
                 constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
@@ -3566,6 +3576,18 @@ loopstart:
               IF setup.max_proc GT 1 THEN BEGIN
                   IF keyword_set(logfile) THEN $
                     update_log, logfile, 'Starting new bridge... ('+out_file+')'
+=======
+            save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
+              sky_file, stamp_param_file, mask_file, im_file, obj_file, $
+              constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
+              outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
+              orgpath_band, orgpath_file, seed,$
+             filename=out_file+'.sav'
+
+            IF setup.max_proc GT 1 THEN BEGIN
+                IF keyword_set(logfile) THEN $
+                 update_log, logfile, 'Starting new bridge... ('+out_file+')'
+>>>>>>> 015444ebb134c299ffdc533979bc0430189b2d4d
 ; print, 'starting new object at '+systime(0)
                   bridge_arr[free[0]]->execute, 'astrolib'
 ;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
@@ -3613,7 +3635,9 @@ loopend:
 ;            obj_file = (orgpath[idx]+orgpre[idx]+setup.obj+objnum)[0]
             obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
             out_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out)[0]
-            
+            sky_file = strarr(nband+1)
+            for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+           
             if keyword_set(plot) then begin
                 plots, table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, psym=1, col=135, thick=2, symsize=2
                 tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
@@ -3624,7 +3648,7 @@ loopend:
             
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
-            update_table, fittab, table, bridge_obj[remain[i]], out_file,nband, setup
+            update_table, fittab, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
          ENDFOR
@@ -3726,14 +3750,16 @@ loopend:
 ; as now are different bands, this has to be done below in the loop
                     
 ;read in image and weight (takes 15sec)
-                    fits_read, table[current_obj].frame[b], im, hd
+;                    fits_read, table[current_obj].frame[b], im, hd
+                    im = readfits(table[current_obj].frame[b], hd,/silent)
 ;                    print, systime(), ' done'
                     
 ;image size
                     sz_im = (size(im))[1:2]
                     
 ;read the skymap
-                    fits_read, orgpath_file_no_band[idx,b]+setup.skymap+'.fits', map
+;                    fits_read, orgpath_file_no_band[idx,b]+setup.skymap+'.fits', map
+                    map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', xxhd,/silent)
                     
 ;rad is the minimum starting radius for the sky calculation (outside
 ;the aperture of the object)
@@ -3772,15 +3798,21 @@ loopend:
             for b=1,nband do begin
 ; choose closest PSF according to RA & DEC and subtract filename from
 ; structure 'psf_struct'
-                fits_read, chosen_psf_file[b], psf, psfhead
+;                fits_read, chosen_psf_file[b], psf, psfhead
+                psf = readfits(chosen_psf_file[b], psfhead,/silent)
                 
 ;read in image and weight again (takes 15sec)
-                fits_read, table[current_obj].frame[b], im, hd
-                fits_read, orgwht[idx,b], wht, whd
+;                fits_read, table[current_obj].frame[b], im, hd
+;                fits_read, orgwht[idx,b], wht, whd
+                im = readfits(table[current_obj].frame[b], hd,/silent)
+                wht = readfits(orgwht[idx,b], whd,/silent)
+
 ;read segmentation map (needed for excluding neighbouring sources)
-                fits_read, orgpath_file[idx,0]+setup.outseg, seg
+;                fits_read, orgpath_file[idx,0]+setup.outseg, seg
+                seg = readfits(orgpath_file[idx,0]+setup.outseg, xxhd,/silent)
 ;read the skymap
-                fits_read, orgpath_file_no_band[idx,b]+setup.skymap+'.fits', map
+;                fits_read, orgpath_file_no_band[idx,b]+setup.skymap+'.fits', map
+                map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', xxhd,/silent)
 
                 seed=table[current_obj].number
                 getsky_loop, setup, current_obj, table, rad, im, hd, map, setup.expt, $
@@ -3836,6 +3868,9 @@ ENDIF
       tab = read_sex_table(setup.outdir+setup.sexcomb, $
                            outpath_file[0,0]+setup.outparam, $
                            add_col = ['TILE', '" "'])
+      add_tag, tab, 'flag_galfit', 0, tab2
+      tab=tab2
+      delvarx, tab2
 
       ntab = n_elements(tab)
       out = read_sex_param(outpath_file[0,0]+setup.outparam, ntab, $
@@ -3865,38 +3900,14 @@ ENDIF
          out_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+ $
                      setup.galfit_out)[0]+'.fits'
 
+         obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
+         sky_file = strarr(nband+1)
+         for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+
 ;         out[i].org_image = tab[i].tile
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-         update_table, out, tab, i, out_file, nband, setup, /final
+         update_table, out, tab, i, out_file, obj_file, sky_file, nband, setup, /final
 
-;         res = read_sersic_results(out_file,nband)
-;         idx = where(finite(res) NE 1, ct)
-;         IF ct GT 0 THEN res[idx] = -99999.
-;
-;         out[i].file_galfit = out_file
-;         out[i].x_galfit = res[10]
-;         out[i].xerr_galfit = res[11]
-;         out[i].y_galfit = res[12]
-;         out[i].yerr_galfit = res[13]
-;         out[i].mag_galfit = res[0]
-;         out[i].magerr_galfit = res[1]
-;         out[i].re_galfit = res[2]
-;         out[i].reerr_galfit = res[3]
-;         out[i].n_galfit = res[4]
-;         out[i].nerr_galfit = res[5]
-;         out[i].q_galfit = res[6]
-;         out[i].qerr_galfit = res[7]
-;         out[i].pa_galfit = res[8]
-;         out[i].paerr_galfit = res[9]
-;         out[i].sky_galfit = res[14]
-;         out[i].psf_galfit = psf
-;         out[i].neigh_galfit = res[15]
-;         out[i].chisq_galfit = res[16]
-;         out[i].ndof_galfit = res[17]
-;         out[i].nfree_galfit = res[18]
-;         out[i].nfix_galfit = res[19]
-;         out[i].chi2nu_galfit = res[20]
       ENDFOR
       print, ' '
       IF file_test(setup.bad) THEN BEGIN
@@ -3927,12 +3938,9 @@ ENDIF
       mwrfits, out, setup.outdir+setup.cat, /silent, /create
   ENDIF
   d = check_math()
-;   stop
 
 print, 'Start: '+start
 print, 'End  : '+systime(0)
-stop
-
 END
 ;==============================================================================
 ;==============================================================================
