@@ -1511,10 +1511,10 @@ forward_function read_sersic_results_old_galfit  ; not quite sure why this is ne
    ENDIF
    
 ;write output sky file
-;   openw, 1, sky_file
-;   printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
-;     sky_flag
-;   close, 1
+   openw, 1, sky_file
+   printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
+     sky_flag
+   close, 1
 END
 
 PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
