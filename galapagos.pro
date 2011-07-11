@@ -3489,11 +3489,7 @@ loopstart2:
                   out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
                   sky_file = strarr(nband+1)
                   for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
-;check if file was done successfully or bombed
-                  
-;DAMN, I KNOW! This only checks the object todo[0], NOT the one that
-;it actually wants to fit! So as soo as 1 object is blocked, this
-;doesn't work!
+;check if file was done successfully or bombed and update table                  
                   IF file_test(obj_file) THEN BEGIN
                       print, obj_file+' found.'
                       print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'
