@@ -3374,7 +3374,7 @@ IF keyword_set(logfile) THEN $
 ;loop over all objects
       loop = 0l
 ; define smaller radius for blocking if too close to blocked objects
-      blockfac=0.5
+      blockfac=0.33
       REPEAT BEGIN
           IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
               update_log, logfile, 'last in cue... '+strtrim(cur, 2)
@@ -3388,38 +3388,15 @@ IF keyword_set(logfile) THEN $
 ;         print, '  currently working on No. '+strtrim(loop,2)+' of '+strtrim(n_elements(sexcat),2)+'   '
           
 ;check if current object exists
+loopstart:
           todo=where(table.flag_galfit eq 0)
           if todo[0] eq -1 then begin
               FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
               goto, loopend
           ENDIF
           ct = 0
-          
-;         IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[0,0], ct)
-;         IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[*,0], ct)
-          IF todo[0] LT nbr THEN idx = where(table[todo[0]].frame EQ orgim[*,0], ct)
-          IF ct GT 0 THEN BEGIN
-;            objnum = round_digit(table[cur].number, 0, /str)
-              objnum = round_digit(table[todo[0]].number, 0, /str)
-              obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
-              out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
-              sky_file = strarr(nband+1)
-              for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
-;check if file was done successfully or bombed
-              IF file_test(obj_file) THEN BEGIN
-                  print, obj_file+' found.'
-                  print, 'Updating table now! ('+strtrim(todo[0], 2)+'/'+strtrim(nbr, 1)+')'
-
-                  update_table, fittab, table, todo[0], out_file+'.fits', obj_file, sky_file, nband, setup
-
-;               cur++
-;               IF cur LT nbr THEN CONTINUE
-                  IF n_elements(todo) ne 1 then CONTINUE
-                  IF n_elements(todo) eq 1 then goto, loopend
-              ENDIF
-          ENDIF
-          
-loopstart:
+                    
+loopstart2:
 ;get status of bridge elements
           FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
           
@@ -3455,7 +3432,6 @@ loopstart:
               ENDIF
               
 ;check if current position is far enough from bridge positions
-; CHANGE ORDER OF OBJECTS HERE!
               filled = where(finite(bridge_pos[0, *]) EQ 1 AND $
                              bridge_use GT 0, ct)
               ob=0l
@@ -3491,7 +3467,7 @@ loopstart:
                           wait, 1
                           ob=0l
                           print, 'starting over'
-                          goto, loopstart
+                          goto, loopstart2
                       ENDIF
                       
                   ENDREP UNTIL (min(dist) gt setup.min_dist and min(dist_block) gt blockfac*setup.min_dist) or ob ge n_elements(todo)-1
@@ -3502,6 +3478,34 @@ loopstart:
               ob=ob-1>0
               cur=todo[ob]
               
+; check whether this object has already been done, if so, read in
+; result
+;         IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[0,0], ct)
+              IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[*,0], ct)
+              IF ct GT 0 THEN BEGIN
+;            objnum = round_digit(table[cur].number, 0, /str)
+                  objnum = round_digit(table[cur].number, 0, /str)
+                  obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
+                  out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
+                  sky_file = strarr(nband+1)
+                  for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+;check if file was done successfully or bombed
+                  
+;DAMN, I KNOW! This only checks the object todo[0], NOT the one that
+;it actually wants to fit! So as soo as 1 object is blocked, this
+;doesn't work!
+                  IF file_test(obj_file) THEN BEGIN
+                      print, obj_file+' found.'
+                      print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'
+                      
+                      update_table, fittab, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup
+                      
+;               IF cur LT nbr THEN CONTINUE
+                      IF n_elements(todo) ne 1 then goto, loopstart
+                      IF n_elements(todo) eq 1 then goto, loopend
+                  ENDIF
+              ENDIF
+
 ;store position of new object
               bridge_obj[free[0]] = cur
               bridge_pos[*, free[0]] = [table[cur].alpha_j2000, $
