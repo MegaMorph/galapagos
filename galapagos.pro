@@ -2808,7 +2808,7 @@ FUNCTION read_sersic_results, obj, nband
                                 'pa_galfit', result[0].COMP2_PA, 'paerr_galfit', result[0].COMP2_PA_ERR, $
                                 'x_galfit', result[0].COMP2_XC, 'xerr_galfit', result[0].COMP2_XC_ERR, $
                                 'y_galfit', result[0].COMP2_YC, 'yerr_galfit', result[0].COMP2_YC_ERR, $
-; adapt PSF
+;adapt psf
                                 'psf_galfit', strtrim(sxpar(hd, 'PSF_A'),2), 'sky_galfit', result[0].COMP1_SKY, $
                                 'mag_galfit_band', result.COMP2_MAG, 'magerr_galfit_band',result.COMP2_MAG_ERR, $
                                 're_galfit_band', result.COMP2_RE, 'reerr_galfit_band', result.COMP2_RE_ERR, $
@@ -2835,16 +2835,16 @@ FUNCTION read_sersic_results, obj, nband
                                 'chi2nu_galfit', float(strmid(sxpar(hd, 'CHI2NU'),2)), $
 ; TO BE ADDED:
 ; #iterations, time
-; NEIGH_GALFIT HAS TO BE ADAPTED!
+; NEIGH_GALFIT HAS TO BE ADAPTED! WHY??
                                 'neigh_galfit', comp-3, 'flag_galfit', 2)
    ENDIF ELSE BEGIN
        psf=strarr(nband)
        for n=0,nband-1 do psf[n]='none'
        
        feedback = create_struct('mag_galfit', -999., 'magerr_galfit',99999., $
-                                're_galfit', -1., 'reerr_galfit', 99999., $
-                                'n_galfit', -1., 'nerr_galfit' ,99999., $
-                                'q_galfit', -1., 'qerr_galfit', 99999., $
+                                're_galfit', -99., 'reerr_galfit', 99999., $
+                                'n_galfit', -99., 'nerr_galfit' ,99999., $
+                                'q_galfit', -99., 'qerr_galfit', 99999., $
                                 'pa_galfit', 0., 'paerr_galfit', 99999., $
                                 'x_galfit', 0., 'xerr_galfit', 99999., $
                                 'y_galfit', 0., 'yerr_galfit', 99999., $
@@ -2923,11 +2923,11 @@ FUNCTION read_sersic_results_old_galfit, obj
    ENDIF ELSE BEGIN
        mag = -999.
        magerr = 99999.
-       re = -1.
+       re = -99.
        reerr = 99999.
-       n = -1.
+       n = -99.
        nerr = 99999.
-       q = -1.
+       q = -99.
        qerr = 99999.
        pa = 0.
        paerr = 99999.
@@ -3009,12 +3009,14 @@ if not file_test(out_file) then begin
                    fittab[i].sky_galfit = round_digit(sky,3)
            endif
        endfor
-    ENDELSE
-    
+    ENDELSE    
 ENDIF
 
 IF file_test(out_file) THEN BEGIN
-    if keyword_set(final) then fittab[i].org_image = table[i].tile
+    if keyword_set(final) then begin
+        fittab[i].org_image = table[i].tile
+        fittab[i].org_image_band = table[i].tile
+    ENDIF
     if not keyword_set(final) then fittab[i].org_image = table[i].frame[0]
     
     table[i].flag_galfit=2
@@ -3886,6 +3888,7 @@ ENDIF
 ;         out[i].org_image = tab[i].tile
 
          update_table, out, tab, i, out_file, obj_file, sky_file, nband, setup, /final
+         out[i].org_image_band = orgim[idx[0],1:nband]
 
       ENDFOR
       print, ' '
@@ -3911,9 +3914,7 @@ ENDIF
           IF ct EQ 0 THEN message, 'No objects in output catalogue left' $
           ELSE out = out[good]
       ENDIF
-      
- out=remove_tags(out,'PSF_GALFIT_BAND')
- out=remove_tags(out,'ORG_IMAGE_BAND')
+
       mwrfits, out, setup.outdir+setup.cat, /silent, /create
   ENDIF
   d = check_math()
