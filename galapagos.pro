@@ -3092,9 +3092,9 @@ print, 'start: '+start
 ;  setup_file = '/home/boris/megamorph_dev/astro-megamorph/scripts_boris/megamorph/gala_setup/multi-wl/gala.gama_mwl_1'
 ;==============================================================================
 ;read in the setup file
-  read_setup, setup_file, setup
+   read_setup, setup_file, setup
    IF keyword_set(logfile) THEN $
-      start_log, logfile, 'Reading setup file... done!'
+     start_log, logfile, 'Reading setup file... done!'
 ;==============================================================================   
 ;read input files into arrays
    read_image_files, setup, images, weights, outpath, outpath_band, outpre, $
@@ -3144,12 +3144,12 @@ print, 'start: '+start
    ENDFOR
 ;create an array, that contains the filenames of neighbouring frames
 ;for each tile
-   neighbours = strarr(setup.nneighb, nframes)
+   neighbours = strarr(setup.nneighb >1, nframes)
    FOR i=0ul, nframes-1 DO BEGIN
-      gcirc, 1, ra_cnt[i]/15., dec_cnt[i], ra_cnt/15., dec_cnt, dist
-      ord = sort(dist)
-      n = setup.nneighb < (n_elements(ord)-1)
-      IF n GT 0 THEN neighbours[0:n-1, i] = images[ord[1:n]]
+       gcirc, 1, ra_cnt[i]/15., dec_cnt[i], ra_cnt/15., dec_cnt, dist
+       ord = sort(dist)
+       n = setup.nneighb < (n_elements(ord)-1)
+       IF n GT 0 THEN neighbours[0:n-1, i] = images[ord[1:n]]
    ENDFOR
 ;==============================================================================
 ;check if output path exists
