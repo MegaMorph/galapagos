@@ -3254,13 +3254,15 @@ IF keyword_set(logfile) THEN $
 ;==============================================================================
 ;create postage stamp description files 
    IF setup.dostamps THEN BEGIN
-      FOR i=0ul, nframes-1 DO BEGIN
+       FOR i=0ul, nframes-1 DO BEGIN
+           print, 'cutting postages for image '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
            create_stamp_file, images[i,0], $
              outpath_file[i,0]+setup.outcat, $
              outpath_file[i,0]+setup.outparam, $
              outpath_file_no_band[i,0]+setup.stampfile, $
              setup.stampsize
            FOR b=1,nband do begin
+               print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
                cut_stamps, images[i,b], $
                  outpath_file_no_band[i,0]+setup.stampfile, $
                  outpath_band[i,b], $
