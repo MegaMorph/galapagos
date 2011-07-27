@@ -1178,9 +1178,12 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
    ENDIF ELSE BEGIN
 ;contributing sources FOUND----------------------------------------------------
 ; FIX THIS DO BE USING THE SOURCES FOUND IN REFERENCE BAND!
-       read_image_files, setup, orgim, weightxxx, outpath, outpath_bandxxx, outpre, $
-         nbandxxx, /silent
-       delvarx, weightxxx, outpath_bandxxx, nbandxxx
+;       read_image_files, setup, orgim, weightxxx, outpath, outpath_bandxxx, outpre, $
+;         nbandxxx, /silent
+;       delvarx, weightxxx, outpath_bandxxx, nbandxxx
+      orgim = setup.images
+      outpath = setup.outpath
+      outpre = setup.outpre
 ;       readcol, files, orgim, outpath, outpre, format = 'A,X,A,A', $
 ;               comment = '#', /silent
        outpath = set_trailing_slash(outpath)
@@ -1875,10 +1878,16 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
    printf, 1, ''
    close, 1
 
-   read_image_files, setup, orgim, orgweights, outpath, outpath_band, outpre, $
-     nbandxxx,/silent
-   delvarx, nbandxxx
+;   read_image_files, setup, orgim, orgweights, outpath, outpath_band, outpre, $
+;     nbandxxx,/silent
+;   delvarx, nbandxxx
 ; define all paths and names again
+   orgim = setup.images
+   orgwheights = setup.weights
+   outpath = setup.outpath
+   outpath_band = setup.outpath_band
+   outpre = setup.outpre
+
    outpath = set_trailing_slash(outpath) 
    outpath_galfit = strtrim(outpath[*,0]+setup.galfit_out_path,2)
    outpath_band = set_trailing_slash(outpath_band)
@@ -2121,9 +2130,11 @@ forward_function read_sersic_results_old_galfit
 ;   file_root = strmid(file_root, strpos(file_root, '/', /reverse_search)+1, $
 ;                      strlen(file_root))
 
-   read_image_files, setup, orgim, orgweightsxx, outpath, outpath_bandxx, outprexx, $
-     nbandxxx,/silent
-   delvarx, nbandxxx, orgweightsxx, outpath_bandxx, outprexx
+;   read_image_files, setup, orgim, orgweightsxx, outpath, outpath_bandxx, outprexx, $
+;     nbandxxx,/silent
+;   delvarx, nbandxxx, orgweightsxx, outpath_bandxx, outprexx
+   orgim = setup.images
+   outpath = setup.outpath
 ;   readcol, files, orgim, outpath, format = 'A,X,A,X', comment = '#', /silent
    outpath = set_trailing_slash(outpath)
 
@@ -2679,7 +2690,7 @@ bad_input:
    message, 'Invalid Entry in '+setup_file
 END
 
-PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nband, silent=silent, firstread=firstread
+PRO read_image_files, setup, silent=silent
 ; reads in the image file and returns the results to galapagos
 
 ; count number of columns in file
@@ -2694,36 +2705,58 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
 ; in the table
    if ncolf eq 4 then begin
        if not keyword_set(silent) then print, 'assuming one band dataset. Are all files within A00) fits images?'
+       
        readcol, setup.files, images, weights, outpath, outpre, $
          format = 'A,A,A,A', comment = '#', /silent
+
+;       setup.images = images
+;       setup.weights = weights
+;       setup.outpath = outpath
+;       setup.outpath_band = outpath_band
+;       setup.outpre = outpre
+
+; create arrays in setup needed to store all the data
+       add_tag, setup, 'images', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'weights', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'outpath', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'outpath_band', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'outpre', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'nband', nband, setup2
+       setup=setup2
+
 ; doubling the arrays to get [*,0] SExtractor images and [*,1] fitting images
-       images=[[images],[images]]
-       weights=[[weights],[weights]]
-       outpath=[[outpath],[outpath]]
-       outpath_band=outpath
-       outpre=[[outpre],[outpre]]
+       setup.images=[[images],[images]]
+       setup.weights=[[weights],[weights]]
+       setup.outpath=[[outpath],[outpath]]
+       setup.outpath_band=outpath
+       setup.outpre=[[outpre],[outpre]]
+
+; define additional parameters
 ; setup.stamp_pre is used and stays as given in C02)
 ; outpre is read in from the filelist
 ; exposure time and zeropoint read from setup file
-       if keyword_set(firstread) then begin 
-           if not tag_exist(setup, 'wavelength') then begin
-               add_tag, setup, 'wavelength', [0,0], setup2
-               setup=setup2
-           endif
-           hlppre=setup.stamp_pre
-           setup=remove_tags(setup,'stamp_pre')
-           add_tag, setup, 'stamp_pre', [hlppre, hlppre], setup2
+       if not tag_exist(setup, 'wavelength') then begin
+           add_tag, setup, 'wavelength', [0,0], setup2
            setup=setup2
-           hlpzp=setup.zp
-           setup=remove_tags(setup,'zp')
-           add_tag, setup, 'zp', [hlpzp, hlpzp], setup2
-           setup=setup2
-           hlpexp=setup.expt
-           setup=remove_tags(setup,'expt')
-           add_tag, setup, 'expt', [hlpexp, hlpexp], setup2
-           setup=setup2
-           delvarx, setup2
        endif
+       hlppre=setup.stamp_pre
+       setup=remove_tags(setup,'stamp_pre')
+       add_tag, setup, 'stamp_pre', [hlppre, hlppre], setup2
+       setup=setup2
+       hlpzp=setup.zp
+       setup=remove_tags(setup,'zp')
+       add_tag, setup, 'zp', [hlpzp, hlpzp], setup2
+       setup=setup2
+       hlpexp=setup.expt
+       setup=remove_tags(setup,'expt')
+       add_tag, setup, 'expt', [hlpexp, hlpexp], setup2
+       setup=setup2
+       delvarx, setup2
        nband=1
 ; wavelength
 ; band
@@ -2740,50 +2773,79 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
        ENDIF
        readcol, setup.files, band, wavelength, mag_offset, filelist, zeropoint, exptime, $
          format = 'A,I,F,A,F,F', comment = '#', /silent      
+
        nband=fix(n_elements(band)-1)
+; read first file to get number of images...
        readcol, filelist[0], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
          format = 'A,A,A,A', comment = '#', /silent
-       images=strarr(n_elements(hlpimages),nband+1)
-       weights=strarr(n_elements(hlpimages),nband+1)
-       outpath=strarr(n_elements(hlpimages),nband+1)
-       outpath_band=strarr(n_elements(hlpimages),nband+1)
-       outpre=strarr(n_elements(hlpimages),nband+1)
+;       images=strarr(n_elements(hlpimages),nband+1)
+;       weights=strarr(n_elements(hlpimages),nband+1)
+;       outpath=strarr(n_elements(hlpimages),nband+1)
+;       outpath_band=strarr(n_elements(hlpimages),nband+1)
+;       outpre=strarr(n_elements(hlpimages),nband+1)
        cnt=intarr(nband+1)
 
-       if keyword_set(firstread) then begin
-           setup=remove_tags(setup,'stamp_pre')
-           add_tag, setup, 'stamp_pre', band, setup2
-           setup=setup2
-           if not tag_exist(setup, 'wavelength') then begin
+; create arrays in setup needed to store all the data
+       add_tag, setup, 'images', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'weights', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'outpath', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'outpath_band', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'outpre', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'nband', nband, setup2
+       setup=setup2
+
+; define additional parameters
+       setup=remove_tags(setup,'stamp_pre')
+       add_tag, setup, 'stamp_pre', band, setup2
+       setup=setup2
+       if not tag_exist(setup, 'wavelength') then begin
 ; setup=remove_tags(setup,'wavelength')
-               add_tag, setup, 'wavelength', wavelength, setup2
-               setup=setup2
-           endif
-           if not tag_exist(setup, 'mag_offset') then begin
-               setup=remove_tags(setup,'mag_offset')
-               add_tag, setup, 'mag_offset', mag_offset, setup2
-               setup=setup2
-           endif
-           setup=remove_tags(setup,'zp')
-           add_tag, setup, 'zp', zeropoint, setup2
+           add_tag, setup, 'wavelength', wavelength, setup2
            setup=setup2
-           setup=remove_tags(setup,'expt')
-           add_tag, setup, 'expt', exptime, setup2
-           setup=setup2
-           delvarx, setup2
        endif
+       if not tag_exist(setup, 'mag_offset') then begin
+           setup=remove_tags(setup,'mag_offset')
+           add_tag, setup, 'mag_offset', mag_offset, setup2
+           setup=setup2
+       endif
+       setup=remove_tags(setup,'zp')
+       add_tag, setup, 'zp', zeropoint, setup2
+       setup=setup2
+       setup=remove_tags(setup,'expt')
+       add_tag, setup, 'expt', exptime, setup2
+       setup=setup2
+       delvarx, setup2
        for b=0,nband do begin
            readcol, filelist[b], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
              format = 'A,A,A,A', comment = '#', /silent
            cnt[b]=n_elements(hlpimages)
            if (cnt[b] ne cnt[0]) and not keyword_set(silent) then print, 'input list '+strtrim(band[b])+' contains a wrong number of entries (tiles)'
            if (cnt[b] ne cnt[0]) and not keyword_set(silent) then stop
-           images[*,b]=hlpimages
-           weights[*,b]=hlpweights
-           outpre[*,b]=hlpoutpre
-           outpath[*,b]=set_trailing_slash(setup.outdir)+set_trailing_slash(strtrim(hlpoutpath,2))
-           outpath_band[*,b]=outpath[*,b]+strtrim(band[b],2)
+           setup.images[*,b]=hlpimages
+           setup.weights[*,b]=hlpweights
+           setup.outpre[*,b]=hlpoutpre
+           setup.outpath[*,b]=set_trailing_slash(setup.outdir)+set_trailing_slash(strtrim(hlpoutpath,2))
+           setup.outpath_band[*,b]=setup.outpath[*,b]+strtrim(band[b],2)
        endfor 
+
+;       for b=0,nband do begin
+;           readcol, filelist[b], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
+;             format = 'A,A,A,A', comment = '#', /silent
+;           cnt[b]=n_elements(hlpimages)
+;           if (cnt[b] ne cnt[0]) and not keyword_set(silent) then print, 'input list '+strtrim(band[b])+' contains a wrong number of entries (tiles)'
+;           if (cnt[b] ne cnt[0]) and not keyword_set(silent) then stop
+;           images[*,b]=hlpimages
+;           weights[*,b]=hlpweights
+;           outpre[*,b]=hlpoutpre
+;           outpath[*,b]=set_trailing_slash(setup.outdir)+set_trailing_slash(strtrim(hlpoutpath,2))
+;           outpath_band[*,b]=outpath[*,b]+strtrim(band[b],2)
+;       endfor 
+
    endif
    if ncolf ne 6 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
 END
@@ -3094,8 +3156,15 @@ print, 'start: '+start
      start_log, logfile, 'Reading setup file... done!'
 ;==============================================================================   
 ;read input files into arrays
-   read_image_files, setup, images, weights, outpath, outpath_band, outpre, $
-     nband,/firstread
+   read_image_files, setup
+   nband = setup.nband
+   images = setup.images
+   weights = setup.weights
+   outpath = setup.outpath
+   outpath_band = setup.outpath_band
+   outpre = setup.outpre
+   nband = setup.nband
+
 ; now that number of bands is known, correct number of additional cheb
 ; combonents to nband -1
    setup.cheb=setup.cheb <(nband-1)
@@ -3269,7 +3338,9 @@ IF keyword_set(logfile) THEN $
        ENDFOR
 ;create skymap files 
        FOR i=0ul, nframes-1 DO BEGIN
+           print, 'creating skymap for image '+strtrim(outpath_file_no_band[i,0],2)
            FOR b=1,nband do begin
+               print, 'creating skymap for '+strtrim(setup.stamp_pre[b],2)+'-band'
                create_skymap, weights[i,b], $
                  outpath_file[i,0]+setup.outseg, $
                  outpath_file[i,0]+setup.outcat, $
@@ -3297,8 +3368,7 @@ IF keyword_set(logfile) THEN $
 ; check if psf in setup file is an image or a list
       readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband
 ;==============================================================================
-;sort the total catalogue by magnitude and select the
-;brightest BRIGHT percent
+;sort the total catalogue by magnitude and select the brightest BRIGHT percent
       br = sort(sexcat.mag_best)
       nbr = round(n_elements(sexcat.mag_best)*setup.bright/100.)
       
@@ -3334,10 +3404,17 @@ IF keyword_set(logfile) THEN $
 
       mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
 ;find the image files for the sources
-      read_image_files, setup, orgim, orgwht, orgpath, orgpath_band, orgpre, $
-        nband,/silent
+;      read_image_files, setup, orgim, orgwht, orgpath, orgpath_band, orgpre, $
+;        nband,/silent
 ;      readcol, setup.files, orgim, orgwht, orgpath, orgpre, $
 ;               format = 'A,A,A,A', comment = '#', /silent
+      orgim = setup.images
+      orgwht = setup.weights
+      orgpath = setup.outpath
+      orgpath_band = setup.outpath_band
+      orgpre = setup.outpre
+      nband = setup.nband
+
       orgpath = set_trailing_slash(orgpath)
       orgpath_band = set_trailing_slash(orgpath_band)
       orgpath_pre = orgpath_band+orgpre
@@ -3383,9 +3460,6 @@ IF keyword_set(logfile) THEN $
                 strtrim(bridge_arr[i]->status(), 2)
           ENDIF
           loop++
-          
-;         statusline, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit gt 0))+1,2)+' of '+strtrim(n_elements(sexcat),2)+'   '
-;         print, '  currently working on No. '+strtrim(loop,2)+' of '+strtrim(n_elements(sexcat),2)+'   '
           
 ;check if current object exists
 loopstart:
@@ -3504,10 +3578,9 @@ loopstart2:
 
 ;store position of new object
               bridge_obj[free[0]] = cur
-              bridge_pos[*, free[0]] = [table[cur].alpha_j2000, $
-                                        table[cur].delta_j2000]
+              bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
               table[cur].flag_galfit = 1
-              print, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(sexcat),2)+'   '
+              statusline, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(sexcat),2)+'   '
               
               if keyword_set(plot) then begin
                   plot, table.alpha_J2000,table.delta_J2000, psym=3
@@ -3692,7 +3765,7 @@ loopend:
 ;continue if current object is on neighbouring frame
              IF table[current_obj].frame[0] NE images[f] THEN CONTINUE
              counter +=1
-             print, '  currently working on No. '+strtrim(counter,2)+' of '+strtrim(todo,2)+'  objects on frame  '+ $
+             statusline, '  currently working on No. '+strtrim(counter,2)+' of '+strtrim(todo,2)+'  objects on frame  '+ $
                strtrim(images[f],2)+'  (frame '+strtrim(f+1,2)+' of '+strtrim(nframes,2)+')'
 ;find the matching filenames
             idx = where(table[current_obj].frame[0] EQ orgim[*,0])
@@ -3857,8 +3930,15 @@ ENDIF
       struct_assign, tab, out
 
 ;find the image files for the sources
-      read_image_files, setup, orgim, orgwht, orgpath, orgpath_band, orgpre, $
-        nband,/silent
+;      read_image_files, setup, orgim, orgwht, orgpath, orgpath_band, orgpre, $
+;        nband,/silent
+      orgim = setup.images
+      orgwht = setup.weights
+      orgpath = setup.outpath
+      orgpath_band = setup.outpath_band
+      orgpre = setup.outpre
+      nband = setup.nband
+
       orgpath = set_trailing_slash(orgpath)
       orgpath_band = set_trailing_slash(orgpath_band)
       orgpath_pre = orgpath_band+orgpre
