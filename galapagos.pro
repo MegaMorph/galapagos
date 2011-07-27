@@ -1853,7 +1853,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
        if b lt nband then SKY_po=SKY_po+','
        if b lt nband then SKY_po2=SKY_po2+','
    ENDFOR
-print, SKY_po
+;print, SKY_po
    band_po=' '
    if setup.version ge 4 and nband gt 1 then band_po='band'
    printf, 1, ' 1) '+SKY_po+'    '+SKY_po2+'  '+band_po+'       # sky background       [ADU counts]'
@@ -1967,7 +1967,7 @@ forward_function read_sersic_results_old_galfit
            par.y_galfit_cheb[0] = table[objects[i]].y_image
 ; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
            par.mag_galfit = table[objects[i]].mag_best
-           par.mag_galfit_band = fltarr(nband)+table[objects[i]].mag_best
+           par.mag_galfit_band = fltarr(nband)+table[objects[i]].mag_best+setup.mag_offset[1:nband]
            par.mag_galfit_cheb = fltarr(nband)
            par.mag_galfit_cheb[0] = table[objects[i]].mag_best
            par.re_galfit = 10.^(-0.79)*table[objects[i]].flux_radius^1.87
@@ -1987,12 +1987,6 @@ forward_function read_sersic_results_old_galfit
            par.pa_galfit_cheb = fltarr(nband)
            par.pa_galfit_cheb[0] = table[objects[i]].theta_image-90.
            
-;; old version, will NOT work, because no structure!
-;         par = [table[objects[i]].x_image, table[objects[i]].y_image, $
-;                table[objects[i]].mag_best, $
-;                10.^(-0.79)*table[objects[i]].flux_radius^1.87, $
-;                2.5, 1-table[objects[i]].ellipticity, $
-;                table[objects[i]].theta_image-90.]
            fix = ['1', '1', '1', '1', '1', '1', '1']
        ENDELSE
        
@@ -2004,7 +1998,7 @@ forward_function read_sersic_results_old_galfit
            fix[0] = '0' & fix[1] = '0' & fix[5] = '0' & fix[6] = '0'
        ENDIF
        
-; check some constraints and set starting values accordingly of neccessary
+; check some constraints and set starting values accordingly if neccessary
        IF finite(par.re_galfit) NE 1 THEN begin
            par.re_galfit = table[objects[i]].flux_radius > 3
            par.re_galfit_band = fltarr(nband)+(table[objects[i]].flux_radius > 3)
@@ -2061,7 +2055,6 @@ forward_function read_sersic_results_old_galfit
        endif else begin
            printf, 1, ' 1) '+x_po+'  '+y_po+'   '+x_po_fit+' '+y_po_fit+'   # position x, y        [pixel]'
        endelse
-       
        mag_po=''
        mag_po_fit=''
        FOR b=1,nband DO BEGIN
@@ -2248,7 +2241,7 @@ forward_function read_sersic_results_old_galfit
                    par.y_galfit_cheb[0] = table[i_con].y_image
 ; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
                    par.mag_galfit = table[i_con].mag_best
-                   par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best
+                   par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best+setup.mag_offset[1:nband]
                    par.mag_galfit_cheb = fltarr(nband)
                    par.mag_galfit_cheb[0] = table[i_con].mag_best
                    par.re_galfit = 10.^(-0.79)*table[i_con].flux_radius^1.87
@@ -2293,7 +2286,7 @@ forward_function read_sersic_results_old_galfit
                par.y_galfit_cheb[0] = table[i_con].y_image
 ; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
                par.mag_galfit = table[i_con].mag_best
-               par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best
+               par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best+setup.mag_offset[1:nband]
                par.mag_galfit_cheb = fltarr(nband)
                par.mag_galfit_cheb[0] = table[i_con].mag_best
                par.re_galfit = 10.^(-0.79)*table[i_con].flux_radius^1.87
@@ -2738,15 +2731,15 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
 
 ; if number of columns eq 3 then assume multi band survey and
 ; filesnames pointing to other file lists that contain all the images.
-   if ncolf eq 5 then begin
+   if ncolf eq 6 then begin
        if not keyword_set(silent) then print, 'assuming multi-wavelength dataset. Assuming first line to be for SExtractor, rest for fitting!'
        if setup.version lt 4 then BEGIN
            print, 'you seem to be using mulit-wavelength data, but the GALFIT version you have specified only supports one-band data'
            print, 'This version of galapagos needs GALFIT4 in order to be able to read out the fitting parameters (output has to be in a fits table)'
            stop
        ENDIF
-       readcol, setup.files, band, wavelength, filelist, zeropoint, exptime, $
-         format = 'A,I,A,F,F', comment = '#', /silent      
+       readcol, setup.files, band, wavelength, mag_offset, filelist, zeropoint, exptime, $
+         format = 'A,I,F,A,F,F', comment = '#', /silent      
        nband=fix(n_elements(band)-1)
        readcol, filelist[0], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
          format = 'A,A,A,A', comment = '#', /silent
@@ -2764,6 +2757,11 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
            if not tag_exist(setup, 'wavelength') then begin
 ; setup=remove_tags(setup,'wavelength')
                add_tag, setup, 'wavelength', wavelength, setup2
+               setup=setup2
+           endif
+           if not tag_exist(setup, 'mag_offset') then begin
+               setup=remove_tags(setup,'mag_offset')
+               add_tag, setup, 'mag_offset', mag_offset, setup2
                setup=setup2
            endif
            setup=remove_tags(setup,'zp')
@@ -2787,7 +2785,7 @@ PRO read_image_files, setup, images, weights, outpath, outpath_band, outpre, nba
            outpath_band[*,b]=outpath[*,b]+strtrim(band[b],2)
        endfor 
    endif
-   if ncolf ne 5 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
+   if ncolf ne 6 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
 END
 
 FUNCTION read_sersic_results, obj, nband
@@ -3079,7 +3077,7 @@ start=systime(0)
 print, 'start: '+start
    IF n_params() LE 1 THEN gala_pro = 'galapagos'
 ;   gala_pro = '/home/boris/IDL/gala/galapagos.pro'
-;   logfile = '/data/gama/galapagos_multi_wlgalapagos.log'
+;   logfile = '/data/gama/galapagos_multi_wl_galapagos.log'
 ; .run galapagos.pro
 ;  galapagos,'~/megamorph_dev/astro-megamorph/scripts_boris/megamorph/gala_setup/multi-wl/gala.gama_mwl_1'
 ;  galapagos,'~/IDL/megamorph/gala_setup/gala.gama_set3.2_test'
@@ -3089,7 +3087,6 @@ print, 'start: '+start
       setup_file = ''
       read, prompt = 'Location of setup file: ', setup_file
    ENDIF
-;  setup_file = '/home/boris/megamorph_dev/astro-megamorph/scripts_boris/megamorph/gala_setup/multi-wl/gala.gama_mwl_1'
 ;==============================================================================
 ;read in the setup file
    read_setup, setup_file, setup
@@ -3102,7 +3099,6 @@ print, 'start: '+start
 ; now that number of bands is known, correct number of additional cheb
 ; combonents to nband -1
    setup.cheb=setup.cheb <(nband-1)
-
 ; old single-band version, will not work anymore, as the above doubnles
 ; the array even for single band as elemen [*,0] have to be sextractor
 ; only, no used for fitting!
