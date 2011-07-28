@@ -3231,7 +3231,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
          outpath_file[*,0]+setup.outparam, images[*,0], neighbours, $
          setup.outdir+setup.sexcomb
        sex2ds9reg, setup.outdir+setup.sexcomb, outpath_file[0,0]+setup.outparam, $
-         setup.outdir+'sexcomb.reg', 10, color='red', tag = 'comb'
+         setup.outdir+'sexcomb.reg', 10, color='green', tag = 'comb'
        IF keyword_set(logfile) THEN $
          update_log, logfile, 'SExtraction... done!'
    ENDIF
