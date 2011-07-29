@@ -318,6 +318,7 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
 ;loop over all elements in cold list and find "good" objects in hot
 ;catalogue, i.e. objects that are not contained in the cold list and 
 ;calculate ellipse parameters
+   print, 'combining hot & cold catalogues'
    IF multi EQ 3 THEN BEGIN
       cold_cxx = cold_table.cxx_image / cold_table.kron_radius^2.
       cold_cyy = cold_table.cyy_image / cold_table.kron_radius^2.
@@ -2486,6 +2487,7 @@ PRO read_setup, setup_file, setup
                          'nneighb', 0, $
                          'max_proc', 0.0, $
                          'min_dist', 0.0, $
+                         'min_dist_block', 0.0, $
                          'galexe', '', $ 
                          'batch', '', $
                          'obj', '', $
@@ -2592,6 +2594,7 @@ PRO read_setup, setup_file, setup
          'D18)': setup.nneighb = fix(content)
          'D19)': setup.max_proc = fix(content)
          'D20)': setup.min_dist = float(content)
+         'D21)': setup.min_dist_block = float(content)
 
          'E00)': setup.galexe = content
          'E01)': setup.batch = content
@@ -3231,7 +3234,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
          outpath_file[*,0]+setup.outparam, images[*,0], neighbours, $
          setup.outdir+setup.sexcomb
        sex2ds9reg, setup.outdir+setup.sexcomb, outpath_file[0,0]+setup.outparam, $
-         setup.outdir+'sexcomb.reg', 10, color='red', tag = 'comb'
+         setup.outdir+'sexcomb.reg', 10, color='green', tag = 'comb'
        IF keyword_set(logfile) THEN $
          update_log, logfile, 'SExtraction... done!'
    ENDIF
