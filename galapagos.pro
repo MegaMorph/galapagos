@@ -155,7 +155,7 @@ FUNCTION read_sex_table, file, param, add_column = add_column
 ;fill structure with values
    fill_struct, table, file
 
-   return, table
+   return, table  
 END
 
 PRO write_sex_table, table, outcat, add_column = add_column

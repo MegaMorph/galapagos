@@ -64,7 +64,7 @@ PRO gala_bridge, filein
                 setup.convbox, nums, frames, setup.galexe, fittab, seed
 ;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
 
-   print,table[cur].number
+;   print,table[cur].number
    create_mask, table, wht, seg, stamp_param_file, mask_file, $
                 im_file, table[cur].frame, cur, $
                 setup.neiscl, setup.skyoff, nums, frames, $
@@ -91,7 +91,7 @@ PRO gala_bridge, filein
 ;   wait, randomu(systime(/seconds))*8+2
 ;   spawn, 'touch '+out_file
 
-;   file_delete, filein
+   file_delete, filein
 
 ;file_delete, filein+'.restored';§§§§§§§§§§§§§§§§§§§§§§
 ;file_delete, filein+'.sky';§§§§§§§§§§§§§§§§§§§§§§
