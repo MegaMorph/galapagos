@@ -2640,6 +2640,9 @@ PRO read_setup, setup_file, setup
          'F01)': setup.cat = content
       ENDCASE
    ENDWHILE
+   
+; Insure backwards compatibility for D21, E16, E17. They don't exist
+; in the old input file. Also, the format of the image setup file changed!!
 
 ;default values
    IF setup.enlarge EQ -1 THEN setup.enlarge = 1.1
@@ -2667,7 +2670,6 @@ END
 
 PRO read_image_files, setup, silent=silent
 ; reads in the image file and returns the results to galapagos
-
 ; count number of columns in file
    lineone = ''
    openr, 1, setup.files
@@ -2708,10 +2710,8 @@ PRO read_image_files, setup, silent=silent
        setup.outpre=[[outpre],[outpre]]
 
 ; define additional parameters
-       if not tag_exist(setup, 'wavelength') then begin
-           add_tag, setup, 'wavelength', [0,0], setup2
-           setup=setup2
-       endif
+       add_tag, setup, 'wavelength', [0,0], setup2
+       setup=setup2
        hlppre=setup.stamp_pre
        setup=remove_tags(setup,'stamp_pre')
        add_tag, setup, 'stamp_pre', [hlppre, hlppre], setup2
@@ -2766,16 +2766,10 @@ PRO read_image_files, setup, silent=silent
        setup=remove_tags(setup,'stamp_pre')
        add_tag, setup, 'stamp_pre', band, setup2
        setup=setup2
-       if not tag_exist(setup, 'wavelength') then begin
-; setup=remove_tags(setup,'wavelength')
-           add_tag, setup, 'wavelength', wavelength, setup2
-           setup=setup2
-       endif
-       if not tag_exist(setup, 'mag_offset') then begin
-           setup=remove_tags(setup,'mag_offset')
-           add_tag, setup, 'mag_offset', mag_offset, setup2
-           setup=setup2
-       endif
+       add_tag, setup, 'wavelength', wavelength, setup2
+       setup=setup2
+       add_tag, setup, 'mag_offset', mag_offset, setup2
+       setup=setup2
        setup=remove_tags(setup,'zp')
        add_tag, setup, 'zp', zeropoint, setup2
        setup=setup2
@@ -3603,113 +3597,112 @@ loopend:
 
 ;loop over all frames
       FOR f=0ul, nframes-1 DO BEGIN
-
 ;check if current frame is in batchlist
-         IF n_elements(batch) GT 0 THEN BEGIN
-            dum = where(batch EQ images[f], ct)
-            IF ct EQ 0 THEN CONTINUE
-         ENDIF ELSE BREAK
+          IF n_elements(batch) GT 0 THEN BEGIN
+              dum = where(batch EQ images[f], ct)
+              IF ct EQ 0 THEN CONTINUE
+          ENDIF ELSE BREAK
 
 ;select table with frames neighbouring the current frame
-         table = sexcat[where(sexcat.frame EQ images[f])]
-
-         FOR i=0ul, n_elements(neighbours[*, f])-1 DO BEGIN
-            tabi = where(sexcat.frame EQ neighbours[i, f], ct)
-            IF ct GT 0 THEN table = [table, sexcat[tabi]]
-         ENDFOR
+          table = sexcat[where(sexcat.frame EQ images[f])]
+          
+          FOR i=0ul, n_elements(neighbours[*, f])-1 DO BEGIN
+              tabi = where(sexcat.frame EQ neighbours[i, f], ct)
+              IF ct GT 0 THEN table = [table, sexcat[tabi]]
+          ENDFOR
 ; make table.frame multi-wavelength-ready to be passed onto gala_bridge
-         tableim = strarr(nband+1,n_elements(table.frame))
-         for i = 0, n_elements(images[*,0])-1 do begin
-             whtableim = where(table.frame eq images[i,0], ct)
-             for b=0,nband do begin
-                 if ct gt 0 then tableim[b,whtableim] = images[i,b]
-             ENDFOR
-         ENDFOR 
-         table=remove_tags(table,'frame')
-         add_tag, table, 'frame', strarr(nband+1), table2
-         table=table2
-         delvarx, table2
-         table.frame = tableim
-
+          tableim = strarr(nband+1,n_elements(table.frame))
+          for i = 0, n_elements(images[*,0])-1 do begin
+              whtableim = where(table.frame eq images[i,0], ct)
+              for b=0,nband do begin
+                  if ct gt 0 then tableim[b,whtableim] = images[i,b]
+              ENDFOR
+          ENDFOR 
+          table=remove_tags(table,'frame')
+          add_tag, table, 'frame', strarr(nband+1), table2
+          table=table2
+          delvarx, table2
+          table.frame = tableim
+          
 ;sort table by magnitude
-         br = sort(table.mag_best)
-         table = table[br]
-
+          br = sort(table.mag_best)
+          table = table[br]
+          
 ;number of objects in table
-         n_obj = n_elements(table)
-
-         first = 1
-         
+          n_obj = n_elements(table)
+          
+          first = 1
+          
 ;calculate sky for all objects in current frame
-         counter=0
-         todo = n_elements(where(table.frame[0] eq images[f]))
+          counter=0
+          todo = n_elements(where(table.frame[0] eq images[f]))
 
-         FOR current_obj=0ul, n_obj-1 DO BEGIN
-             
+          FOR current_obj=0ul, n_obj-1 DO BEGIN
+              
 ;continue if current object is on neighbouring frame
-             IF table[current_obj].frame[0] NE images[f] THEN CONTINUE
-             counter +=1
-             print, '  currently working on No. '+strtrim(counter,2)+' of '+strtrim(todo,2)+'  objects on frame  '+ $
-               strtrim(images[f],2)+'  (frame '+strtrim(f+1,2)+' of '+strtrim(nframes,2)+')'
+              IF table[current_obj].frame[0] NE images[f] THEN CONTINUE
+              counter +=1
+              print, '  currently working on No. '+strtrim(counter,2)+' of '+strtrim(todo,2)+'  objects on frame  '+ $
+                strtrim(images[f],2)+'  (frame '+strtrim(f+1,2)+' of '+strtrim(nframes,2)+')'
 ;find the matching filenames
-            idx = where(table[current_obj].frame[0] EQ orgim[*,0])
-
+              idx = where(table[current_obj].frame[0] EQ orgim[*,0])
+              
 ;define the file names for the:
 ;postage stamp parameters
-            stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
-            objnum = round_digit(table[current_obj].number, 0, /str)
+              stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
+              objnum = round_digit(table[current_obj].number, 0, /str)
 ;galfit masks
-            mask_file = strarr(nband+1)
-            for q=1,nband do mask_file[q] = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
+              mask_file = strarr(nband+1)
+              for q=1,nband do mask_file[q] = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
 ;galfit obj file
-            obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
+              obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
 ;galfit constraint file
-            constr_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.constr)[0]
+              constr_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.constr)[0]
 ;galfit input file
-            im_file = strarr(nband+1)
-            for q=1,nband do im_file[q] = (orgpath_pre[idx,q]+objnum+'_'+setup.stamp_pre[q])[0]
+              im_file = strarr(nband+1)
+              for q=1,nband do im_file[q] = (orgpath_pre[idx,q]+objnum+'_'+setup.stamp_pre[q])[0]
 ;galfit output path
-            out_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out)[0]
+              out_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out)[0]
 ;sky summary file
-            sky_file = strarr(nband+1)
-            for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
-            
-            IF first THEN BEGIN
+              sky_file = strarr(nband+1)
+              for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+              
+              IF first THEN BEGIN
 ; only to be done for first object on file
-                first = 0
-                print, systime(), ' reading image and estimating global sky values for each band'
+                  first = 0
+                  print, systime(), ' reading image and estimating global sky values for each band'
 ; loop over band again as in gala_bridge
-                global_sky = fltarr(nband+1)
-                global_sigsky = fltarr(nband+1)
-                for b=1,nband do begin
-
+                  global_sky = fltarr(nband+1)
+                  global_sigsky = fltarr(nband+1)
+                  for b=1,nband do begin
+                      
 ;read in image and weight (takes 15sec)
-                    im = readfits(table[current_obj].frame[b], hd,/silent)
+                      im = readfits(table[current_obj].frame[b], hd,/silent)
 ;image size
-                    sz_im = (size(im))[1:2]
-                    
+                      sz_im = (size(im))[1:2]
+                      
 ;read the skymap
-                    map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', xxhd,/silent)
-                    
+                      map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', xxhd,/silent)
+                      
 ;rad is the minimum starting radius for the sky calculation (outside
 ;the aperture of the object)
-                    rad = table.a_image*table.kron_radius*setup.skyscl+setup.skyoff
-                    
+                      rad = table.a_image*table.kron_radius*setup.skyscl+setup.skyoff
+                      
 ;get first guess for global sky
 ; same changes as in gala_bridge.
-                    skypix = where(map EQ 0 and finite(im) eq 1,ct)
+                      skypix = where(map EQ 0 and finite(im) eq 1,ct)
 ; new scheme takes around 2 second,s the next, old system, about 6
 ; moment() would be 3 times faster, but returns a MEAN value!
 ;; current version
-                    global_sky=median(im[skypix])
-                    global_sigsky=stddev(im[skypix])
-                    if finite(global_sky) ne 1 or finite(global_sigsky) ne 1 then begin
+                      global_sky=median(im[skypix])
+                      global_sigsky=stddev(im[skypix])
+                      if finite(global_sky) ne 1 or finite(global_sigsky) ne 1 then begin
 ;; old version
 ;   resistant_mean, im[skypix], 3, sky, sigsky, nrej
 ;   sigsky *= sqrt(ct-1-nrej)
-                        global_sky=median(im[skypix],/double)
-                        global_sigsky=stddev(im[skypix],/double)
-                    endif
+                          global_sky=median(im[skypix],/double)
+                          global_sigsky=stddev(im[skypix],/double)
+                      endif
 ;; also belonging to old version
 ;   resistant_mean, im[skypix], 3, sky, sigsky, nrej
 ;   sigsky *= sqrt(ct-1-nrej)
@@ -3723,84 +3716,83 @@ loopend:
 ;   global_sky = par[1]
 ;   global_sigsky = par[2]
                     
-                    delvarx, skypix
-                    
+                      delvarx, skypix
+                      
 ;make sure all positions are relative to the current frame
 ;(neighbouring frames may have negative positions)
-                    adxy, hd, table.alpha_j2000, table.delta_j2000, x, y
-                    
-                    table.x_image = x+1
-                    table.y_image = y+1
-                ENDFOR
-            ENDIF
+                      adxy, hd, table.alpha_j2000, table.delta_j2000, x, y
+                      
+                      table.x_image = x+1
+                      table.y_image = y+1
+                  ENDFOR
+              ENDIF
 ;does a GALFIT obj file exist (cannot test for _gf.fits -> files might
 ;bomb -> endless loop)?
-            
-            choose_psf, table[current_obj].alpha_j2000, table[current_obj].delta_j2000, $
-              psf_struct, table[current_obj].frame, chosen_psf_file, nband         
-
+              
+              choose_psf, table[current_obj].alpha_j2000, table[current_obj].delta_j2000, $
+                psf_struct, table[current_obj].frame, chosen_psf_file, nband         
+              
 ; now estimate real skies for the object
-            IF file_test(obj_file) THEN CONTINUE
-            for b=1,nband do begin
+              IF file_test(obj_file) THEN CONTINUE
+              for b=1,nband do begin
 ; choose closest PSF according to RA & DEC and subtract filename from
 ; structure 'psf_struct'
-                psf = readfits(chosen_psf_file[b], psfhead,/silent)
-                
+                  psf = readfits(chosen_psf_file[b], psfhead,/silent)
+                  
 ;read in image and weight again (takes 15sec)
-                im = readfits(table[current_obj].frame[b], hd,/silent)
-                wht = readfits(orgwht[idx,b], whd,/silent)
-
+                  im = readfits(table[current_obj].frame[b], hd,/silent)
+                  wht = readfits(orgwht[idx,b], whd,/silent)
+                  
 ;read segmentation map (needed for excluding neighbouring sources)
-                seg = readfits(orgpath_file[idx,0]+setup.outseg, xxhd,/silent)
+                  seg = readfits(orgpath_file[idx,0]+setup.outseg, xxhd,/silent)
 ;read the skymap
-                map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', xxhd,/silent)
-
-                seed=table[current_obj].number
-                getsky_loop, setup, current_obj, table, rad, im, hd, map, setup.expt, $
-                  setup.zp, setup.neiscl, setup.skyoff, setup.power, $
-                  setup.cut, setup.files, psf, setup.dstep, $
-                  setup.wstep, setup.gap, setup.nslope, sky_file[b], $
-                  setup.galfit_out, setup.outcat, setup.outparam, $
-                  setup.stampfile, global_sky[b], global_sigsky[b], $
-                  setup.convbox, nums, frames, setup.galexe, fittab, b, $
-                  orgpath_pre, outpath_file, outpath_file_no_band, nband, seed
-
-                create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
-                  im_file[b], table[current_obj].frame[b], current_obj, $
-                  setup.neiscl, setup.skyoff, nums, frames, $
-                  setup.maglim_gal, setup.maglim_star, $
-                  setup.stel_slope, setup.stel_zp, objects, corner, $
-                  b
+                  map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', xxhd,/silent)
+                  
+                  seed=table[current_obj].number
+                  getsky_loop, setup, current_obj, table, rad, im, hd, map, setup.expt, $
+                    setup.zp, setup.neiscl, setup.skyoff, setup.power, $
+                    setup.cut, setup.files, psf, setup.dstep, $
+                    setup.wstep, setup.gap, setup.nslope, sky_file[b], $
+                    setup.galfit_out, setup.outcat, setup.outparam, $
+                    setup.stampfile, global_sky[b], global_sigsky[b], $
+                    setup.convbox, nums, frames, setup.galexe, fittab, b, $
+                    orgpath_pre, outpath_file, outpath_file_no_band, nband, seed
+                  
+                  create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
+                    im_file[b], table[current_obj].frame[b], current_obj, $
+                    setup.neiscl, setup.skyoff, nums, frames, $
+                    setup.maglim_gal, setup.maglim_star, $
+                    setup.stel_slope, setup.stel_zp, objects, corner, $
+                    b
 ; saves memory generally, and (for some reasons) prevents IDL from
 ; taking up too much memory. Don't quite get that, doesn't even work
 ; when at the beginning of this loop.
-                delvarx,psf,im,wht,seg,map
+                  delvarx,psf,im,wht,seg,map
 ; deblending is defined by primary band!
-                if b eq 1 then begin
-                    delvarx, save_objects, save_corner
-                    save_objects = objects
-                    save_corner = corner
-                ENDIF       
-            ENDFOR
-
-            prepare_galfit, setup, save_objects, setup.files, save_corner, table, $
-              obj_file, im_file, constr_file, mask_file, $
-              chosen_psf_file, out_file, sky_file, setup.convbox, $
-              setup.zp, setup.platescl, nums, frames, $
-              current_obj, setup.outcat, setup.outparam, $
-              setup.stampfile, setup.conmaxre, setup.conminm, $
-              setup.conmaxm, fittab, setup.version, nband, orgpre ;, n_constrained = n_constrained
-
-            cd, outpath_galfit[idx]
-            IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file $
-            ELSE spawn, setup.galexe+' '+obj_file
-            file_delete, outpath_galfit[idx]+'galfit.[0123456789]*', /quiet, $
-              /allow_nonexistent, /noexpand_path
-        ENDFOR
-    ENDFOR
-    IF n_elements(bridge_arr) GT 0 THEN obj_destroy, bridge_arr
-ENDIF
-
+                  if b eq 1 then begin
+                      delvarx, save_objects, save_corner
+                      save_objects = objects
+                      save_corner = corner
+                  ENDIF       
+              ENDFOR
+              
+              prepare_galfit, setup, save_objects, setup.files, save_corner, table, $
+                obj_file, im_file, constr_file, mask_file, $
+                chosen_psf_file, out_file, sky_file, setup.convbox, $
+                setup.zp, setup.platescl, nums, frames, $
+                current_obj, setup.outcat, setup.outparam, $
+                setup.stampfile, setup.conmaxre, setup.conminm, $
+                setup.conmaxm, fittab, setup.version, nband, orgpre ;, n_constrained = n_constrained
+              
+              cd, outpath_galfit[idx]
+              IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file $
+              ELSE spawn, setup.galexe+' '+obj_file
+              file_delete, outpath_galfit[idx]+'galfit.[0123456789]*', /quiet, $
+                /allow_nonexistent, /noexpand_path
+          ENDFOR
+      ENDFOR
+      IF n_elements(bridge_arr) GT 0 THEN obj_destroy, bridge_arr
+  ENDIF
 ;==============================================================================
 ;read in sextractor table, combine with galfit results, write out
 ;combined fits table
