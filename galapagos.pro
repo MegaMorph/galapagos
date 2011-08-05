@@ -1132,6 +1132,9 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;nums, frames: object numbers and frames of potential contributing sources
 ;curb: current band index (deblending only decided in reference band)
 ;compute the sky for a single source
+;nband: numbers of bands in the data
+;xarr, yarr: arrays needed for skymap, created outside for all bands at once to improve speed
+;seed: seed for random selection of pixels in the sky determination
 
 ;computation flag:
 ;0 - done
@@ -2522,12 +2525,15 @@ PRO read_setup, setup_file, setup
    setup.stel_zp = 1e20
    setup.maglim_gal = -1
    setup.maglim_star = -1
-      
+   setup.min_dist_block = -1
+   for n=0,n_elements(setup.cheb)-1 do setup.cheb[n] = -1
+   setup.galfit_out_path = ''
+
    line = ''
    openr, 1, setup_file
    WHILE NOT eof(1) DO BEGIN
        readf, 1, line
-       
+
 ;get rid of leading and trailing blanks
       line = strtrim(line, 2)
       
@@ -2640,8 +2646,7 @@ PRO read_setup, setup_file, setup
          'F01)': setup.cat = content
       ENDCASE
    ENDWHILE
-   
-; Insure backwards compatibility for D21, E16, E17. They don't exist
+; Ensure backwards compatibility for D21, E16, E17. They don't exist
 ; in the old input file. Also, the format of the image setup file changed!!
 
 ;default values
@@ -2659,6 +2664,8 @@ PRO read_setup, setup_file, setup
    IF setup.stel_zp EQ 1e20 THEN setup.stel_zp = 6.8
    IF setup.maglim_gal EQ -1 THEN setup.maglim_gal = 5
    IF setup.maglim_star EQ -1 THEN setup.maglim_star = 2
+   IF setup.min_dist_block EQ -1 THEN setup.min_dist_block = setup.min_dist/3.
+   IF setup.cheb[0] EQ -1 THEN for n=0,n_elements(setup.cheb)-1 do setup.cheb[n] = 0
 
    close, 1
 
@@ -2688,29 +2695,32 @@ PRO read_image_files, setup, silent=silent
        readcol, setup.files, images, weights, outpath, outpre, $
          format = 'A,A,A,A', comment = '#', /silent
 
+       nband=1
 ; create arrays in setup needed to store all the data
-       add_tag, setup, 'images', strarr(n_elements(hlpimages),nband+1), setup2
+       add_tag, setup, 'images', strarr(n_elements(images),nband+1), setup2
        setup=setup2
-       add_tag, setup, 'weights', strarr(n_elements(hlpimages),nband+1), setup2
+       add_tag, setup, 'weights', strarr(n_elements(images),nband+1), setup2
        setup=setup2
-       add_tag, setup, 'outpath', strarr(n_elements(hlpimages),nband+1), setup2
+       add_tag, setup, 'outpath', strarr(n_elements(images),nband+1), setup2
        setup=setup2
-       add_tag, setup, 'outpath_band', strarr(n_elements(hlpimages),nband+1), setup2
+       add_tag, setup, 'outpath_band', strarr(n_elements(images),nband+1), setup2
        setup=setup2
-       add_tag, setup, 'outpre', strarr(n_elements(hlpimages),nband+1), setup2
+       add_tag, setup, 'outpre', strarr(n_elements(images),nband+1), setup2
        setup=setup2
        add_tag, setup, 'nband', nband, setup2
        setup=setup2
 
 ; doubling the arrays to get [*,0] SExtractor images and [*,1] fitting images
-       setup.images=[[images],[images]]
-       setup.weights=[[weights],[weights]]
-       setup.outpath=[[outpath],[outpath]]
-       setup.outpath_band=outpath
-       setup.outpre=[[outpre],[outpre]]
+       setup.images = [[images],[images]]
+       setup.weights = [[weights],[weights]]
+       setup.outpath = [[outpath],[outpath]]
+       setup.outpath_band = setup.outpath
+       setup.outpre = [[outpre],[outpre]]
 
 ; define additional parameters
        add_tag, setup, 'wavelength', [0,0], setup2
+       setup=setup2
+       add_tag, setup, 'mag_offset', [0,0], setup2
        setup=setup2
        hlppre=setup.stamp_pre
        setup=remove_tags(setup,'stamp_pre')
@@ -3149,7 +3159,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ;check if output path exists
    IF NOT file_test(setup.outdir) THEN $
      spawn, 'mkdirhier '+setup.outdir
-   FOR i=0ul, n_elements(outpath_band)-1 DO IF NOT file_test(outpath_band[i]) THEN spawn, 'mkdirhier '+outpath_band[i]
+   FOR i=0ul, n_elements(outpath_band[*,0])-1 DO IF NOT file_test(outpath_band[i,0]) THEN spawn, 'mkdirhier '+strtrim(outpath_band[i,0],2)
    FOR i=0ul, n_elements(outpath_galfit)-1 DO IF NOT file_test(outpath_galfit[i]) THEN spawn, 'mkdirhier '+outpath_galfit[i]
    IF keyword_set(logfile) THEN $
      update_log, logfile, 'Initialisation... done!'
@@ -3369,7 +3379,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
           
 ;check if current object exists
 loopstart:
-          todo=where(table.flag_galfit eq 0)
+          todo=where(fittab.flag_galfit eq 0)
           if todo[0] eq -1 then begin
               FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
               goto, loopend
@@ -3384,8 +3394,10 @@ loopstart2:
           free = where(bridge_use eq 0, ct)
           
 ;         IF ct GT 0 AND cur LT nbr THEN BEGIN
-          IF ct GT 0 AND todo[0] ne -1  THEN BEGIN
-;at least one bridge is free --> start new object
+          IF ct GT 0 AND todo[0] ne -1 THEN BEGIN
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;at least one bridge is free --> start newobject
 ;the available bridge is free[0]
               
 ;treat finished objects first
@@ -3432,7 +3444,7 @@ loopstart2:
                       ob++
                       if ob eq n_elements(todo) and $
                         (min(dist) lt setup.min_dist or min(dist_block) lt setup.min_dist_block) then begin
-                          wait, 1
+                          wait, 2
                           ob=0l
                           print, 'starting over'
                           goto, loopstart2
@@ -3458,7 +3470,6 @@ loopstart2:
                       print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'
                       
                       update_table, fittab, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup
-                      
                       IF n_elements(todo) ne 1 then goto, loopstart
                       IF n_elements(todo) eq 1 then goto, loopend
                   ENDIF
@@ -3468,8 +3479,8 @@ loopstart2:
               bridge_obj[free[0]] = cur
               bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
               table[cur].flag_galfit = 1
+              fittab[cur].flag_galfit = 1
               print, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(sexcat),2)+'   '
-              
               if keyword_set(plot) then begin
                   plot, table.alpha_J2000,table.delta_J2000, psym=3
                   if n_elements(blocked) gt 1 then begin
@@ -3495,6 +3506,7 @@ loopstart2:
               for q=1,nband do mask_file[q] = (outpath_galfit[idx]+outpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
 ;galfit obj file
               obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
+              print, obj_file
 ;galfit constraint file
               constr_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.constr)[0]
 ;galfit input file
@@ -3646,7 +3658,7 @@ loopend:
                 strtrim(images[f],2)+'  (frame '+strtrim(f+1,2)+' of '+strtrim(nframes,2)+')'
 ;find the matching filenames
               idx = where(table[current_obj].frame[0] EQ orgim[*,0])
-              
+                            
 ;define the file names for the:
 ;postage stamp parameters
               stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
@@ -3728,12 +3740,16 @@ loopend:
               ENDIF
 ;does a GALFIT obj file exist (cannot test for _gf.fits -> files might
 ;bomb -> endless loop)?
+              IF file_test(obj_file) THEN CONTINUE
               
               choose_psf, table[current_obj].alpha_j2000, table[current_obj].delta_j2000, $
                 psf_struct, table[current_obj].frame, chosen_psf_file, nband         
               
+
+; update flag_galfit (for no reason at all, it's not used in this
+; scheme here
+              table[current_obj].flag_galfit = 1
 ; now estimate real skies for the object
-              IF file_test(obj_file) THEN CONTINUE
               for b=1,nband do begin
 ; choose closest PSF according to RA & DEC and subtract filename from
 ; structure 'psf_struct'
