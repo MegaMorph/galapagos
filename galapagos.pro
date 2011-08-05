@@ -3444,7 +3444,7 @@ loopstart2:
                       ob++
                       if ob eq n_elements(todo) and $
                         (min(dist) lt setup.min_dist or min(dist_block) lt setup.min_dist_block) then begin
-                          wait, 2
+                          wait, 1
                           ob=0l
                           print, 'starting over'
                           goto, loopstart2
@@ -3467,8 +3467,7 @@ loopstart2:
 ;check if file was done successfully or bombed and update table                  
                   IF file_test(obj_file) THEN BEGIN
                       print, obj_file+' found.'
-                      print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'
-                      
+                      print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
                       update_table, fittab, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup
                       IF n_elements(todo) ne 1 then goto, loopstart
                       IF n_elements(todo) eq 1 then goto, loopend
@@ -3506,7 +3505,6 @@ loopstart2:
               for q=1,nband do mask_file[q] = (outpath_galfit[idx]+outpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
 ;galfit obj file
               obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
-              print, obj_file
 ;galfit constraint file
               constr_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.constr)[0]
 ;galfit input file
