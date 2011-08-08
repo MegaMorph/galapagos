@@ -978,7 +978,7 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
       
 ; try using 'match'
       ident1 = strtrim(fit_table.org_image,2)+':'+strtrim(fit_table.number,2)
-      ident2 = strtrim(t.frame,2)+':'+strtrim(t.number,2)
+      ident2 = strtrim(t.frame[0],2)+':'+strtrim(t.number,2)
       match, ident1, ident2, id_idx1, id_idx2
       wh_re_gt0 = where(fit_table[id_idx1].re_galfit GE 0,cntregt0)
       if cntregt0 gt 0 then begin
@@ -3146,6 +3146,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        ra_cnt[i] = a
        dec_cnt[i] = d
    ENDFOR
+
 ;create an array, that contains the filenames of neighbouring frames
 ;for each tile
    neighbours = strarr(setup.nneighb >1, nframes)
@@ -3298,7 +3299,6 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        nbr = round(n_elements(sexcat.mag_best)*setup.bright/100.)
        
        table = sexcat[br]
-       
 ; make table.frame multi-wavelength-ready to be passed onto gala_bridge
        tableim = strarr(nband+1,n_elements(table.frame))
        for i = 0, n_elements(images[*,0])-1 do begin
@@ -3362,7 +3362,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 
       if keyword_set(plot) then begin
           loadct,39,/silent
-          plot, fittab.alpha_j2000, fittab.delta_j2000, psym=3
+          plot, fittab.alpha_j2000, fittab.delta_j2000, psym=3, ystyle=1, xstyle=1
       endif
       
 ;loop over all objects
@@ -3403,7 +3403,7 @@ loopstart2:
 ;treat finished objects first
               IF bridge_obj[free[0]] GE 0 THEN BEGIN
 ;read in feedback data
-                  idx = where(table[bridge_obj[free[0]]].frame EQ orgim[*,0])
+                  idx = where(table[bridge_obj[free[0]]].frame[0] EQ orgim[*,0])
                   objnum = round_digit(table[bridge_obj[free[0]]].number, 0, /str)
                   obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
                   out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
@@ -3456,8 +3456,10 @@ loopstart2:
               ob=ob-1>0
               cur=todo[ob]
               
-; check whether this object has already been done, if so, read in result
-              IF cur LT nbr THEN idx = where(table[cur].frame EQ orgim[*,0], ct)
+; check whether this object has already been done, if so, read in
+; result
+              ct = 0 
+              IF cur LT nbr THEN idx = where(table[cur].frame[0] EQ orgim[*,0], ct)
               IF ct GT 0 THEN BEGIN
                   objnum = round_digit(table[cur].number, 0, /str)
                   obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
@@ -3473,15 +3475,16 @@ loopstart2:
                       IF n_elements(todo) eq 1 then goto, loopend
                   ENDIF
               ENDIF
-              
+
 ;store position of new object
               bridge_obj[free[0]] = cur
               bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
               table[cur].flag_galfit = 1
               fittab[cur].flag_galfit = 1
               print, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(sexcat),2)+'   '
+;              print, obj_file
               if keyword_set(plot) then begin
-                  plot, table.alpha_J2000,table.delta_J2000, psym=3
+                  plot, table.alpha_J2000,table.delta_J2000, psym=3, ystyle=1, xstyle=1
                   if n_elements(blocked) gt 1 then begin
                       plots, table[blocked[1:n_elements(blocked)-1]].alpha_J2000,table[blocked[1:n_elements(blocked)-1]].delta_J2000, psym=4, col=200, symsize=2
                       for r=1,n_elements(blocked)-1 do tvellipse, setup.min_dist_block/3600., setup.min_dist_block/3600., table[blocked[r]].alpha_J2000,table[blocked[r]].delta_J2000,col=200,/data
@@ -3495,7 +3498,7 @@ loopstart2:
               ENDIF
               
 ;find the matching filenames
-              idx = where(table[cur].frame EQ orgim[*,0])
+              idx = where(table[cur].frame[0] EQ orgim[*,0])
 ;define the file names for the:
 ;postage stamp parameters
               stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
@@ -3741,8 +3744,7 @@ loopend:
               IF file_test(obj_file) THEN CONTINUE
               
               choose_psf, table[current_obj].alpha_j2000, table[current_obj].delta_j2000, $
-                psf_struct, table[current_obj].frame, chosen_psf_file, nband         
-              
+                psf_struct, table[current_obj].frame, chosen_psf_file, nband
 
 ; update flag_galfit (for no reason at all, it's not used in this
 ; scheme here
