@@ -72,7 +72,7 @@ for b=1,nband do begin
 
 ; read in psf to be passed onto procedure
    psf = readfits(chosen_psf_file[b], psfhead,/silent)
-
+   
 ; fix contrib_targets
    getsky_loop, setup, cur, table, rad, im, hd, map, setup.expt, $
      setup.zp, setup.neiscl, setup.skyoff, setup.power, $
@@ -98,13 +98,13 @@ for b=1,nband do begin
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§tile10_5/t10_5.3416_obj§§§§§§
 endfor
 
-  prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
-                   im_file, constr_file, mask_file, chosen_psf_file, $
-                   out_file, sky_file, setup.convbox, setup.zp, $
-                   setup.platescl, nums, frames, cur, $
-                   setup.outcat, setup.outparam, setup.stampfile, $
-                   setup.conmaxre, setup.conminm, setup.conmaxm, $
-                   fittab, setup.version, nband, orgpre;, n_constrained = n_constrained
+prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
+  im_file, constr_file, mask_file, chosen_psf_file, $
+  out_file, sky_file, setup.convbox, setup.zp, $
+  setup.platescl, nums, frames, cur, $
+  setup.outcat, setup.outparam, setup.stampfile, $
+  setup.conmaxre, setup.conminm, setup.conmaxm, $
+  fittab, setup.version, nband, orgpre
 ;spawn, 'touch '+filein+'.preparegalfit';§§§§§§§§§§§§§§§§§§§§§§
 
 ;spawn the script

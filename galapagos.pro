@@ -1533,7 +1533,9 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
 
    readcol, paramfile, $
             pnum, px, py, pxlo, pxhi, pylo, pyhi, $
-            comment = '#', format = 'I,F,F,L,L,L,L', /silent
+            comment = '#', format = 'L,F,F,L,L,L,L', /silent
+;            comment = '#', format = 'I,F,F,L,L,L,L', /silent
+;            ; could be the problem for >integer detections on one tile
 
    i = where(pnum EQ table[current].number, ct)
    IF ct EQ 0 THEN message, 'no postage stamp definition found ' + $
@@ -1724,7 +1726,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
                     conv_box, zero_pt, plate_scl, num_contrib, frame_contrib, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
                     conminm, conmaxm, fit_table, setup_version, nband, $
-                    outpre, n_constrained = n_constrained
+                    outpre
 ;   setup_version = 4
 ;objects contains an index of secondary sources
 ;in the case of contributing sources, the TABLE is changed, so keep a
@@ -1740,24 +1742,19 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
    printf, 1, '# Component/    parameter   constraint  Comment'
    printf, 1, '# operation                  values'
    FOR j=2ul, n_elements(objects)+1 DO BEGIN
-      IF keyword_set(n_constrained) AND j EQ 2 THEN BEGIN
-         lo = strtrim(n_constrained[0], 2)
-         hi = strtrim(n_constrained[1], 2)
-      ENDIF ELSE BEGIN
-         lo = '0.2'
-         hi = '8'
-      ENDELSE
-      printf, 1, j, ' n '+lo+' to '+hi
-      printf, 1, j, ' re 0.3 to '+strtrim(conmaxre, 2)
-      printf, 1, j, ' q 0.0001  to 1.'
-      printf, 1, j, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
-      printf, 1, j, ' mag 0 to 40'
-      printf, 1, j, ' pa -360 to 360'
-      printf, 1, j, ' x '+strtrim(-xmax)+' '+strtrim(xmax)
-      printf, 1, j, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
+       lo = strtrim(setup.conminn, 2)
+       hi = strtrim(setup.conmaxn, 2)
+       printf, 1, j, ' n '+lo+' to '+hi
+       printf, 1, j, ' re 0.3 to '+strtrim(conmaxre, 2)
+       printf, 1, j, ' q 0.0001  to 1.'
+       printf, 1, j, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
+       printf, 1, j, ' mag 0 to 40'
+       printf, 1, j, ' pa -360 to 360'
+       printf, 1, j, ' x '+strtrim(-xmax)+' '+strtrim(xmax)
+       printf, 1, j, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
    ENDFOR
    close, 1
-
+   
 ;write obj file header plus sky
    openw, 1, obj_file, width=1000
 ; WRITE FILES & STUFF
@@ -1991,6 +1988,7 @@ forward_function read_sersic_results_old_galfit
            fix[0] = '0' & fix[1] = '0' & fix[5] = '0' & fix[6] = '0'
        ENDIF
        
+;;;;;;;;;;;; CONSTRAINTS
 ; check some constraints and set starting values accordingly if neccessary
        IF finite(par.re_galfit) NE 1 THEN begin
            par.re_galfit = table[objects[i]].flux_radius > 3
@@ -2006,13 +2004,16 @@ forward_function read_sersic_results_old_galfit
            par.re_galfit_cheb[0] = table[objects[i]].flux_radius > 3    
        ENDIF
        par.re_galfit = par.re_galfit < float(conmaxre) > 0.3
-; hard contraints work on ALL bands if this is used below. USED!
+; hard contraints work on ALL bands if this is used below.
        par.re_galfit_band = par.re_galfit_band < float(conmaxre) > 0.3
 ; hard contraints work only on principle band if this is used
        par.re_galfit_cheb[0] = par.re_galfit_cheb[0] < float(conmaxre) > 0.3
-       par.n_galfit = par.n_galfit < 8 > 0.2
-       par.n_galfit_band = par.n_galfit_band < 8 > 0.2
-       par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < 8 > 0.2
+       par.n_galfit = par.n_galfit < setup.conmaxn > setup.conminn
+       par.n_galfit_band = par.n_galfit_band < setup.conmaxn > setup.conminn
+       par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < setup.conmaxn > setup.conminn
+;       par.n_galfit = par.n_galfit < 8 > 0.2
+;       par.n_galfit_band = par.n_galfit_band < 8 > 0.2
+;       par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < 8 > 0.2
        par.q_galfit = par.q_galfit > 0.0001 < 1
        par.q_galfit_band = par.q_galfit_band > 0.0001 < 1
        par.q_galfit_cheb[0] = par.q_galfit_cheb[0] > 0.0001 < 1
@@ -2318,9 +2319,12 @@ forward_function read_sersic_results_old_galfit
        par.re_galfit_band = par.re_galfit_band < conmaxre > 0.3
 ; hard contraints work only on principle band if this is used
        par.re_galfit_cheb[0] = par.re_galfit_cheb[0] < conmaxre > 0.3
-       par.n_galfit = par.n_galfit < 8 > 0.2
-       par.n_galfit_band = par.n_galfit_band < 8 > 0.2
-       par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < 8 > 0.2
+       par.n_galfit = par.n_galfit < setup.conmaxn > setup.conminn
+       par.n_galfit_band = par.n_galfit_band < setup.conmaxn > setup.conminn
+       par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < setup.conmaxn > setup.conminn
+;       par.n_galfit = par.n_galfit < 8 > 0.2
+;       par.n_galfit_band = par.n_galfit_band < 8 > 0.2
+;       par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < 8 > 0.2
        par.q_galfit = par.q_galfit > 0.0001 < 1
        par.q_galfit_band = par.q_galfit_band > 0.0001 < 1
        par.q_galfit_cheb[0] = par.q_galfit_cheb[0] > 0.0001 < 1
@@ -2454,30 +2458,30 @@ PRO read_setup, setup_file, setup
                          'hot', '', $
                          'hotcat', '', $
                          'hotseg', '', $
-                         'enlarge', 0.0, $
+                         'enlarge', -1., $
                          'outcat', '', $
                          'outseg', '', $
                          'outparam', '', $
                          'check', '', $
                          'chktype', '', $
                          'exclude', '', $
-                         'exclude_rad', 0.0, $
+                         'exclude_rad', -1., $
                          'outonly', 0, $
                          'bad', '', $
                          'sexcomb', '', $
                          'dostamps', 0, $
                          'stampfile', '', $
                          'stamp_pre', strarr(1), $
-                         'stampsize', 0.0, $
+                         'stampsize', -1., $
                          'dosky', 0, $
                          'skymap', '', $
                          'outsky', '', $
-                         'skyscl', 0.0, $
-                         'neiscl', 0.0, $
-                         'skyoff', 0.0, $
-                         'dstep', 0, $
-                         'wstep', 0, $
-                         'gap', 0, $
+                         'skyscl', -1., $
+                         'neiscl', -1., $
+                         'skyoff', -1., $
+                         'dstep', -1, $
+                         'wstep', -1, $
+                         'gap', -1, $
                          'cut', 0.0, $
                          'nobj_max', 0, $
                          'power', 0.0, $
@@ -2485,12 +2489,12 @@ PRO read_setup, setup_file, setup
                          'nslope', 0, $
                          'stel_slope', 0.0, $
                          'stel_zp', 0.0, $
-                         'maglim_gal', 0.0, $
-                         'maglim_star', 0.0, $
+                         'maglim_gal', -1, $
+                         'maglim_star', -1., $
                          'nneighb', 0, $
                          'max_proc', 0.0, $
                          'min_dist', 0.0, $
-                         'min_dist_block', 0.0, $
+                         'min_dist_block', -1., $
                          'galexe', '', $ 
                          'batch', '', $
                          'obj', '', $
@@ -2505,29 +2509,53 @@ PRO read_setup, setup_file, setup
                          'conmaxre', 0.0, $
                          'conminm', 0.0, $
                          'conmaxm', 0.0, $
-                         'docombine', 0, $
-                         'cat', '', $
+                         'conminn', 0.2, $
+                         'conmaxn', 8.0, $
                          'nice', 0, $
                          'version', 0,$
-                         'cheb', intarr(7), $
-                         'galfit_out_path',' ')
+                         'cheb', intarr(7)-1, $
+                         'galfit_out_path',' ', $
+                         'dobd', 0, $
+                         'bd_maglim', -1., $
+                         'docombine', 0, $
+                         'cat', '')
 
-   setup.enlarge = -1
-   setup.exclude_rad = -1
-   setup.stampsize = -1
-   setup.skyscl = -1
-   setup.neiscl = -1
-   setup.skyoff = -1
-   setup.dstep = -1
-   setup.wstep = -1
-   setup.gap = -1
+;   setup.enlarge = -1
+;   setup.exclude_rad = -1
+;   setup.stampsize = -1
+;   setup.skyscl = -1
+;   setup.neiscl = -1
+;   setup.skyoff = -1
+;   setup.dstep = -1
+;   setup.wstep = -1
+;   setup.gap = -1
    setup.stel_slope = 1e20
    setup.stel_zp = 1e20
-   setup.maglim_gal = -1
-   setup.maglim_star = -1
-   setup.min_dist_block = -1
-   for n=0,n_elements(setup.cheb)-1 do setup.cheb[n] = -1
+;   setup.maglim_gal = -1
+;   setup.maglim_star = -1
+;   setup.min_dist_block = -1
+;   for n=0,n_elements(setup.cheb)-1 do setup.cheb[n] = -1
    setup.galfit_out_path = ''
+
+; check format for backwards compatibility
+   limitn = 0
+   block_bd = 0
+   line = ''
+   openr, 1, setup_file
+   WHILE NOT eof(1) DO BEGIN
+       readf, 1, line       
+;get rid of leading and trailing blanks
+       line = strtrim(line, 2)
+;comment or empty line encountered?
+       IF strmid(line, 0, 1) EQ '#' OR strlen(line) EQ 0 THEN CONTINUE       
+;comment at end of line?
+       pos = strpos(line, '#')
+       IF pos EQ -1 THEN pos = strlen(line)
+       content = strtrim(strmid(line, len_num, pos-len_num), 2)
+       IF strupcase(strmid(line, 0, len_num)) eq 'G00)' then block_bd = 1
+       IF strupcase(strmid(line, 0, len_num)) eq 'E19)' then limitn = 1
+   ENDWHILE
+   close, 1
 
    line = ''
    openr, 1, setup_file
@@ -2616,20 +2644,54 @@ PRO read_setup, setup_file, setup
          'E11)': setup.conmaxre = float(content)
          'E12)': setup.conminm = float(content)
          'E13)': setup.conmaxm = float(content)
-         'E14)': setup.nice = (content EQ 'nice') ? 1 : 0
+         'E14)': BEGIN
+             if limitn eq 1 then setup.conminn = float(content) $
+               else setup.nice = (content EQ 'nice') ? 1 : 0
+         END
          'E15)': BEGIN
-            setup.version = 1
-            IF (pos = stregex(content, '[0123456789]')) GT 0 THEN $
-             content = strmid(content, pos, strlen(content)-pos)
-            pos = strpos(content, '.')
-            content = strrep(content, '.', ' ')
-            strput, content, '.', pos
-            content = strcompress(content, /remove_all)
-            if float(content) lt 2.1 then setup.version = 0
-            if (float(content) GE 2.1 and float(content) lt 4) then setup.version = 1
-            if float(content) GE 4.0 then setup.version = 4
+             if limitn eq 1 then setup.conmaxn = float(content) $
+             else begin
+                 setup.version = 1
+                 IF (pos = stregex(content, '[0123456789]')) GT 0 THEN $
+                   content = strmid(content, pos, strlen(content)-pos)
+                 pos = strpos(content, '.')
+                 content = strrep(content, '.', ' ')
+                 strput, content, '.', pos
+                 content = strcompress(content, /remove_all)
+                 if float(content) lt 2.1 then setup.version = 0
+                 if (float(content) GE 2.1 and float(content) lt 4) then setup.version = 1
+                 if float(content) GE 4.0 then setup.version = 4
+             endelse
          END
          'E16)': BEGIN
+             if limitn eq 1 then setup.nice = (content EQ 'nice') ? 1 : 0 $
+             else begin
+                 for n=0,5 do begin
+                     pos=strpos(content, ',')
+                     setup.cheb[n]=strmid(content,0,pos)
+                     content=strmid(content,pos+1)
+                 ENDFOR
+                 setup.cheb[6]=content
+             endelse
+         END
+         'E17)': BEGIN
+             if limitn eq 1 then begin
+                 setup.version = 1
+                 IF (pos = stregex(content, '[0123456789]')) GT 0 THEN $
+                   content = strmid(content, pos, strlen(content)-pos)
+                 pos = strpos(content, '.')
+                 content = strrep(content, '.', ' ')
+                 strput, content, '.', pos
+                 content = strcompress(content, /remove_all)
+                 if float(content) lt 2.1 then setup.version = 0
+                 if (float(content) GE 2.1 and float(content) lt 4) then setup.version = 1
+                 if float(content) GE 4.0 then setup.version = 4
+             endif else begin
+                 if content eq '' then setup.galfit_out_path = content
+                 if content ne '' then setup.galfit_out_path = set_trailing_slash(content)
+             endelse
+         END
+         'E18)': BEGIN
              for n=0,5 do begin
                  pos=strpos(content, ',')
                  setup.cheb[n]=strmid(content,0,pos)
@@ -2637,16 +2699,27 @@ PRO read_setup, setup_file, setup
              ENDFOR
              setup.cheb[6]=content
          END
-         'E17)': BEGIN
-             if content eq '' then setup.galfit_out_path = content
-             if content ne '' then setup.galfit_out_path = set_trailing_slash(content)
+         'E19)': BEGIN
+                 if content eq '' then setup.galfit_out_path = content
+                 if content ne '' then setup.galfit_out_path = set_trailing_slash(content)
+             END
+
+         'F00)': BEGIN
+             if block_bd eq 1 then setup.dobd = (content EQ 'execute') ? 1 : 0 $
+             else setup.docombine = (content EQ 'execute') ? 1 : 0
+         END
+         'F01)': BEGIN
+             if block_bd eq 1 then setup.bd_maglim = content $
+             else setup.cat = content
          END
 
-         'F00)': setup.docombine = (content EQ 'execute') ? 1 : 0
-         'F01)': setup.cat = content
-      ENDCASE
+         'G00)': setup.docombine = (content EQ 'execute') ? 1 : 0
+         'G01)': setup.cat = content
+     ENDCASE
    ENDWHILE
-; Ensure backwards compatibility for D21, E16, E17. They don't exist
+   close, 1
+stop
+; Ensure backwards compatibility for D21, E18, E19. They don't exist
 ; in the old input file. Also, the format of the image setup file changed!!
 
 ;default values
@@ -2666,9 +2739,6 @@ PRO read_setup, setup_file, setup
    IF setup.maglim_star EQ -1 THEN setup.maglim_star = 2
    IF setup.min_dist_block EQ -1 THEN setup.min_dist_block = setup.min_dist/3.
    IF setup.cheb[0] EQ -1 THEN for n=0,n_elements(setup.cheb)-1 do setup.cheb[n] = 0
-
-   close, 1
-
    return
 
 bad_input:
@@ -3166,7 +3236,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
      update_log, logfile, 'Initialisation... done!'
 ;===============================================================================
 ; define the columns that have to be added to the SExtractor catalogue
-   define_addcol, addcol, nband, setup.stamp_pre, setup.cheb
+   define_addcol, addcol, nband
 ;==============================================================================
 ;run SExtractor
    IF setup.dosex THEN BEGIN
@@ -3798,7 +3868,7 @@ loopend:
                 setup.zp, setup.platescl, nums, frames, $
                 current_obj, setup.outcat, setup.outparam, $
                 setup.stampfile, setup.conmaxre, setup.conminm, $
-                setup.conmaxm, fittab, setup.version, nband, orgpre ;, n_constrained = n_constrained
+                setup.conmaxm, fittab, setup.version, nband, orgpre
               
               cd, outpath_galfit[idx]
               IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file $

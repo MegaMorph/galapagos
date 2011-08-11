@@ -1,4 +1,4 @@
-PRO define_addcol, addcol, nband, pre, cheb
+PRO define_addcol, addcol, nband
 
 ; version as it should be!
 ;    hlpcheb0 = 'fltarr('+strtrim(cheb[0]+1,2)+')'
