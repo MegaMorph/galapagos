@@ -3160,7 +3160,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ;check if output path exists
    IF NOT file_test(setup.outdir) THEN $
      spawn, 'mkdirhier '+setup.outdir
-   FOR i=0ul, n_elements(outpath_band[*,0])-1 DO IF NOT file_test(outpath_band[i,0]) THEN spawn, 'mkdirhier '+strtrim(outpath_band[i,0],2)
+   FOR i=0ul, n_elements(outpath_band)-1 DO IF NOT file_test(outpath_band[i]) THEN spawn, 'mkdirhier '+strtrim(outpath_band[i,0],2)
    FOR i=0ul, n_elements(outpath_galfit)-1 DO IF NOT file_test(outpath_galfit[i]) THEN spawn, 'mkdirhier '+outpath_galfit[i]
    IF keyword_set(logfile) THEN $
      update_log, logfile, 'Initialisation... done!'
