@@ -1,21 +1,23 @@
-PRO gala_bridge, filein
+PRO gala_bridge, filein, fit_bd = fit_bd
 ;variables provided in filein:
 ;cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
 ;stamp_param_file, mask_file, im_file, obj_file, 
 ;constr_file, out_file, fittab, nband, outpath_file
 ;orgpath_band, orgpath_pre, orgpath_galfit, orgpath_file,
 ;orgpath_file_no_band, seed
-   restore, filein
-   table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
+stop
+restore, filein
+if not keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
+if keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.bd.ttmp', 1)
 
 for b=1,nband do begin
 ;read in image and weight (takes few sec)
     im=readfits(table[cur].frame[b], hd,/silent)
     wht=readfits(orgwht[idx,b], whd,/silent)
-
+    
 ;image size
-   sz_im = (size(im))[1:2]
-
+    sz_im = (size(im))[1:2]
+    
 ; create arrays used by getsky_loop to identify sky pixels
 ; only needs to be done once as all images for different bands have to
 ; be micro-resgistered and have the same size. Saves time!
@@ -84,6 +86,8 @@ for b=1,nband do begin
      orgpath_pre, outpath_file, outpath_file_no_band, nband, $
      xarr, yarr, seed
 ;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
+   
+stop
    create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
      im_file[b], table[cur].frame[b], cur, $
      setup.neiscl, setup.skyoff, nums, frames, $
@@ -97,6 +101,7 @@ for b=1,nband do begin
    ENDIF       
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§tile10_5/t10_5.3416_obj§§§§§§
 endfor
+stop
 
 prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
   im_file, constr_file, mask_file, chosen_psf_file, $
