@@ -18,39 +18,15 @@ function is_ieee_big
 ;	None
 ; RESTRICTIONS:
 ; PROCEDURE:
-;       A sample int, long, float and double are converted using
-;       byteorder and compared with the original.  If there is no
-;       change, the machine is assumed to be IEEE compliant and
-;       big-endian.
+;       The first byte of the two-byte representation of 1 is examined.
+;       If it is zero, then the data is stored in big-endian order.
 ; MODIFICATION HISTORY:
 ;       Written 15-April-1996 by T. McGlynn for use in MRDFITS.
 ;	13-jul-1997	jkf/acc	- added calls to check_math to avoid
 ;				  underflow messages in V5.0 on Win32 (NT).
 ;	Converted to IDL V5.0   W. Landsman   September 1997
+;       Follow RSI and just do a single test  W. Landsman   April 2003
 ;-
 
-    itest = 512
-    ltest = 102580L
-    ftest = 1.23e10
-    dtest = 1.23d10
-		
-		
-    it2 = itest
-    lt2 = ltest
-    ft2 = ftest
-    dt2 = dtest
-				
-    byteorder, it2, /htons
-    byteorder, lt2, /htonl
-    byteorder, ft2, /ftoxdr
-    byteorder, dt2, /dtoxdr
-
-    if itest eq it2  and  ltest eq lt2   and ftest eq ft2  and dtest eq dt2  $
-    then begin
-    	dum = check_math()
-        return, 1
-    endif else begin
-    	dum = check_math()
-        return, 0
-    endelse
-    end								    
+      return, 1b - (byte(1,0,1))[0]
+      end								    

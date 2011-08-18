@@ -1,4 +1,4 @@
-pro getrot, hdr, rot, cdelt, DEBUG = debug, SILENT = silent      ;GET ROTation 
+pro getrot, hdr, rot, cdelt, DEBUG = debug, SILENT = silent, ALT=alt      ;GET ROTation 
 ;+
 ; NAME:
 ;    GETROT
@@ -35,6 +35,10 @@ pro getrot, hdr, rot, cdelt, DEBUG = debug, SILENT = silent      ;GET ROTation
 ;
 ; OPTIONAL INPUT KEYWORD
 ; 
+;       ALT - single character 'A' through 'Z' or ' ' specifying an alternate
+;             astrometry system present in the FITS header.   See extast.pro
+;             for more information on the ALT keyword.    Ignored if an
+;             astrometry structure rather than FITS header is supplied.
 ;       DEBUG - if DEBUG is set, GETROT will print the rotation for both the 
 ;           X and Y axis when these values are unequal.  If DEBUG is set to 2, 
 ;           then the output parameter ROT will contain both X and Y rotations.
@@ -64,12 +68,15 @@ pro getrot, hdr, rot, cdelt, DEBUG = debug, SILENT = silent      ;GET ROTation
 ;       Preserve sign in the CDELT output  WL June 2003
 ;       Check if latitude/longitude reversed in CTYPE  WL  February 2004
 ;       Fix problem in latitude check  M.Lombardi/W.Landsman Sep 2004
+;       Added ALT keyword W. Landsman May 2005
+;       Account for any rotation of the native system by examining the value
+;        of LONGPOLE       H. Taylor/W. Landsman
 ;-
  Compile_opt IDL2
  On_error,2
 
  if N_params() EQ 0 then begin
-        print,'Syntax: GETROT, Hdr, [ Rot, CDelt, DEBUG= , /SILENT]'
+        print,'Syntax: GETROT, Hdr, [ Rot, CDelt, DEBUG= , /SILENT, ALT=]'
         print,'    OR: GETROT, Astr, [ Rot, CDelt, DEBUG= , /SILENT]'
         return
  endif
@@ -81,7 +88,7 @@ pro getrot, hdr, rot, cdelt, DEBUG = debug, SILENT = silent      ;GET ROTation
  if ((sz.N_dimensions eq 1) and $
      (sz.type_name EQ 'STRING')) then begin     ;FITS header?
 
-        extast,hdr,astr             ;Extract astrometry from header,
+        extast,hdr,astr,alt=alt             ;Extract astrometry from header,
         if strmid(astr.ctype[0],5,3) EQ 'GSS' then begin
                 hdr1 = hdr
                 gsss_stdast, hdr1
@@ -135,7 +142,9 @@ endif else $
   cdelt[1] =   sqrt(cd[1,1]^2 + cd[1,0]^2)
  endelse
 
- rot = float(rot*RADEG)
+ rot = rot*RADEG   
+ if astr.longpole NE 180.0d then rot = rot + ( 180.0d - astr.longpole )
+ rot = float(rot)
  cdelt = float(cdelt*RADEG)
 
  if N_params() EQ 1 or keyword_set(DEBUG) then begin

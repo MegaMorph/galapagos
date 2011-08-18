@@ -9,7 +9,10 @@ pro GSSS_StdAst,h,xpts,ypts
 ; DESCRIPTION:
 ;       This procedure takes a header with GSSS (ST Guide Star Survey) 
 ;       astrometry and writes a roughly equivalent tangent projection 
-;       astrometry into the header. 
+;       astrometry into the header.     One might want to do this if (1)
+;       one needs to use software which does not recognize the GSSS astrometric
+;       parameters or (2) if the the image to be transformed, since the 
+;       highly nonlinear GSSS solution does not transform easily.  
 ;
 ; CALLING SEQUENCE:
 ;       GSSS_STDAST, H, [Xpts, Ypts]
@@ -28,6 +31,13 @@ pro GSSS_StdAst,h,xpts,ypts
 ;       projection astrometry that best matches these reference points.
 ;
 ; NOTES:
+;       Images from the STScI server (http://archive.stsci.edu/dss/) contain
+;       both a GSSS polynomial plate solution and an approximate WCS tangent
+;       projection.    The value  of the WCSNAME keyword in the FITS header 
+;       is 'DSS'.    If WCSNAME = "DSS' then the more accurate DSS astrometry
+;       is extracted by EXTAST    This procedure changes the value of WCSNAME  
+;       to 'DSS_TANGENT' to indicate that the tangent solution should be used.
+;    
 ;       Some early GSSS images (before the 1994 CD-Rom) used keywords CRPIXx
 ;       rather than CNPIXx.    The GSSS astrometry in these images could be
 ;       corrupted by this procedure as the CRPIXx values will be altered.
@@ -43,14 +53,15 @@ pro GSSS_StdAst,h,xpts,ypts
 ;       Delete CDELT* keywords from header   W. Landsman      May 1994
 ;       Remove call to BUILDAST  W. Landsman                  Jan, 1995
 ;       Added optional Xpts, Ypts parameters   E. Deutsch     Oct, 1995
-;       Converted to IDL V5.0   W. Landsman   September 1997
+;       Add WCSNAME   W. Landsman                             Nov 2006
 ;-
   On_error,2
+  compile_opt idl2
 
   arg = N_params()
 
   if (arg lt 1) then begin
-    print,'Syntax - GSSS_StdAst, header'
+    print,'Syntax - GSSS_StdAst, header, [xpts, ypts]'
     print,'Purpose - Write tangent projection astrometry into a GSSS header'
     return
     endif
@@ -69,6 +80,8 @@ pro GSSS_StdAst,h,xpts,ypts
   starast, RA, DEC, X, Y, cd
   crval=[RA[0],DEC[0]] & crpix=[X[0],Y[0]]+1
 
+  sxaddpar, h, 'WCSNAME', 'DSS_TANGENT', $
+            'WCS Tangent Approximation to full plate solution' 
   sxaddpar, h, 'CTYPE1','RA---TAN'
   sxaddpar, h, 'CTYPE2','DEC--TAN'
   sxaddpar, h, 'CD1_1', cd[0,0]
@@ -86,6 +99,7 @@ pro GSSS_StdAst,h,xpts,ypts
 
   sxdelpar, h, 'CDELT1'
   sxdelpar, h, 'CDELT2'
+  
 
   return
   end

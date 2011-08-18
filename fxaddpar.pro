@@ -24,10 +24,10 @@
 ;       VALUE   = Value for parameter.  The value expression must be of the
 ;                 correct type, e.g. integer, floating or string.
 ;                 String values of 'T' or 'F' are considered logical
-;                 values.  If the value is a string and is "long"
-;                 (more than 69 characters), then it may be continued
-;                 over more than one line using the OGIP CONTINUE
-;                 standard.
+;                 values unless the /NOLOGICAL keyword is set.  If the value is
+;                 a string and is "long" (more than 69 characters), then it 
+;                 may be continued over more than one line using the OGIP 
+;                 CONTINUE standard.
 ;
 ; Opt. Inputs : 
 ;       COMMENT = String field.  The '/' is added by this routine.  Added
@@ -52,13 +52,27 @@
 ;       FORMAT  = Specifies FORTRAN-like format for parameter, e.g. "F7.3".  A
 ;                 scalar string should be used.  For complex numbers the format
 ;                 should be defined so that it can be applied separately to the
-;                 real and imaginary parts.
+;                 real and imaginary parts.      If not supplied, then the IDL
+;                 default formatting is used, except that double precision is
+;                 given a format of G19.12.
 ;
 ;       /NOCONTINUE = By default, FXADDPAR will break strings longer than 68 
 ;                characters into multiple lines using the continuation
 ;                convention.    If this keyword is set, then the line will
 ;                instead be truncated to 68 characters.    This was the default
 ;                behaviour of FXADDPAR prior to December 1999.  
+;
+;      /NOLOGICAL = If set, then the values 'T' and 'F' are not interpreted as
+;                logical values, and are simply added without interpretation.
+;
+;	ERRMSG	 = If defined and passed, then any error messages will be
+;		   returned to the user in this parameter rather than
+;		   depending on the MESSAGE routine in IDL, e.g.
+;
+;			ERRMSG = ''
+;			FXADDPAR, ERRMSG=ERRMSG, ...
+;			IF ERRMSG NE '' THEN ...
+;
 ; Calls       : 
 ;       DETABIFY(), FXPAR(), FXPARPOS()
 ; Common      : 
@@ -88,7 +102,7 @@
 ;       String values longer than 68 characters will be split into multiple
 ;       lines using the OGIP CONTINUE convention, unless the /NOCONTINUE keyword
 ;       is set.    For a description of the CONTINUE convention see    
-;       http://heasarc.gsfc.nasa.gov/docs/heasarc/ofwg/docs/ofwg_recomm/r13.htm
+;       http://fits.gsfc.nasa.gov/registry/continue_keyword.html
 ; Category    : 
 ;       Data Handling, I/O, FITS, Generic.
 ; Prev. Hist. : 
@@ -119,8 +133,12 @@
 ;		of a lower case e for exponential format.
 ;       Version 4.1 W. Landsman April 2000, make user-supplied format uppercase
 ;       Version 4.2 W. Landsman July 2002, positioning of EXTEND keyword
+;       Version 5, 23-April-2007, William Thompson, GSFC
+;       Version 6, 02-Aug-2007, WTT, bug fix for OGIP long lines
+;       Version 6.1, 10-Feb-2009, W. Landsman, increase default format precision
+;       Version 6.2  30-Sep-2009, W. Landsman, added /NOLOGICAL keyword
 ; Version     : 
-;       Version 4.2, July 2002
+;       Version 6.2, 30-Sep-2009
 ;-
 ;
 
@@ -207,14 +225,17 @@ END
 
 
 PRO FXADDPAR, HEADER, NAME, VALUE, COMMENT, BEFORE=BEFORE,      $
-              AFTER=AFTER, FORMAT=FORMAT, NOCONTINUE = NOCONTINUE
+              AFTER=AFTER, FORMAT=FORMAT, NOCONTINUE = NOCONTINUE, $
+              ERRMSG=ERRMSG, NOLOGICAL=NOLOGICAL
 
         ON_ERROR,2                              ;Return to caller
 ;
 ;  Check the number of parameters.
 ;
-        IF N_PARAMS() LT 3 THEN MESSAGE, $      ;Need at least 3 parameters
-                'Syntax:  FXADDPAR, HEADER, NAME, VALUE [, COMMENT ]'
+        IF N_PARAMS() LT 3 THEN BEGIN
+            MESSAGE = 'Syntax:  FXADDPAR, HEADER, NAME, VALUE [, COMMENT ]'
+            GOTO, HANDLE_ERROR
+        ENDIF
 ;
 ; Define a blank line and the END line
 ;
@@ -234,8 +255,11 @@ PRO FXADDPAR, HEADER, NAME, VALUE, COMMENT, BEFORE=BEFORE,      $
                 N=36
         ENDIF ELSE BEGIN
                 S = SIZE(HEADER)        ;check for string type
-                IF (S[0] NE 1) OR (S[2] NE 7) THEN MESSAGE, $
-                        'FITS Header (first parameter) must be a string array'
+                IF (S[0] NE 1) OR (S[2] NE 7) THEN BEGIN
+                    MESSAGE = 'FITS Header (first parameter) must be a ' + $
+                      'string array'
+                    GOTO, HANDLE_ERROR
+                ENDIF
         ENDELSE
 ;
 ;  Make sure NAME is 8 characters long
@@ -248,11 +272,14 @@ PRO FXADDPAR, HEADER, NAME, VALUE, COMMENT, BEFORE=BEFORE,      $
         S = SIZE(VALUE)         ;get type of value parameter
         STYPE = S[S[0]+1]
         IF S[0] NE 0 THEN BEGIN
-                MESSAGE,'Keyword Value (third parameter) must be scalar'
+                MESSAGE = 'Keyword Value (third parameter) must be scalar'
+                GOTO, HANDLE_ERROR
         END ELSE IF STYPE EQ 0 THEN BEGIN
-                MESSAGE,'Keyword Value (third parameter) is not defined'
+                MESSAGE = 'Keyword Value (third parameter) is not defined'
+                GOTO, HANDLE_ERROR
         END ELSE IF STYPE EQ 8 THEN BEGIN
-                MESSAGE,'Keyword Value (third parameter) cannot be structure'
+                MESSAGE = 'Keyword Value (third parameter) cannot be structure'
+                GOTO, HANDLE_ERROR
         ENDIF
 ;
 ;  Extract first 8 characters of each line of header, and locate END line
@@ -369,8 +396,10 @@ PRO FXADDPAR, HEADER, NAME, VALUE, COMMENT, BEFORE=BEFORE,      $
 ;
         IF NN EQ 'BITPIX  ' THEN BEGIN
                 IF (KEYWRD[0] NE 'SIMPLE  ') AND                $
-                        (KEYWRD[0] NE 'XTENSION') THEN MESSAGE, $
-                        'Header must start with either SIMPLE or XTENSION'
+                        (KEYWRD[0] NE 'XTENSION') THEN BEGIN
+                    MESSAGE = 'Header must start with either SIMPLE or XTENSION'
+                    GOTO, HANDLE_ERROR
+                ENDIF
                 I = 1
                 GOTO, INSERT
         ENDIF
@@ -378,8 +407,10 @@ PRO FXADDPAR, HEADER, NAME, VALUE, COMMENT, BEFORE=BEFORE,      $
 ;  If the keyword is NAXIS, then it must follow the BITPIX keyword.
 ;
         IF NN EQ 'NAXIS   ' THEN BEGIN
-                IF KEYWRD[1] NE 'BITPIX  ' THEN MESSAGE,        $
-                        'Required BITPIX keyword not found'
+                IF KEYWRD[1] NE 'BITPIX  ' THEN BEGIN
+                    MESSAGE = 'Required BITPIX keyword not found'
+                    GOTO, HANDLE_ERROR
+                ENDIF
                 I = 2
                 GOTO, INSERT
         ENDIF
@@ -387,8 +418,10 @@ PRO FXADDPAR, HEADER, NAME, VALUE, COMMENT, BEFORE=BEFORE,      $
 ;  If the keyword is NAXIS1, then it must follow the NAXIS keyword.
 ;
         IF NN EQ 'NAXIS1  ' THEN BEGIN
-                IF KEYWRD[2] NE 'NAXIS   ' THEN MESSAGE,        $
-                        'Required NAXIS keyword not found'
+                IF KEYWRD[2] NE 'NAXIS   ' THEN BEGIN
+                    MESSAGE = 'Required NAXIS keyword not found'
+                    GOTO, HANDLE_ERROR
+                ENDIF
                 I = 3
                 GOTO, INSERT
         ENDIF
@@ -400,8 +433,10 @@ PRO FXADDPAR, HEADER, NAME, VALUE, COMMENT, BEFORE=BEFORE,      $
                 PREV = STRING(REPLICATE(32B,8))         ;Format NAXIS<n-1>
                 STRPUT,PREV,'NAXIS',0                   ;Insert NAXIS
                 STRPUT,PREV,STRTRIM(NUM_AXIS-1,2),5     ;Insert <n-1>
-                IF KEYWRD[NUM_AXIS+1] NE PREV THEN MESSAGE,     $
-                        'Required '+PREV+' keyword not found'
+                IF KEYWRD[NUM_AXIS+1] NE PREV THEN BEGIN
+                    MESSAGE = 'Required '+PREV+' keyword not found'
+                    GOTO, HANDLE_ERROR
+                ENDIF
                 I = NUM_AXIS + 2
                 GOTO, INSERT
         ENDIF
@@ -411,8 +446,10 @@ PRO FXADDPAR, HEADER, NAME, VALUE, COMMENT, BEFORE=BEFORE,      $
 ;
 
         IF NN EQ 'EXTEND  ' THEN BEGIN
-                IF KEYWRD[2] NE 'NAXIS   ' THEN MESSAGE,        $
-                        'Required NAXIS keyword not found'
+                IF KEYWRD[2] NE 'NAXIS   ' THEN BEGIN
+                    MESSAGE = 'Required NAXIS keyword not found'
+                    GOTO, HANDLE_ERROR
+                ENDIF
                 FOR I = 3, N-2 DO $   
                     IF STRMID(KEYWRD[I],0,5) NE 'NAXIS' THEN GOTO, INSERT 
                    
@@ -429,8 +466,10 @@ PRO FXADDPAR, HEADER, NAME, VALUE, COMMENT, BEFORE=BEFORE,      $
 ;  If the keyword is PCOUNT, then it must follow the NAXIS2 keyword.
 ;
                         IF NN EQ 'PCOUNT  ' THEN BEGIN
-                                IF KEYWRD[4] NE 'NAXIS2  ' THEN MESSAGE, $
-                                        'Required NAXIS2 keyword not found'
+                                IF KEYWRD[4] NE 'NAXIS2  ' THEN BEGIN
+                                    MESSAGE = 'Required NAXIS2 keyword not found'
+                                    GOTO, HANDLE_ERROR
+                                ENDIF
                                 I = 5
                                 GOTO, INSERT
                         ENDIF
@@ -438,8 +477,10 @@ PRO FXADDPAR, HEADER, NAME, VALUE, COMMENT, BEFORE=BEFORE,      $
 ;  If the keyword is GCOUNT, then it must follow the PCOUNT keyword.
 ;
                         IF NN EQ 'GCOUNT  ' THEN BEGIN
-                                IF KEYWRD[5] NE 'PCOUNT  ' THEN MESSAGE, $
-                                        'Required PCOUNT keyword not found'
+                                IF KEYWRD[5] NE 'PCOUNT  ' THEN BEGIN
+                                    MESSAGE = 'Required PCOUNT keyword not found'
+                                    GOTO, HANDLE_ERROR
+                                ENDIF
                                 I = 6
                                 GOTO, INSERT
                         ENDIF
@@ -447,8 +488,10 @@ PRO FXADDPAR, HEADER, NAME, VALUE, COMMENT, BEFORE=BEFORE,      $
 ;  If the keyword is TFIELDS, then it must follow the GCOUNT keyword.
 ;
                         IF NN EQ 'TFIELDS ' THEN BEGIN
-                                IF KEYWRD[6] NE 'GCOUNT  ' THEN MESSAGE, $
-                                        'Required GCOUNT keyword not found'
+                                IF KEYWRD[6] NE 'GCOUNT  ' THEN BEGIN
+                                    MESSAGE = 'Required GCOUNT keyword not found'
+                                    GOTO, HANDLE_ERROR
+                                ENDIF
                                 I = 7
                                 GOTO, INSERT
                         ENDIF
@@ -492,7 +535,8 @@ REPLACE:
 
         IF TYPE[1] EQ 7 THEN BEGIN              ;which type?
                 UPVAL = STRUPCASE(VALUE)        ;force upper case.
-                IF (UPVAL EQ 'T') OR (UPVAL EQ 'F') THEN BEGIN
+                IF ~KEYWORD_SET(NOLOGICAL)  $ 
+		   &&  ((UPVAL EQ 'T') OR (UPVAL EQ 'F')) THEN BEGIN
                         STRPUT,H,UPVAL,29       ;insert logical value.
 ;
 ;  Otherwise, remove any tabs, and check for any apostrophes in the string.
@@ -535,7 +579,7 @@ REPLACE:
                         ;; Insert new lines if needed
                         IF NNEWCONT GT NOLDCONT THEN BEGIN
                             INS = NNEWCONT - NOLDCONT
-                            WHILE IEND+INS GT N DO BEGIN
+                            WHILE IEND+INS GE N DO BEGIN
                                 HEADER = [HEADER, REPLICATE(BLANK,36)]
                                 N = N_ELEMENTS(HEADER)
                             ENDWHILE
@@ -588,7 +632,7 @@ REPLACE:
                 IF N_ELEMENTS(FORMAT) EQ 1 THEN BEGIN   ;use format keyword
                         VR = STRING(FLOAT(VALUE),    '('+STRUPCASE(FORMAT)+')')
                         VI = STRING(IMAGINARY(VALUE),'('+STRUPCASE(FORMAT)+')')
-                END ELSE BEGIN
+                 END ELSE BEGIN
                         VR = STRTRIM(FLOAT(VALUE),2)
                         VI = STRTRIM(IMAGINARY(VALUE),2)
                 ENDELSE
@@ -603,8 +647,11 @@ REPLACE:
 ;
         END ELSE BEGIN
                 IF (N_ELEMENTS(FORMAT) EQ 1) THEN $ ;use format keyword
-                        V = STRING(VALUE,'('+STRUPCASE(FORMAT)+')' ) ELSE $
+                        V = STRING(VALUE,'('+STRUPCASE(FORMAT)+')' ) ELSE BEGIN
+			IF TYPE[1] EQ 5 THEN $
+			V = STRING(VALUE,FORMAT='(G19.12)') ELSE $
                         V = STRTRIM(strupcase(VALUE),2)    ;default format
+			ENDELSE
                 S = STRLEN(V)                 ;right justify
                 STRPUT,H,V,(30-S)>10          ;insert
         ENDELSE
@@ -615,6 +662,14 @@ REPLACE:
         STRPUT,H,COMMENT,32     ;add comment
         HEADER[I]=H             ;save line
 ;
+        ERRMSG = ''
+        RETURN
+;
+;  Error handling point.
+;
+HANDLE_ERROR:
+	IF ARG_PRESENT(ERRMSG) THEN ERRMSG = 'FXADDPAR: ' + MESSAGE	$
+		ELSE MESSAGE, MESSAGE
         RETURN
         END
 

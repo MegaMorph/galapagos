@@ -1,6 +1,7 @@
         FUNCTION FXPAR, HDR, NAME, ABORT, COUNT=MATCHES, COMMENT=COMMENTS, $
                         START=START, PRECHECK=PRECHECK, POSTCHECK=POSTCHECK, $
-                                          NOCONTINUE = NOCONTINUE
+                                          NOCONTINUE = NOCONTINUE, $
+                        DATATYPE=DATATYPE
 ;+
 ; NAME: 
 ;        FXPAR()
@@ -16,8 +17,9 @@
 ;       with the given name.
 ;      
 ;       If the value is too long for one line, it may be continued on to the
-;       the next input card, using the OGIP CONTINUE convention.  For more info,
-;       http://heasarc.gsfc.nasa.gov/docs/heasarc/ofwg/docs/ofwg_recomm/r13.html
+;       the next input card, using the CONTINUE Long String Keyword convention.
+;       For more info, http://fits.gsfc.nasa.gov/registry/continue_keyword.html
+;       
 ;
 ;       Complex numbers are recognized as two numbers separated by one or more
 ;       space characters.
@@ -41,13 +43,18 @@
 ;                 form 'keyword*' then an array is returned containing values
 ;                 of keywordN where N is an integer.  The value of keywordN
 ;                 will be placed in RESULT(N-1).  The data type of RESULT will
-;                 be the type of the first valid match of keywordN found.
+;                 be the type of the first valid match of keywordN
+;                 found, unless DATATYPE is given.
 ; OPTIONAL INPUT: 
 ;       ABORT   = String specifying that FXPAR should do a RETALL if a
 ;                 parameter is not found.  ABORT should contain a string to be
 ;                 printed if the keyword parameter is not found.  If not
 ;                 supplied, FXPAR will return with a negative !err if a keyword
 ;                 is not found.
+;       DATATYPE = A scalar value, indicating the type of vector
+;                  data.  All keywords will be cast to this type.
+;                  Default: based on first keyword.
+;                  Example: DATATYPE=0.0D (cast data to double precision)
 ;       START   = A best-guess starting position of the sought-after
 ;                 keyword in the header.  If specified, then FXPAR
 ;                 first searches for scalar keywords in the header in
@@ -132,7 +139,11 @@
 ;       Version 6, Craig Markwardt, GSFC, 28 Jan 1998, 
 ;               Added CONTINUE parsing         
 ;       Version 7, Craig Markwardt, GSFC, 18 Nov 1999,
-;               Added START, PRE/POSTCHECK keywords for better performance
+;               Added START, PRE/POSTCHECK keywords for better
+;               performance
+;       Version 8, Craig Markwardt, GSFC, 08 Oct 2003,
+;               Added DATATYPE keyword to cast vector keywords type
+;       Version 9, Paul Hick, 22 Oct 2003, Corrected bug (NHEADER-1)
 ;-
 ;------------------------------------------------------------------------------
 ;
@@ -193,7 +204,7 @@
             IF N_ELEMENTS(POSTCHECK) EQ 0 THEN POSTCHECK = 20
             NHEADER = N_ELEMENTS(HDR)
             MN = (START - PRECHECK)  > 0
-            MX = (START + POSTCHECK) < NHEADER-1
+            MX = (START + POSTCHECK) < (NHEADER-1)      ;Corrected bug
             KEYWORD = STRMID(HDR[MN:MX], 0, 8)
         ENDIF ELSE BEGIN
             RESTART:
@@ -352,7 +363,7 @@ NOT_COMPLEX:
                                 END ELSE VALUE = FLOAT(VALUE)
                         ENDIF ELSE BEGIN
                             LMAX = 2.0D^31 - 1.0D
-                            LMIN = -2.0D31
+                            LMIN = -2.0D^31       ;Typo fixed Feb 2010
                             VALUE = DOUBLE(VALUE)
                             if (VALUE GE LMIN) and (VALUE LE LMAX) THEN $
                                 VALUE = LONG(VALUE)
@@ -369,7 +380,13 @@ GOT_VALUE:
                 IF VECTOR THEN BEGIN
                     MAXNUM = MAX(NUMBER)
                     IF ( I EQ 0 ) THEN BEGIN
-                        SZ_VALUE = SIZE(VALUE)
+                        IF N_ELEMENTS(DATATYPE) EQ 0 THEN BEGIN
+                            ;; Data type determined from keyword
+                            SZ_VALUE = SIZE(VALUE)
+                        ENDIF ELSE BEGIN
+                            ;; Data type requested by user
+                            SZ_VALUE = SIZE(DATATYPE[0])
+                        ENDELSE
                         RESULT = MAKE_ARRAY( MAXNUM, TYPE=SZ_VALUE[1])
                         COMMENTS = STRARR(MAXNUM)
                     ENDIF 

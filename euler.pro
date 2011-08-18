@@ -1,4 +1,4 @@
-PRO EULER,AI,BI,AO,BO,SELECT, FK4 = FK4, SELECT = select1
+PRO EULER,AI,BI,AO,BO,SELECT, FK4 = FK4, SELECT = select1, RADIAN=radian
 ;+
 ; NAME:
 ;     EULER
@@ -8,12 +8,12 @@ PRO EULER,AI,BI,AO,BO,SELECT, FK4 = FK4, SELECT = select1
 ;     Use the procedure ASTRO to use this routine interactively
 ;
 ; CALLING SEQUENCE:
-;      EULER, AI, BI, AO, BO, [ SELECT, /FK4, SELECT = ] 
+;      EULER, AI, BI, AO, BO, [ SELECT, /FK4, /RADIAN, SELECT = ] 
 ;
 ; INPUTS:
-;       AI - Input Longitude in DEGREES, scalar or vector.  If only two 
-;               parameters are supplied, then  AI and BI will be modified to 
-;               contain the output longitude and latitude.
+;       AI - Input Longitude, scalar or vector.  In DEGREES unless /RADIAN
+;            is set.  If only two parameters are supplied, then  AI and BI 
+;             will be modified to contain the output longitude and latitude.
 ;       BI - Input Latitude in DEGREES
 ;
 ; OPTIONAL INPUT:
@@ -29,30 +29,37 @@ PRO EULER,AI,BI,AO,BO,SELECT, FK4 = FK4, SELECT = select1
 ;      Celestial coordinates (RA, Dec) should be given in equinox J2000 
 ;      unless the /FK4 keyword is set.
 ; OUTPUTS:
-;       AO - Output Longitude in DEGREES
-;       BO - Output Latitude in DEGREES
+;       AO - Output Longitude in DEGREES, always double precision
+;       BO - Output Latitude in DEGREES, always double precision
 ;
-; INPUT KEYWORD:
+; OPTIONAL INPUT KEYWORD:
 ;       /FK4 - If this keyword is set and non-zero, then input and output 
 ;             celestial and ecliptic coordinates should be given in equinox 
 ;             B1950.
-;       /SELECT  - The coordinate conversion integer (1-6) may alternatively be 
+;       /RADIAN - if set, then all input and output angles are in radians rather
+;             than degrees.
+;       SELECT  - The coordinate conversion integer (1-6) may alternatively be 
 ;              specified as a keyword
-; NOTES:
-;       EULER was changed in December 1998 to use J2000 coordinates as the 
-;       default, ** and may be incompatible with earlier versions***.
+; EXAMPLE:
+;       Find the Galactic coordinates of Cyg X-1 (ra=299.590315, dec=35.201604)
+;       IDL> ra = 299.590315d
+;       IDL> dec = 35.201604d
+;       IDL> euler,ra,dec,glong,glat,1 & print,glong,glat 
+;            71.334990, 3.0668335
 ; REVISION HISTORY:
 ;       Written W. Landsman,  February 1987
 ;       Adapted from Fortran by Daryl Yentis NRL
-;       Converted to IDL V5.0   W. Landsman   September 1997
 ;       Made J2000 the default, added /FK4 keyword  W. Landsman December 1998
 ;       Add option to specify SELECT as a keyword W. Landsman March 2003
+;       Use less virtual memory for large input arrays W. Landsman June 2008
+;       Added /RADIAN input keyword  W. Landsman   Sep 2008
 ;-
  On_error,2
+ compile_opt idl2
 
  npar = N_params()
  if npar LT 2 then begin
-    print,'Syntax - EULER, AI, BI, A0, B0, [ SELECT, /FK4, SELECT= ]'
+    print,'Syntax - EULER, AI, BI, A0, B0, [ SELECT, /FK4, /RADIAN, SELECT= ]'
     print,'    AI,BI - Input longitude,latitude in degrees'
     print,'    AO,BO - Output longitude, latitude in degrees'
     print,'    SELECT - Scalar (1-6) specifying transformation type'
@@ -61,7 +68,7 @@ PRO EULER,AI,BI,AO,BO,SELECT, FK4 = FK4, SELECT = select1
 
   twopi   =   2.0d*!DPI
   fourpi  =   4.0d*!DPI
-  deg_to_rad = 180.0d/!DPI
+  rad_to_deg = 180.0d/!DPI
 
 ;   J2000 coordinate conversions are based on the following constants
 ;   (see the Hipparcos explanatory supplement).
@@ -112,7 +119,7 @@ PRO EULER,AI,BI,AO,BO,SELECT, FK4 = FK4, SELECT = select1
           if N_elements(select1) EQ 1 then select=select1
  if N_elements(select) EQ 0 then begin
         print,' '
-        print,' 1 RA-DEC ' + equinox + ' to Galactic
+        print,' 1 RA-DEC ' + equinox + ' to Galactic'
         print,' 2 Galactic       to RA-DEC' + equinox
         print,' 3 RA-DEC ' + equinox + ' to Ecliptic'
         print,' 4 Ecliptic       to RA-DEC' + equinox
@@ -124,19 +131,38 @@ PRO EULER,AI,BI,AO,BO,SELECT, FK4 = FK4, SELECT = select1
  endif
 
  I  = select - 1                         ; IDL offset
- a  = ai/deg_to_rad - phi[i]
- b = bi/deg_to_rad
- sb = sin(b) &	cb = cos(b)
- cbsa = cb * sin(a)
- b  = -stheta[i] * cbsa + ctheta[i] * sb
- bo    = asin(b<1.0d)*deg_to_rad
+ if npar EQ 2 then begin
+
+      if keyword_set(radian) then begin 
+         ao = temporary(ai) - phi[i]
+         bo = temporary(bi)
+      endif else begin  
+         ao = temporary(ai)/rad_to_deg - phi[i]
+         bo = temporary(bi)/rad_to_deg
+      endelse 
+      
+      endif else begin 
+      if keyword_set(radian) then begin 
+           ao = ai - phi[i]
+	   bo = bi
+      endif else begin      
+          ao  = ai/rad_to_deg - phi[i]
+          bo = bi/rad_to_deg
+       endelse	  
+ endelse
+ sb = sin(bo) &	cb = cos(bo)
+ cbsa = cb * sin(ao)
+ bo  = -stheta[i] * cbsa + ctheta[i] * sb
+ bo    = asin(bo<1.0d)
+ if not keyword_set(radian) then bo = bo*rad_to_deg
 ;
- a =  atan( ctheta[i] * cbsa + stheta[i] * sb, cb * cos(a) )
- ao = ( (a+psi[i]+fourpi) mod twopi) * deg_to_rad
+ ao =  atan( ctheta[i] * cbsa + stheta[i] * sb, cb * cos(ao) )
+ ao = ( (ao+psi[i]+fourpi) mod twopi) 
+ if not keyword_set(radian) then ao = ao*rad_to_deg
 
 
  if ( npar EQ 2 ) then begin
-	ai = ao & bi=bo
+	ai = temporary(ao) & bi=temporary(bo)
  endif
 
  return

@@ -7,7 +7,7 @@ pro GSSSadxy,gsa,ra,dec,x,y, PRINT = print
 ; EXPLANATION:
 ;       The sky coordinates may be printed and/or returned in variables.
 ;
-; CALLING SEQEUNCE:
+; CALLING SEQUENCE:
 ;       GSSSADXY, GSA, Ra,Dec, [ X, Y, /Print ] 
 
 ; INPUT:
@@ -45,6 +45,7 @@ pro GSSSadxy,gsa,ra,dec,x,y, PRINT = print
 ;       June 1994 - Dropped PRFLAG parameter, added /PRINT  W. Landsman (HSTX)
 ;       Converted to IDL V5.0   W. Landsman   September 1997
 ;       29-JUN-99 Added support for AMD[X,Y]1[2-3] for DSS images by E. Deutsch
+;       Reduce memory requirements for large arrays D. Finkbeiner April 2004
 ;-
   On_error,2
   arg = N_params()
@@ -58,16 +59,20 @@ pro GSSSadxy,gsa,ra,dec,x,y, PRINT = print
   iters = 0 & maxiters=50 & tolerance=0.0000005
   radeg = 180.0d/!DPI  & arcsec_per_radian= 3600.0d*radeg
 
-  dec_rad = dec/radeg & ra_rad = ra/radeg
-  pltra = gsa.crval[0]/radeg
   pltdec = gsa.crval[1]/radeg
 
-  cosd = cos(dec_rad) & sind = sin(dec_rad) & ra_dif = ra_rad - pltra
+  dec_rad = dec/radeg 
+  cosd = cos(dec_rad)
+  sind = sin(temporary(dec_rad))
+  ra_dif = ra/radeg - gsa.crval[0]/radeg
 
   div = ( sind*sin(pltdec) + cosd*cos(pltdec)*cos(ra_dif))
   xi = cosd*sin(ra_dif)*arcsec_per_radian/div
-  eta = ( sind*cos(pltdec)-cosd*sin(pltdec)*cos(ra_dif))*arcsec_per_radian/div
-
+  eta = ( sind*cos(pltdec)-cosd*sin(pltdec)*cos(ra_dif))* $
+    (arcsec_per_radian/temporary(div))
+  ra_dif = 0
+  cosd = 0 & sind = 0
+  
   obx = xi/gsa.pltscl
   oby = eta/gsa.pltscl
 
@@ -158,10 +163,10 @@ pro GSSSadxy,gsa,ra,dec,x,y, PRINT = print
 
     endrep until (min(abs([deltx,delty])) lt tolerance) or (iters gt maxiters)
 
-  x = (gsa.ppo3-obx*1000.0)/gsa.xsz-gsa.xll
-  y = (gsa.ppo6+oby*1000.0)/gsa.ysz-gsa.yll
-  x = x - 0.5 & y = y - 0.5
-
+    delvarx, eta, xi, deltx, delty
+    x = (gsa.ppo3-obx*1000.0)/gsa.xsz-gsa.xll - 0.5
+    y = (gsa.ppo6+oby*1000.0)/gsa.ysz-gsa.yll - 0.5
+    
   if keyword_set(PRINT) then AstDisp, x, y, ra, dec
 
   return
