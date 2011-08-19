@@ -1,5 +1,7 @@
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxmove.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
@@ -3911,7 +3913,7 @@ jump_to_bd:
 ; d) Neighbours will only be deblended as single sersics!
   IF setup.dobd THEN BEGIN
 ;goto, jump_over_this
-;goto, jump_over_this2
+goto, jump_over_this2
 
 ; first read in all single sersic results (ALL)
 ; This should NOT be neccessary, when table and fittab contain the

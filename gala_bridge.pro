@@ -87,7 +87,6 @@ for b=1,nband do begin
      xarr, yarr, seed
 ;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
    
-stop
    create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
      im_file[b], table[cur].frame[b], cur, $
      setup.neiscl, setup.skyoff, nums, frames, $
