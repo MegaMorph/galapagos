@@ -2952,11 +2952,11 @@ stop
                                 'sky_galfit_band', fltarr(nband)-999.,'sky_galfit_cheb', fltarr(nband)-999., $
                                 'psf_galfit_band', psf, $
                                 'chisq_galfit', -99., $
-                                'ndof_galfit', -99., $
-                                'nfree_galfit', -99., $
-                                'nfix_galfit', -99., $
+                                'ndof_galfit', -99, $
+                                'nfree_galfit', -99, $
+                                'nfix_galfit', -99, $
                                 'chi2nu_galfit', -99., $
-                                'iter', -99., $
+                                'iter', -99, $
 ; TO BE ADDED:
 ; fitting time
 ; NEIGH_GALFIT HAS TO BE ADAPTED!
