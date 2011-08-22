@@ -1,5 +1,7 @@
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_hread.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/valid_num.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
