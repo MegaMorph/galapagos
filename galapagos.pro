@@ -2887,7 +2887,6 @@ FUNCTION read_sersic_results, obj, nband
 ; delete feedback, just in case the format of one is different,
 ; avoiding crash
        delvarx, feedback
-stop
        feedback = create_struct('mag_galfit', result[0].COMP2_MAG, 'magerr_galfit',result[0].COMP2_MAG_ERR, $
                                 're_galfit', result[0].COMP2_RE, 'reerr_galfit', result[0].COMP2_RE_ERR, $
                                 'n_galfit', result[0].COMP2_N, 'nerr_galfit' ,result[0].COMP2_N_ERR, $
