@@ -2887,7 +2887,6 @@ FUNCTION read_sersic_results, obj, nband
 ; delete feedback, just in case the format of one is different,
 ; avoiding crash
        delvarx, feedback
-stop
        feedback = create_struct('mag_galfit', result[0].COMP2_MAG, 'magerr_galfit',result[0].COMP2_MAG_ERR, $
                                 're_galfit', result[0].COMP2_RE, 'reerr_galfit', result[0].COMP2_RE_ERR, $
                                 'n_galfit', result[0].COMP2_N, 'nerr_galfit' ,result[0].COMP2_N_ERR, $
@@ -2936,27 +2935,27 @@ stop
                                 'y_galfit', 0., 'yerr_galfit', 99999., $
                                 'psf_galfit', 'none', 'sky_galfit', -999., $
                                 'mag_galfit_band', fltarr(nband)-999., 'magerr_galfit_band',fltarr(nband)+99999., $
-                                're_galfit_band', fltarr(nband)-1., 'reerr_galfit_band', fltarr(nband)+99999., $
-                                'n_galfit_band', fltarr(nband)-1., 'nerr_galfit_band' ,fltarr(nband)+99999., $
-                                'q_galfit_band', fltarr(nband)-1., 'qerr_galfit_band', fltarr(nband)+99999., $
+                                're_galfit_band', fltarr(nband)-99., 'reerr_galfit_band', fltarr(nband)+99999., $
+                                'n_galfit_band', fltarr(nband)-99., 'nerr_galfit_band' ,fltarr(nband)+99999., $
+                                'q_galfit_band', fltarr(nband)-99., 'qerr_galfit_band', fltarr(nband)+99999., $
                                 'pa_galfit_band', fltarr(nband), 'paerr_galfit_band', fltarr(nband)+99999., $
                                 'x_galfit_band', fltarr(nband), 'xerr_galfit_band', fltarr(nband)+99999., $
                                 'y_galfit_band', fltarr(nband), 'yerr_galfit_band', fltarr(nband)+99999., $
                                 'mag_galfit_cheb', fltarr(nband)-999., 'magerr_galfit_cheb',fltarr(nband)+99999., $
-                                're_galfit_cheb', fltarr(nband)-1., 'reerr_galfit_cheb', fltarr(nband)+99999., $
-                                'n_galfit_cheb', fltarr(nband)-1., 'nerr_galfit_cheb' ,fltarr(nband)+99999., $
-                                'q_galfit_cheb', fltarr(nband)-1., 'qerr_galfit_cheb', fltarr(nband)+99999., $
+                                're_galfit_cheb', fltarr(nband)-99., 'reerr_galfit_cheb', fltarr(nband)+99999., $
+                                'n_galfit_cheb', fltarr(nband)-99., 'nerr_galfit_cheb' ,fltarr(nband)+99999., $
+                                'q_galfit_cheb', fltarr(nband)-99., 'qerr_galfit_cheb', fltarr(nband)+99999., $
                                 'pa_galfit_cheb', fltarr(nband), 'paerr_galfit_cheb', fltarr(nband)+99999., $
                                 'x_galfit_cheb', fltarr(nband), 'xerr_galfit_cheb', fltarr(nband)+99999., $
                                 'y_galfit_cheb', fltarr(nband), 'yerr_galfit_cheb', fltarr(nband)+99999., $
                                 'sky_galfit_band', fltarr(nband)-999.,'sky_galfit_cheb', fltarr(nband)-999., $
                                 'psf_galfit_band', psf, $
                                 'chisq_galfit', -99., $
-                                'ndof_galfit', -99., $
-                                'nfree_galfit', -99., $
-                                'nfix_galfit', -99., $
+                                'ndof_galfit', -99l, $
+                                'nfree_galfit', -99l, $
+                                'nfix_galfit', -99l, $
                                 'chi2nu_galfit', -99., $
-                                'iter', -99., $
+                                'iter', -99, $
 ; TO BE ADDED:
 ; fitting time
 ; NEIGH_GALFIT HAS TO BE ADAPTED!
@@ -3068,42 +3067,10 @@ END
 
 PRO update_table, fittab, table, i, out_file, obj_file, sky_file, nband, setup, final = final
 ; HAS TO BE CHANGED FOR POSSIBILITY FOR B/D DECOMPOSITION
-if not file_test(out_file) then begin
-    if not file_test(obj_file) then begin
-; object has not yet been started.
-        table[i].flag_galfit = 0
-        fittab[i].flag_galfit = 0
-    endif else begin
-; object has been started and crashed (or is currently doing sky determination)
-        table[i].flag_galfit = 1
-        fittab[i].flag_galfit = 1
-; read all sky files (for the case that the fit crashed and the output
-; file does not exist. Useful to find systematic crashes with sky value)
-        for b=1,nband do begin
-; check whether sky file exists first
-            if file_test(sky_file[b]) eq 1 then begin
-                openr, 99, sky_file[b]
-                readf, 99, sky, dsky, minrad, maxrad, flag
-                close, 99
-                fittab[i].sky_galfit_band[b-1] = round_digit(sky,3)
-                if b eq 1 then $
-                  fittab[i].sky_galfit = round_digit(sky,3)
-            endif
-        endfor
-    ENDELSE    
-ENDIF
-
-IF file_test(out_file) THEN BEGIN
-    if keyword_set(final) then begin
-        fittab[i].org_image = table[i].tile
-        fittab[i].org_image_band = table[i].tile
-    ENDIF
-    if not keyword_set(final) then fittab[i].org_image = table[i].frame[0]
-    
-    table[i].flag_galfit=2
-    fittab[i].file_galfit = out_file
 forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
+; this routine takes care of objects with non-existent output files
+; (e.g. crashed)
     IF setup.version ge 4 then res = read_sersic_results(out_file,nband)
     IF setup.version lt 4 then res = read_sersic_results_old_galfit(out_file)      
     name_fittab = tag_names(fittab)
@@ -3136,7 +3103,41 @@ forward_function read_sersic_results_old_galfit
         fittab[i].(tagidx) = res.(j)          
     ENDFOR
     fittab[i].flag_galfit = res.flag_galfit    
-ENDIF
+    
+    if not file_test(out_file) then begin
+        if not file_test(obj_file) then begin
+; object has not yet been started.
+            table[i].flag_galfit = 0
+            fittab[i].flag_galfit = 0
+        endif else begin
+; object has been started and crashed (or is currently doing sky determination)
+            table[i].flag_galfit = 1
+            fittab[i].flag_galfit = 1
+; read all sky files (for the case that the fit crashed and the output
+; file does not exist. Useful to find systematic crashes with sky value)
+            for b=1,nband do begin
+; check whether sky file exists first
+; overwrite -999. from above with true value
+                if file_test(sky_file[b]) eq 1 then begin
+                    openr, 99, sky_file[b]
+                    readf, 99, sky, dsky, minrad, maxrad, flag
+                    close, 99
+                    fittab[i].sky_galfit_band[b-1] = round_digit(sky,3)
+                    if b eq 1 then $
+                      fittab[i].sky_galfit = round_digit(sky,3)
+                endif
+            endfor
+        ENDELSE    
+    ENDIF ELSE BEGIN
+        if keyword_set(final) then begin
+            fittab[i].org_image = table[i].tile
+            fittab[i].org_image_band = table[i].tile
+        ENDIF
+        if not keyword_set(final) then fittab[i].org_image = table[i].frame[0]
+
+        table[i].flag_galfit=2
+        fittab[i].file_galfit = out_file    
+    ENDELSE
 END
 
 PRO update_log, logfile, message
