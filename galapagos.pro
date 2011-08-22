@@ -2881,12 +2881,13 @@ FUNCTION read_sersic_results, obj, nband
        res_cheb = mrdfits(obj[0], 'FINAL_CHEB',/silent)
        fit_info = mrdfits(obj[0], 'FIT_INFO',/silent)
        band_info = mrdfits(obj[0], 'BAND_INFO',/silent)
-       hd = headfits(obj[0], exten = nband+1)
+;       hd = headfits(obj[0], exten = nband+1)
        comp=1
        repeat comp = comp +1 until tag_exist(result, 'COMP'+strtrim(comp,2)+'_MAG') eq 0
 ; delete feedback, just in case the format of one is different,
 ; avoiding crash
        delvarx, feedback
+stop
        feedback = create_struct('mag_galfit', result[0].COMP2_MAG, 'magerr_galfit',result[0].COMP2_MAG_ERR, $
                                 're_galfit', result[0].COMP2_RE, 'reerr_galfit', result[0].COMP2_RE_ERR, $
                                 'n_galfit', result[0].COMP2_N, 'nerr_galfit' ,result[0].COMP2_N_ERR, $
@@ -3150,7 +3151,7 @@ PRO start_log, logfile, message
    free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump=jump
+PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
    start=systime(0)
    print, 'start: '+start
    IF n_params() LE 1 THEN gala_pro = 'galapagos'
@@ -3171,8 +3172,6 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump=jump
    IF keyword_set(logfile) THEN $
      start_log, logfile, 'Reading setup file... done!'
    if setup.dobd eq 1 then print, 'You are trying to do B/D decomposition? You are crazy!' 
-
-if keyword_set(jump) then goto, jump_to_bd
 
 ;==============================================================================   
 ;read input files into arrays
@@ -3902,9 +3901,6 @@ loopend:
       
   ENDIF
 
-    save, /all, filename = strtrim(setup.outdir,2)+'before_bd.sav'
-jump_to_bd:
-    restore, strtrim(setup.outdir,2)+'before_bd.sav'
 ;stop
 ;==============================================================================
 ; start B/D fitting.
@@ -3930,7 +3926,7 @@ jump_to_bd:
                            outpath_file[0,0]+setup.outparam, $
                            add_col = ['TILE', '" "'])
 
-; NEEDS TO BE CHANGED TO FLAG_GALFIT_BD
+
       add_tag, tab, 'flag_galfit', 0, tab2
       tab=tab2
       delvarx, tab2
@@ -3938,7 +3934,7 @@ jump_to_bd:
       ntab = n_elements(tab)
       out = read_sex_param(outpath_file[0,0]+setup.outparam, ntab, $
                            add_column = addcol)
-;;; WHY DOES THIS LINE DELETE EMPTY STRINGS???
+
       struct_assign, tab, out
 
 ;find the image files for the sources
@@ -4006,6 +4002,12 @@ jump_to_bd:
       br = sort(out.mag_best)
       table = out[br]
 delvarx, out
+stop
+;????????????????
+      add_tag, table, 'flag_galfit_bd', 0, table2
+      table = table2
+      delvarx, tab2
+
 ;;;;;;;; currently decided on SExtractor mag. single sersic fitting mag might
 ; be better
       nbr = n_elements(where(table.mag_best lt setup.bd_maglim))
