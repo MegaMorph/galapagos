@@ -2875,8 +2875,10 @@ END
 
 FUNCTION read_sersic_results, obj, nband
    IF file_test(obj[0]) THEN BEGIN
-       result=mrdfits(obj[0], 'FINAL_BAND',/silent)
-       res_cheb=mrdfits(obj[0], 'FINAL_CHEB',/silent)
+       result = mrdfits(obj[0], 'FINAL_BAND',/silent)
+       res_cheb = mrdfits(obj[0], 'FINAL_CHEB',/silent)
+       fit_info = mrdfits(obj[0], 'FIT_INFO',/silent)
+       band_info = mrdfits(obj[0], 'BAND_INFO',/silent)
        hd = headfits(obj[0], exten = nband+1)
        comp=1
        repeat comp = comp +1 until tag_exist(result, 'COMP'+strtrim(comp,2)+'_MAG') eq 0
@@ -2890,8 +2892,7 @@ FUNCTION read_sersic_results, obj, nband
                                 'pa_galfit', result[0].COMP2_PA, 'paerr_galfit', result[0].COMP2_PA_ERR, $
                                 'x_galfit', result[0].COMP2_XC, 'xerr_galfit', result[0].COMP2_XC_ERR, $
                                 'y_galfit', result[0].COMP2_YC, 'yerr_galfit', result[0].COMP2_YC_ERR, $
-;adapt psf
-                                'psf_galfit', strtrim(sxpar(hd, 'PSF_A'),2), 'sky_galfit', result[0].COMP1_SKY, $
+                                'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
                                 'mag_galfit_band', result.COMP2_MAG, 'magerr_galfit_band',result.COMP2_MAG_ERR, $
                                 're_galfit_band', result.COMP2_RE, 'reerr_galfit_band', result.COMP2_RE_ERR, $
                                 'n_galfit_band', result.COMP2_N, 'nerr_galfit_band' ,result.COMP2_N_ERR, $
@@ -2908,15 +2909,15 @@ FUNCTION read_sersic_results, obj, nband
                                 'x_galfit_cheb', res_cheb.COMP2_XC, 'xerr_galfit_cheb', res_cheb.COMP2_XC_ERR, $
                                 'y_galfit_cheb', res_cheb.COMP2_YC, 'yerr_galfit_cheb', res_cheb.COMP2_YC_ERR, $
                                 'sky_galfit_cheb', res_cheb.COMP1_SKY, $
-; PSF_BAND HAS TO BE ADAPTED!!
-                                'psf_galfit_band', strtrim(sxpar(hd, 'PSF'), 2), $
-                                'chisq_galfit', float(strmid(sxpar(hd, 'CHISQ'),2)), $
-                                'ndof_galfit', float(strmid(sxpar(hd, 'NDOF'),2)), $
-                                'nfree_galfit', float(strmid(sxpar(hd, 'NFREE'),2)), $
-                                'nfix_galfit', float(strmid(sxpar(hd, 'NFIX'),2)), $
-                                'chi2nu_galfit', float(strmid(sxpar(hd, 'CHI2NU'),2)), $
+                                'psf_galfit_band', strtrim(band_info.psf, 2), $
+                                'chisq_galfit', fit_info.chisq, $
+                                'ndof_galfit', fit_info.ndof, $
+                                'nfree_galfit', fit_info.nfree, $
+                                'nfix_galfit', fit_info.nfix, $
+                                'chi2nu_galfit', fit_info.chi2nu, $
+                                'iter', fit_info.niter, $
 ; TO BE ADDED:
-; #iterations, time
+; fitting time
 ; NEIGH_GALFIT HAS TO BE ADAPTED! WHY??
                                 'neigh_galfit', comp-3, 'flag_galfit', 2)
    ENDIF ELSE BEGIN
@@ -2945,16 +2946,16 @@ FUNCTION read_sersic_results, obj, nband
                                 'pa_galfit_cheb', fltarr(nband), 'paerr_galfit_cheb', fltarr(nband)+99999., $
                                 'x_galfit_cheb', fltarr(nband), 'xerr_galfit_cheb', fltarr(nband)+99999., $
                                 'y_galfit_cheb', fltarr(nband), 'yerr_galfit_cheb', fltarr(nband)+99999., $
-                               'sky_galfit_band', fltarr(nband)-999.,'sky_galfit_cheb', fltarr(nband)-999., $
-   ; PSF_BAND HAS TO BE ADAPTED!!
-                                'psf_galfit_band', strarr(nband), $
+                                'sky_galfit_band', fltarr(nband)-999.,'sky_galfit_cheb', fltarr(nband)-999., $
+                                'psf_galfit_band', psf, $
                                 'chisq_galfit', -99., $
                                 'ndof_galfit', -99., $
                                 'nfree_galfit', -99., $
                                 'nfix_galfit', -99., $
                                 'chi2nu_galfit', -99., $
+                                'iter', -99., $
 ; TO BE ADDED:
-; #iterations, time
+; fitting time
 ; NEIGH_GALFIT HAS TO BE ADAPTED!
                                 'neigh_galfit', -99, 'flag_galfit', 1)
    ENDELSE
@@ -2998,9 +2999,9 @@ FUNCTION read_sersic_results_old_galfit, obj
        neigh_galfit = comp-3
        flag_galfit = 2
        chisq_galfit = float(strmid(sxpar(hd, 'CHISQ'),2)) 
-       ndof_galfit = float(strmid(sxpar(hd, 'NDOF'),2))
-       nfree_galfit = float(strmid(sxpar(hd, 'NFREE'),2))
-       nfix_galfit = float(strmid(sxpar(hd, 'NFIX'),2))
+       ndof_galfit = fix(strmid(sxpar(hd, 'NDOF'),2))
+       nfree_galfit = fix(strmid(sxpar(hd, 'NFREE'),2))
+       nfix_galfit = fix(strmid(sxpar(hd, 'NFIX'),2))
        chi2nu_galfit = float(strmid(sxpar(hd, 'CHI2NU'),2))
    ENDIF ELSE BEGIN
        mag = -999.
@@ -3018,12 +3019,12 @@ FUNCTION read_sersic_results_old_galfit, obj
        y = 0.
        yerr = 99999.
        sky = -999.
-       neigh_galfit = -99.
+       neigh_galfit = -99
        flag_galfit = 1
        chisq_galfit = -99.
-       ndof_galfit = -99.
-       nfree_galfit = -99.
-       nfix_galfit = -99.
+       ndof_galfit = -99
+       nfree_galfit = -99
+       nfix_galfit = -99
        chi2nu_galfit = -99.
        psf='none'
    ENDELSE
@@ -3913,13 +3914,13 @@ jump_to_bd:
 ; d) Neighbours will only be deblended as single sersics!
   IF setup.dobd THEN BEGIN
 ;goto, jump_over_this
-goto, jump_over_this2
+;goto, jump_over_this2
 
 ; first read in all single sersic results (ALL)
 ; This should NOT be neccessary, when table and fittab contain the
 ; same objects and/or if a proper database is used!!
 
-print, 'reading all single sersic results so that B/D has the best possible knowledge' 
+      print, 'reading all single sersic results so that B/D has the best possible knowledge' 
 ; start again from virgin structure, fill with all fitting resuluts,
 ; only reading in, no additional fitting being done
 ; called sexcat above
@@ -4273,7 +4274,7 @@ loopstart2_bd:
                 constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
                 outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
                 orgpath_band, orgpath_file, seed,$
-                filename=out_file+'.sav'
+                filename=out_file+'.bd.sav'
 stop              
               IF setup.max_proc GT 1 THEN BEGIN
                   IF keyword_set(logfile) THEN $
@@ -4288,7 +4289,7 @@ stop
                   IF keyword_set(logfile) THEN $
                     update_log, logfile, 'Starting next object... ('+out_file+')'
                   cd, orgpath[idx,0]
-                  gala_bridge, out_file+'.sav'
+                  gala_bridge, out_file+'.bd.sav'
                   file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
                     /allow_nonexistent, /noexpand_path
               ENDELSE

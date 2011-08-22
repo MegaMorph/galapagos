@@ -5,7 +5,7 @@ PRO gala_bridge, filein, fit_bd = fit_bd
 ;constr_file, out_file, fittab, nband, outpath_file
 ;orgpath_band, orgpath_pre, orgpath_galfit, orgpath_file,
 ;orgpath_file_no_band, seed
-stop
+
 restore, filein
 if not keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
 if keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.bd.ttmp', 1)
@@ -100,7 +100,6 @@ for b=1,nband do begin
    ENDIF       
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§tile10_5/t10_5.3416_obj§§§§§§
 endfor
-stop
 
 prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
   im_file, constr_file, mask_file, chosen_psf_file, $
