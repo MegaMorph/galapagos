@@ -77,6 +77,8 @@
 ;             limit for execute    W. Landsman Jun 2009 
 ;      Restore EXECUTE limit (sigh...)   W. Landsman July 2009 
 ;-
+;       Add the possibility to create string arrays (strarr(x))
+;                                                 B. Haeussler Feb 2011
 
 ; Check that the number of names is the same as the number of values.
 
@@ -124,8 +126,9 @@ function mrd_struct, names, values, nrow, no_execute = no_execute,  $
 		dimen_string = gettok(value,')')	
 		dimen = long(strsplit(dimen_string,',',/extract))
 		case type of
-		    'bytarr': v = make_array(dimen=dimen,/byte)
-		    'intarr': v = make_array(dimen=dimen,/int)
+                    'strarr': v = make_array(dimen=dimen,/string)
+                    'bytarr': v = make_array(dimen=dimen,/byte)
+                    'intarr': v = make_array(dimen=dimen,/int)
 		    'fltarr': v = make_array(dimen=dimen,/float)
 		    'lonarr': v = make_array(dimen=dimen,/long)
 		    'lon64arr': v = make_array(dimen=dimen,/long64)

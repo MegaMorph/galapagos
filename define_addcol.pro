@@ -20,9 +20,9 @@ PRO define_addcol, addcol, nband, fit_bd = fit_bd
     bandstring = 'strarr('+strtrim(nband,2)+')'
     bandfloat = 'fltarr('+strtrim(nband,2)+')'
     addcol = [['FLAG_GALFIT', '0'], $
-              ['NEIGH_GALFIT', '0'], ['CHISQ_GALFIT','0'], $
-              ['NDOF_GALFIT','0'], ['NFREE_GALFIT','0'], $
-              ['NFIX_GALFIT','0'], ['CHI2NU_GALFIT','0'], $
+              ['NEIGH_GALFIT', '0'], ['CHISQ_GALFIT','0.'], $
+              ['NDOF_GALFIT','0l'], ['NFREE_GALFIT','0l'], $
+              ['NFIX_GALFIT','0l'], ['CHI2NU_GALFIT','0.'], $
               ['ORG_IMAGE', '" "'], ['FILE_GALFIT', '" "'], $
               ['ITER', '0'], $
               ['X_GALFIT', '0.'], ['XERR_GALFIT', '0.'], $
@@ -52,9 +52,9 @@ PRO define_addcol, addcol, nband, fit_bd = fit_bd
               ['SKY_GALFIT_CHEB', bandfloat]]
     if keyword_set(fit_bd) then addcol=[[addcol], $
                                          ['FLAG_GALFIT_BD', '0'], $
-                                         ['NEIGH_GALFIT_BD', '0'], ['CHISQ_GALFIT_BD','0'], $
-                                         ['NDOF_GALFIT_BD','0'], ['NFREE_GALFIT_BD','0'], $
-                                         ['NFIX_GALFIT_BD','0'], ['CHI2NU_GALFIT_BD','0'], $
+                                         ['NEIGH_GALFIT_BD', '0'], ['CHISQ_GALFIT_BD','0.'], $
+                                         ['NDOF_GALFIT_BD','0l'], ['NFREE_GALFIT_BD','0l'], $
+                                         ['NFIX_GALFIT_BD','0l'], ['CHI2NU_GALFIT_BD','0.'], $
                                          ['FILE_GALFIT_BD', '" "'], ['ITER_BD', '0'],$
                                          ['X_GALFIT_D', '0.'], ['XERR_GALFIT_D', '0.'], $
                                          ['X_GALFIT_B', '0.'], ['XERR_GALFIT_B', '0.'], $
