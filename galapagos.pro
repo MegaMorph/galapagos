@@ -2726,7 +2726,7 @@ PRO read_setup, setup_file, setup
 
 ;default values
    IF setup.enlarge EQ -1 THEN setup.enlarge = 1.1
-   IF setup.exclude_rad EQ -1 THEN setup.exclude_rad = 10.
+   IF setup.exclude_rad EQ -1 THEN setup.exclude_rad = 2.0
    IF setup.check EQ '' THEN setup.chktype = 'none'
    IF setup.stampsize EQ -1 THEN setup.stampsize = 2.5
    IF setup.skyscl EQ -1 THEN setup.skyscl = 3.0
@@ -3410,14 +3410,14 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ; objects (only [br])
 ; set standard values
        struct_assign, table, fittab
-       fittab.mag_galfit = 999
-       fittab.mag_galfit_band = fltarr(nband)+999
-       fittab.re_galfit = -1
-       fittab.re_galfit_band = fltarr(nband)-1
-       fittab.n_galfit = -1
-       fittab.n_galfit_band = fltarr(nband)-1
-       fittab.q_galfit = -1
-       fittab.q_galfit_band = fltarr(nband)-1
+       fittab.mag_galfit = 999.
+       fittab.mag_galfit_band = fltarr(nband)+999.
+       fittab.re_galfit = -99.
+       fittab.re_galfit_band = fltarr(nband)-99.
+       fittab.n_galfit = -99.
+       fittab.n_galfit_band = fltarr(nband)-99.
+       fittab.q_galfit = -99.
+       fittab.q_galfit_band = fltarr(nband)-99.
 
        mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
 ;find the image files for the sources
@@ -3902,7 +3902,6 @@ loopend:
       
   ENDIF
 
-;stop
 ;==============================================================================
 ; start B/D fitting.
 ; a) optimized queue is not needed, all the single sersic fits already exist and should be read in
@@ -3913,7 +3912,7 @@ loopend:
 ; d) Neighbours will only be deblended as single sersics!
   IF setup.dobd THEN BEGIN
 ;goto, jump_over_this
-;goto, jump_over_this2
+goto, jump_over_this2
 
 ; first read in all single sersic results (ALL)
 ; This should NOT be neccessary, when table and fittab contain the
@@ -3926,7 +3925,6 @@ loopend:
       tab = read_sex_table(setup.outdir+setup.sexcomb, $
                            outpath_file[0,0]+setup.outparam, $
                            add_col = ['TILE', '" "'])
-
 
       add_tag, tab, 'flag_galfit', 0, tab2
       tab=tab2
@@ -4003,11 +4001,6 @@ loopend:
       br = sort(out.mag_best)
       table = out[br]
 delvarx, out
-stop
-;????????????????
-      add_tag, table, 'flag_galfit_bd', 0, table2
-      table = table2
-      delvarx, tab2
 
 ;;;;;;;; currently decided on SExtractor mag. single sersic fitting mag might
 ; be better
@@ -4029,33 +4022,25 @@ stop
       fittab = read_sex_param(outpath_file[0,0]+setup.outparam, nbr, $
                               add_column = addcol)
 
-; set standard values
+; fill with single sersic results
       struct_assign, table, fittab
-      fittab.mag_galfit = 999
-      fittab.mag_galfit_band = fltarr(nband)+999
-      fittab.re_galfit = -1
-      fittab.re_galfit_band = fltarr(nband)-1
-      fittab.n_galfit = -1
-      fittab.n_galfit_band = fltarr(nband)-1
-      fittab.q_galfit = -1
-      fittab.q_galfit_band = fltarr(nband)-1
  ; set standard values for bulge & disk parameters
-      fittab.mag_galfit_d = 999
+      fittab.mag_galfit_d = 999.
       fittab.mag_galfit_band_d = fltarr(nband)+999
-      fittab.re_galfit_d = -1
-      fittab.re_galfit_band_d = fltarr(nband)-1
-      fittab.n_galfit_d = -1
-      fittab.n_galfit_band_d = fltarr(nband)-1
-      fittab.q_galfit_d = -1
-      fittab.q_galfit_band_d = fltarr(nband)-1
-      fittab.mag_galfit_b = 999
-      fittab.mag_galfit_band_b = fltarr(nband)+999
-      fittab.re_galfit_b = -1
-      fittab.re_galfit_band_b = fltarr(nband)-1
-      fittab.n_galfit_b = -1
-      fittab.n_galfit_band_b = fltarr(nband)-1
-      fittab.q_galfit_b = -1
-      fittab.q_galfit_band_b = fltarr(nband)-1
+      fittab.re_galfit_d = -99.
+      fittab.re_galfit_band_d = fltarr(nband)-99.
+      fittab.n_galfit_d = -99.
+      fittab.n_galfit_band_d = fltarr(nband)-99.
+      fittab.q_galfit_d = -99.
+      fittab.q_galfit_band_d = fltarr(nband)-99.
+      fittab.mag_galfit_b = 999.
+      fittab.mag_galfit_band_b = fltarr(nband)+999.
+      fittab.re_galfit_b = -99.
+      fittab.re_galfit_band_b = fltarr(nband)-99.
+      fittab.n_galfit_b = -99.
+      fittab.n_galfit_band_b = fltarr(nband)-99.
+      fittab.q_galfit_b = -99.
+      fittab.q_galfit_band_b = fltarr(nband)-99.
       
       mwrfits, table, setup.outdir+setup.sexcomb+'.bd.ttmp', /create
 ;find the image files for the sources
@@ -4147,8 +4132,10 @@ loopstart2_bd:
                   out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.galfit_out)[0]
                   sky_file = strarr(nband+1)
                   for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
-                  
+
+;;;;;;;;;;;;;;;;;;;; UPDATE_TABLE HAS TO BE ADAPTED!!!
 ;check if file was done successfully or bombed
+stop
 ;;;;;;                  update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup, /bd
 ;else table is automatically filled with standard values
                   
@@ -4194,12 +4181,14 @@ loopstart2_bd:
               ob=ob-1>0
               cur=todo[ob]
               
-              if table[cur].class_star gt 0.8 then begin
-                  print, strtrim(cur,2)+' SEEMS TO BE A STAR! trying next object'
-                  table[cur].flag_galfit_bd = -1
-                  fittab[cur].flag_galfit_bd = -1
-                  goto, loopstart_bd
-              ENDIF
+; perform some kind of STAR classification so B/D is only done for galaxies
+; currently, SExtractor is used, but maybe others are more useful
+;              if table[cur].class_star gt 0.8 then begin
+;                  print, strtrim(cur,2)+' SEEMS TO BE A STAR! trying next object'
+;                  table[cur].flag_galfit_bd = -1
+;                  fittab[cur].flag_galfit_bd = -1
+;                  goto, loopstart_bd
+;              ENDIF
 
 ; check whether this object has already been done, if so, read in
 ; result and restart
@@ -4215,6 +4204,7 @@ loopstart2_bd:
                   IF file_test(obj_file) THEN BEGIN
                       print, obj_file+' found.'
                       print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
+stop
 ;;;;;;                      update_table, fittab, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup
                       IF n_elements(todo) ne 1 then goto, loopstart_bd
                       IF n_elements(todo) eq 1 then goto, loopend_bd
@@ -4279,8 +4269,8 @@ loopstart2_bd:
                 constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
                 outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
                 orgpath_band, orgpath_file, seed,$
-                filename=out_file+'.bd.sav'
-stop              
+                filename=out_file+'.sav'
+
               IF setup.max_proc GT 1 THEN BEGIN
                   IF keyword_set(logfile) THEN $
                     update_log, logfile, 'Starting new bridge... ('+out_file+')'
@@ -4315,8 +4305,8 @@ loopend_bd:
          FOR i=0, ct-1 DO BEGIN
             idx = where(table[bridge_obj[remain[i]]].frame[0] EQ orgim[*,0])
             objnum = round_digit(table[bridge_obj[remain[i]]].number, 0, /str)
-            obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
-            out_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out)[0]
+            obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_bd_'+setup.obj)[0]
+            out_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_bd_'+setup.galfit_out)[0]
             sky_file = strarr(nband+1)
             for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
            
@@ -4330,7 +4320,7 @@ loopend_bd:
             
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
-            update_table, fittab, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup
+;            update_table, fittab, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
         ENDFOR
@@ -4341,6 +4331,7 @@ jump_over_this:
 ;==============================================================================
 ;read in sextractor table, combine with galfit results, write out
 ;combined fits table
+; has to be adapted to also read B/D!
    IF setup.docombine THEN BEGIN
       tab = read_sex_table(setup.outdir+setup.sexcomb, $
                            outpath_file[0,0]+setup.outparam, $
