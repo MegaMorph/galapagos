@@ -2875,7 +2875,7 @@ PRO read_image_files, setup, silent=silent
    if ncolf ne 6 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
 END
 
-FUNCTION read_sersic_results, obj, nband
+FUNCTION read_sersic_results, obj, nband, bd=bd
    IF file_test(obj[0]) THEN BEGIN
        result = mrdfits(obj[0], 'FINAL_BAND',/silent)
        res_cheb = mrdfits(obj[0], 'FINAL_CHEB',/silent)
@@ -2887,79 +2887,202 @@ FUNCTION read_sersic_results, obj, nband
 ; delete feedback, just in case the format of one is different,
 ; avoiding crash
        delvarx, feedback
-       feedback = create_struct('mag_galfit', result[0].COMP2_MAG, 'magerr_galfit',result[0].COMP2_MAG_ERR, $
-                                're_galfit', result[0].COMP2_RE, 'reerr_galfit', result[0].COMP2_RE_ERR, $
-                                'n_galfit', result[0].COMP2_N, 'nerr_galfit' ,result[0].COMP2_N_ERR, $
-                                'q_galfit', result[0].COMP2_AR, 'qerr_galfit', result[0].COMP2_AR_ERR, $
-                                'pa_galfit', result[0].COMP2_PA, 'paerr_galfit', result[0].COMP2_PA_ERR, $
-                                'x_galfit', result[0].COMP2_XC, 'xerr_galfit', result[0].COMP2_XC_ERR, $
-                                'y_galfit', result[0].COMP2_YC, 'yerr_galfit', result[0].COMP2_YC_ERR, $
-                                'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
-                                'mag_galfit_band', result.COMP2_MAG, 'magerr_galfit_band',result.COMP2_MAG_ERR, $
-                                're_galfit_band', result.COMP2_RE, 'reerr_galfit_band', result.COMP2_RE_ERR, $
-                                'n_galfit_band', result.COMP2_N, 'nerr_galfit_band' ,result.COMP2_N_ERR, $
-                                'q_galfit_band', result.COMP2_AR, 'qerr_galfit_band', result.COMP2_AR_ERR, $
-                                'pa_galfit_band', result.COMP2_PA, 'paerr_galfit_band', result.COMP2_PA_ERR, $
-                                'sky_galfit_band', result.COMP1_SKY, $
-                                'x_galfit_band', result.COMP2_XC, 'xerr_galfit_band', result.COMP2_XC_ERR, $
-                                'y_galfit_band', result.COMP2_YC, 'yerr_galfit_band', result.COMP2_YC_ERR, $
-                                'mag_galfit_cheb', res_cheb.COMP2_MAG, 'magerr_galfit_cheb',res_cheb.COMP2_MAG_ERR, $
-                                're_galfit_cheb', res_cheb.COMP2_RE, 'reerr_galfit_cheb', res_cheb.COMP2_RE_ERR, $
-                                'n_galfit_cheb', res_cheb.COMP2_N, 'nerr_galfit_cheb' ,res_cheb.COMP2_N_ERR, $
-                                'q_galfit_cheb', res_cheb.COMP2_AR, 'qerr_galfit_cheb', res_cheb.COMP2_AR_ERR, $
-                                'pa_galfit_cheb', res_cheb.COMP2_PA, 'paerr_galfit_cheb', res_cheb.COMP2_PA_ERR, $
-                                'x_galfit_cheb', res_cheb.COMP2_XC, 'xerr_galfit_cheb', res_cheb.COMP2_XC_ERR, $
-                                'y_galfit_cheb', res_cheb.COMP2_YC, 'yerr_galfit_cheb', res_cheb.COMP2_YC_ERR, $
-                                'sky_galfit_cheb', res_cheb.COMP1_SKY, $
-                                'psf_galfit_band', strtrim(band_info.psf, 2), $
-                                'chisq_galfit', fit_info.chisq, $
-                                'ndof_galfit', fit_info.ndof, $
-                                'nfree_galfit', fit_info.nfree, $
-                                'nfix_galfit', fit_info.nfix, $
-                                'chi2nu_galfit', fit_info.chi2nu, $
-                                'iter', fit_info.niter, $
+       if not keyword_set(bd) then begin
+           feedback = create_struct('mag_galfit', result[0].COMP2_MAG, 'magerr_galfit',result[0].COMP2_MAG_ERR, $
+                                    're_galfit', result[0].COMP2_RE, 'reerr_galfit', result[0].COMP2_RE_ERR, $
+                                    'n_galfit', result[0].COMP2_N, 'nerr_galfit' ,result[0].COMP2_N_ERR, $
+                                    'q_galfit', result[0].COMP2_AR, 'qerr_galfit', result[0].COMP2_AR_ERR, $
+                                    'pa_galfit', result[0].COMP2_PA, 'paerr_galfit', result[0].COMP2_PA_ERR, $
+                                    'x_galfit', result[0].COMP2_XC, 'xerr_galfit', result[0].COMP2_XC_ERR, $
+                                    'y_galfit', result[0].COMP2_YC, 'yerr_galfit', result[0].COMP2_YC_ERR, $
+                                    'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
+                                    'mag_galfit_band', result.COMP2_MAG, 'magerr_galfit_band',result.COMP2_MAG_ERR, $
+                                    're_galfit_band', result.COMP2_RE, 'reerr_galfit_band', result.COMP2_RE_ERR, $
+                                    'n_galfit_band', result.COMP2_N, 'nerr_galfit_band' ,result.COMP2_N_ERR, $
+                                    'q_galfit_band', result.COMP2_AR, 'qerr_galfit_band', result.COMP2_AR_ERR, $
+                                    'pa_galfit_band', result.COMP2_PA, 'paerr_galfit_band', result.COMP2_PA_ERR, $
+                                    'x_galfit_band', result.COMP2_XC, 'xerr_galfit_band', result.COMP2_XC_ERR, $
+                                    'y_galfit_band', result.COMP2_YC, 'yerr_galfit_band', result.COMP2_YC_ERR, $
+                                    'sky_galfit_band', result.COMP1_SKY, $
+                                    'mag_galfit_cheb', res_cheb.COMP2_MAG, 'magerr_galfit_cheb',res_cheb.COMP2_MAG_ERR, $
+                                    're_galfit_cheb', res_cheb.COMP2_RE, 'reerr_galfit_cheb', res_cheb.COMP2_RE_ERR, $
+                                    'n_galfit_cheb', res_cheb.COMP2_N, 'nerr_galfit_cheb' ,res_cheb.COMP2_N_ERR, $
+                                    'q_galfit_cheb', res_cheb.COMP2_AR, 'qerr_galfit_cheb', res_cheb.COMP2_AR_ERR, $
+                                    'pa_galfit_cheb', res_cheb.COMP2_PA, 'paerr_galfit_cheb', res_cheb.COMP2_PA_ERR, $
+                                    'x_galfit_cheb', res_cheb.COMP2_XC, 'xerr_galfit_cheb', res_cheb.COMP2_XC_ERR, $
+                                    'y_galfit_cheb', res_cheb.COMP2_YC, 'yerr_galfit_cheb', res_cheb.COMP2_YC_ERR, $
+                                    'sky_galfit_cheb', res_cheb.COMP1_SKY, $
+                                    'psf_galfit_band', strtrim(band_info.psf, 2), $
+                                    'chisq_galfit', fit_info.chisq, $
+                                    'ndof_galfit', fit_info.ndof, $
+                                    'nfree_galfit', fit_info.nfree, $
+                                    'nfix_galfit', fit_info.nfix, $
+                                    'chi2nu_galfit', fit_info.chi2nu, $
+                                    'iter', fit_info.niter, $
+                                    'neigh_galfit', comp-3, 'flag_galfit', 2)
 ; TO BE ADDED:
 ; fitting time
 ; NEIGH_GALFIT HAS TO BE ADAPTED! WHY??
-                                'neigh_galfit', comp-3, 'flag_galfit', 2)
+       ENDIF
+       if keyword_set(bd) then begin
+           feedback = create_struct('mag_galfit_d', result[0].COMP2_MAG, 'magerr_galfit_d',result[0].COMP2_MAG_ERR, $
+                                    're_galfit_d', result[0].COMP2_RE, 'reerr_galfit_d', result[0].COMP2_RE_ERR, $
+                                    'n_galfit_d', result[0].COMP2_N, 'nerr_galfit_d' ,result[0].COMP2_N_ERR, $
+                                    'q_galfit_d', result[0].COMP2_AR, 'qerr_galfit_d', result[0].COMP2_AR_ERR, $
+                                    'pa_galfit_d', result[0].COMP2_PA, 'paerr_galfit_d', result[0].COMP2_PA_ERR, $
+                                    'x_galfit_d', result[0].COMP2_XC, 'xerr_galfit_d', result[0].COMP2_XC_ERR, $
+                                    'y_galfit_d', result[0].COMP2_YC, 'yerr_galfit_d', result[0].COMP2_YC_ERR, $
+                                    'mag_galfit_b', result[0].COMP3_MAG, 'magerr_galfit_b',result[0].COMP3_MAG_ERR, $
+                                    're_galfit_b', result[0].COMP3_RE, 'reerr_galfit_b', result[0].COMP3_RE_ERR, $
+                                    'n_galfit_b', result[0].COMP3_N, 'nerr_galfit_b' ,result[0].COMP3_N_ERR, $
+                                    'q_galfit_b', result[0].COMP3_AR, 'qerr_galfit_b', result[0].COMP3_AR_ERR, $
+                                    'pa_galfit_b', result[0].COMP3_PA, 'paerr_galfit_b', result[0].COMP3_PA_ERR, $
+                                    'x_galfit_b', result[0].COMP3_XC, 'xerr_galfit_b', result[0].COMP3_XC_ERR, $
+                                    'y_galfit_b', result[0].COMP3_YC, 'yerr_galfit_b', result[0].COMP3_YC_ERR, $                                    'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
+                                    'mag_galfit_band_d', result.COMP2_MAG, 'magerr_galfit_band_d',result.COMP2_MAG_ERR, $
+                                    're_galfit_band_d', result.COMP2_RE, 'reerr_galfit_band_d', result.COMP2_RE_ERR, $
+                                    'n_galfit_band_d', result.COMP2_N, 'nerr_galfit_band_d' ,result.COMP2_N_ERR, $
+                                    'q_galfit_band_d', result.COMP2_AR, 'qerr_galfit_band_d', result.COMP2_AR_ERR, $
+                                    'pa_galfit_band_d', result.COMP2_PA, 'paerr_galfit_band_d', result.COMP2_PA_ERR, $
+                                    'x_galfit_band_d', result.COMP2_XC, 'xerr_galfit_band_d', result.COMP2_XC_ERR, $
+                                    'y_galfit_band_b', result.COMP2_YC, 'yerr_galfit_band_b', result.COMP2_YC_ERR, $
+                                    'mag_galfit_band_b', result.COMP3_MAG, 'magerr_galfit_band_b',result.COMP3_MAG_ERR, $
+                                    're_galfit_band_b', result.COMP3_RE, 'reerr_galfit_band_b', result.COMP3_RE_ERR, $
+                                    'n_galfit_band_b', result.COMP3_N, 'nerr_galfit_band_b' ,result.COMP3_N_ERR, $
+                                    'q_galfit_band_b', result.COMP3_AR, 'qerr_galfit_band_b', result.COMP3_AR_ERR, $
+                                    'pa_galfit_band_b', result.COMP3_PA, 'paerr_galfit_band_b', result.COMP3_PA_ERR, $
+                                    'x_galfit_band_b', result.COMP3_XC, 'xerr_galfit_band_b', result.COMP3_XC_ERR, $
+                                    'y_galfit_band_b', result.COMP3_YC, 'yerr_galfit_band_b', result.COMP3_YC_ERR, $
+                                    'sky_galfit_band', result.COMP1_SKY, $
+                                    'mag_galfit_cheb_d', res_cheb.COMP2_MAG, 'magerr_galfit_cheb_d',res_cheb.COMP2_MAG_ERR, $
+                                    're_galfit_cheb_d', res_cheb.COMP2_RE, 'reerr_galfit_cheb_d', res_cheb.COMP2_RE_ERR, $
+                                    'n_galfit_cheb_d', res_cheb.COMP2_N, 'nerr_galfit_cheb_d' ,res_cheb.COMP2_N_ERR, $
+                                    'q_galfit_cheb_d', res_cheb.COMP2_AR, 'qerr_galfit_cheb_d', res_cheb.COMP2_AR_ERR, $
+                                    'pa_galfit_cheb_d', res_cheb.COMP2_PA, 'paerr_galfit_cheb_d', res_cheb.COMP2_PA_ERR, $
+                                    'x_galfit_cheb_d', res_cheb.COMP2_XC, 'xerr_galfit_cheb_d', res_cheb.COMP2_XC_ERR, $
+                                    'y_galfit_cheb_d', res_cheb.COMP2_YC, 'yerr_galfit_cheb_d', res_cheb.COMP2_YC_ERR, $
+                                    'mag_galfit_cheb_b', res_cheb.COMP3_MAG, 'magerr_galfit_cheb_b',res_cheb.COMP3_MAG_ERR, $
+                                    're_galfit_cheb_b', res_cheb.COMP3_RE, 'reerr_galfit_cheb_b', res_cheb.COMP3_RE_ERR, $
+                                    'n_galfit_cheb_b', res_cheb.COMP3_N, 'nerr_galfit_cheb_b' ,res_cheb.COMP3_N_ERR, $
+                                    'q_galfit_cheb_b', res_cheb.COMP3_AR, 'qerr_galfit_cheb_b', res_cheb.COMP3_AR_ERR, $
+                                    'pa_galfit_cheb_b', res_cheb.COMP3_PA, 'paerr_galfit_cheb_b', res_cheb.COMP3_PA_ERR, $
+                                    'x_galfit_cheb_b', res_cheb.COMP3_XC, 'xerr_galfit_cheb_b', res_cheb.COMP3_XC_ERR, $
+                                    'y_galfit_cheb_b', res_cheb.COMP3_YC, 'yerr_galfit_cheb_b', res_cheb.COMP3_YC_ERR, $
+                                    'sky_galfit_cheb', res_cheb.COMP1_SKY, $
+                                    'psf_galfit_band', strtrim(band_info.psf, 2), $
+                                    'chisq_galfit_bd', fit_info.chisq, $
+                                    'ndof_galfit_bd', fit_info.ndof, $
+                                    'nfree_galfit_bd', fit_info.nfree, $
+                                    'nfix_galfit_bd', fit_info.nfix, $
+                                    'chi2nu_galfit_bd', fit_info.chi2nu, $
+                                    'iter_bd', fit_info.niter, $
+                                    'neigh_galfit_bd', comp-4, 'flag_galfit_bd', 2)
+; TO BE ADDED:
+; fitting time
+; NEIGH_GALFIT HAS TO BE ADAPTED! WHY??
+       ENDIF
+
    ENDIF ELSE BEGIN
        psf=strarr(nband)
        for n=0,nband-1 do psf[n]='none'
        
-       feedback = create_struct('mag_galfit', -999., 'magerr_galfit',99999., $
-                                're_galfit', -99., 'reerr_galfit', 99999., $
-                                'n_galfit', -99., 'nerr_galfit' ,99999., $
-                                'q_galfit', -99., 'qerr_galfit', 99999., $
-                                'pa_galfit', 0., 'paerr_galfit', 99999., $
-                                'x_galfit', 0., 'xerr_galfit', 99999., $
-                                'y_galfit', 0., 'yerr_galfit', 99999., $
-                                'psf_galfit', 'none', 'sky_galfit', -999., $
-                                'mag_galfit_band', fltarr(nband)-999., 'magerr_galfit_band',fltarr(nband)+99999., $
-                                're_galfit_band', fltarr(nband)-99., 'reerr_galfit_band', fltarr(nband)+99999., $
-                                'n_galfit_band', fltarr(nband)-99., 'nerr_galfit_band' ,fltarr(nband)+99999., $
-                                'q_galfit_band', fltarr(nband)-99., 'qerr_galfit_band', fltarr(nband)+99999., $
-                                'pa_galfit_band', fltarr(nband), 'paerr_galfit_band', fltarr(nband)+99999., $
-                                'x_galfit_band', fltarr(nband), 'xerr_galfit_band', fltarr(nband)+99999., $
-                                'y_galfit_band', fltarr(nband), 'yerr_galfit_band', fltarr(nband)+99999., $
-                                'mag_galfit_cheb', fltarr(nband)-999., 'magerr_galfit_cheb',fltarr(nband)+99999., $
-                                're_galfit_cheb', fltarr(nband)-99., 'reerr_galfit_cheb', fltarr(nband)+99999., $
-                                'n_galfit_cheb', fltarr(nband)-99., 'nerr_galfit_cheb' ,fltarr(nband)+99999., $
-                                'q_galfit_cheb', fltarr(nband)-99., 'qerr_galfit_cheb', fltarr(nband)+99999., $
-                                'pa_galfit_cheb', fltarr(nband), 'paerr_galfit_cheb', fltarr(nband)+99999., $
-                                'x_galfit_cheb', fltarr(nband), 'xerr_galfit_cheb', fltarr(nband)+99999., $
-                                'y_galfit_cheb', fltarr(nband), 'yerr_galfit_cheb', fltarr(nband)+99999., $
-                                'sky_galfit_band', fltarr(nband)-999.,'sky_galfit_cheb', fltarr(nband)-999., $
-                                'psf_galfit_band', psf, $
-                                'chisq_galfit', -99., $
-                                'ndof_galfit', -99l, $
-                                'nfree_galfit', -99l, $
-                                'nfix_galfit', -99l, $
-                                'chi2nu_galfit', -99., $
-                                'iter', -99, $
-; TO BE ADDED:
+       if not keyword_set(bd) then begin
+           feedback = create_struct('mag_galfit', -999., 'magerr_galfit',99999., $
+                                    're_galfit', -99., 'reerr_galfit', 99999., $
+                                    'n_galfit', -99., 'nerr_galfit' ,99999., $
+                                    'q_galfit', -99., 'qerr_galfit', 99999., $
+                                    'pa_galfit', 0., 'paerr_galfit', 99999., $
+                                    'x_galfit', 0., 'xerr_galfit', 99999., $
+                                    'y_galfit', 0., 'yerr_galfit', 99999., $
+                                    'psf_galfit', 'none', 'sky_galfit', -999., $
+                                    'mag_galfit_band', fltarr(nband)-999., 'magerr_galfit_band',fltarr(nband)+99999., $
+                                    're_galfit_band', fltarr(nband)-99., 'reerr_galfit_band', fltarr(nband)+99999., $
+                                    'n_galfit_band', fltarr(nband)-99., 'nerr_galfit_band' ,fltarr(nband)+99999., $
+                                    'q_galfit_band', fltarr(nband)-99., 'qerr_galfit_band', fltarr(nband)+99999., $
+                                    'pa_galfit_band', fltarr(nband), 'paerr_galfit_band', fltarr(nband)+99999., $
+                                    'x_galfit_band', fltarr(nband), 'xerr_galfit_band', fltarr(nband)+99999., $
+                                    'y_galfit_band', fltarr(nband), 'yerr_galfit_band', fltarr(nband)+99999., $ 
+                                    'sky_galfit_band', fltarr(nband)-999., $
+                                    'mag_galfit_cheb', fltarr(nband)-999., 'magerr_galfit_cheb',fltarr(nband)+99999., $
+                                    're_galfit_cheb', fltarr(nband)-99., 'reerr_galfit_cheb', fltarr(nband)+99999., $
+                                    'n_galfit_cheb', fltarr(nband)-99., 'nerr_galfit_cheb' ,fltarr(nband)+99999., $
+                                    'q_galfit_cheb', fltarr(nband)-99., 'qerr_galfit_cheb', fltarr(nband)+99999., $
+                                    'pa_galfit_cheb', fltarr(nband), 'paerr_galfit_cheb', fltarr(nband)+99999., $
+                                    'x_galfit_cheb', fltarr(nband), 'xerr_galfit_cheb', fltarr(nband)+99999., $
+                                    'y_galfit_cheb', fltarr(nband), 'yerr_galfit_cheb', fltarr(nband)+99999., $
+                                    'sky_galfit_cheb', fltarr(nband)-999., $
+                                    'psf_galfit_band', psf, $
+                                    'chisq_galfit', -99., $
+                                    'ndof_galfit', -99l, $
+                                    'nfree_galfit', -99l, $
+                                    'nfix_galfit', -99l, $
+                                    'chi2nu_galfit', -99., $
+                                    'iter', -99, $
+                                    'neigh_galfit', -99, 'flag_galfit', 1)
+ ; TO BE ADDED:
 ; fitting time
 ; NEIGH_GALFIT HAS TO BE ADAPTED!
-                                'neigh_galfit', -99, 'flag_galfit', 1)
+       ENDIF
+
+       if keyword_set(bd) then begin
+           feedback = create_struct('mag_galfit_d', -999., 'magerr_galfit_d',99999., $
+                                    're_galfit_d', -99., 'reerr_galfit_d', 99999., $
+                                    'n_galfit_d', -99., 'nerr_galfit_d' ,99999., $
+                                    'q_galfit_d', -99., 'qerr_galfit_d', 99999., $
+                                    'pa_galfit_d', 0., 'paerr_galfit_d', 99999., $
+                                    'x_galfit_d', 0., 'xerr_galfit_d', 99999., $
+                                    'y_galfit_d', 0., 'yerr_galfit_d', 99999., $
+                                    'mag_galfit_b', -999., 'magerr_galfit_b',99999., $
+                                    're_galfit_b', -99., 'reerr_galfit_b', 99999., $
+                                    'n_galfit_b', -99., 'nerr_galfit_b' ,99999., $
+                                    'q_galfit_b', -99., 'qerr_galfit_b', 99999., $
+                                    'pa_galfit_b', 0., 'paerr_galfit_b', 99999., $
+                                    'x_galfit_b', 0., 'xerr_galfit_b', 99999., $
+                                    'y_galfit_b', 0., 'yerr_galfit_b', 99999., $
+                                    'psf_galfit', 'none', 'sky_galfit', -999., $
+                                    'mag_galfit_band_d', fltarr(nband)-999., 'magerr_galfit_band_d',fltarr(nband)+99999., $
+                                    're_galfit_band_d', fltarr(nband)-99., 'reerr_galfit_band_d', fltarr(nband)+99999., $
+                                    'n_galfit_band_d', fltarr(nband)-99., 'nerr_galfit_band_d' ,fltarr(nband)+99999., $
+                                    'q_galfit_band_d', fltarr(nband)-99., 'qerr_galfit_band_d', fltarr(nband)+99999., $
+                                    'pa_galfit_band_d', fltarr(nband), 'paerr_galfit_band_d', fltarr(nband)+99999., $
+                                    'x_galfit_band_d', fltarr(nband), 'xerr_galfit_band_d', fltarr(nband)+99999., $
+                                    'y_galfit_band_d', fltarr(nband), 'yerr_galfit_band_d', fltarr(nband)+99999., $ 
+                                    'mag_galfit_band_b', fltarr(nband)-999., 'magerr_galfit_band_b',fltarr(nband)+99999., $
+                                    're_galfit_band_b', fltarr(nband)-99., 'reerr_galfit_band_b', fltarr(nband)+99999., $
+                                    'n_galfit_band_b', fltarr(nband)-99., 'nerr_galfit_band_b' ,fltarr(nband)+99999., $
+                                    'q_galfit_band_b', fltarr(nband)-99., 'qerr_galfit_band_b', fltarr(nband)+99999., $
+                                    'pa_galfit_band_b', fltarr(nband), 'paerr_galfit_band_b', fltarr(nband)+99999., $
+                                    'x_galfit_band_b', fltarr(nband), 'xerr_galfit_band_b', fltarr(nband)+99999., $
+                                    'y_galfit_band_b', fltarr(nband), 'yerr_galfit_band_b', fltarr(nband)+99999., $ 
+                                    'sky_galfit_band', fltarr(nband)-999., $
+                                    'mag_galfit_cheb_d', fltarr(nband)-999., 'magerr_galfit_cheb_d',fltarr(nband)+99999., $
+                                    're_galfit_cheb_d', fltarr(nband)-99., 'reerr_galfit_cheb_d', fltarr(nband)+99999., $
+                                    'n_galfit_cheb_d', fltarr(nband)-99., 'nerr_galfit_cheb_d' ,fltarr(nband)+99999., $
+                                    'q_galfit_cheb_d', fltarr(nband)-99., 'qerr_galfit_cheb_d', fltarr(nband)+99999., $
+                                    'pa_galfit_cheb_d', fltarr(nband), 'paerr_galfit_cheb_d', fltarr(nband)+99999., $
+                                    'x_galfit_cheb_d', fltarr(nband), 'xerr_galfit_cheb_d', fltarr(nband)+99999., $
+                                    'y_galfit_cheb_d', fltarr(nband), 'yerr_galfit_cheb_d', fltarr(nband)+99999., $
+                                    'mag_galfit_cheb_b', fltarr(nband)-999., 'magerr_galfit_cheb_b',fltarr(nband)+99999., $
+                                    're_galfit_cheb_b', fltarr(nband)-99., 'reerr_galfit_cheb_b', fltarr(nband)+99999., $
+                                    'n_galfit_cheb_b', fltarr(nband)-99., 'nerr_galfit_cheb_b' ,fltarr(nband)+99999., $
+                                    'q_galfit_cheb_b', fltarr(nband)-99., 'qerr_galfit_cheb_b', fltarr(nband)+99999., $
+                                    'pa_galfit_cheb_b', fltarr(nband), 'paerr_galfit_cheb_b', fltarr(nband)+99999., $
+                                    'x_galfit_cheb_b', fltarr(nband), 'xerr_galfit_cheb_b', fltarr(nband)+99999., $
+                                    'y_galfit_cheb_b', fltarr(nband), 'yerr_galfit_cheb_b', fltarr(nband)+99999., $
+                                    'sky_galfit_cheb', fltarr(nband)-999., $
+                                    'psf_galfit_band', psf, $
+                                    'chisq_galfit_bd', -99., $
+                                    'ndof_galfit_bd', -99l, $
+                                    'nfree_galfit_bd', -99l, $
+                                    'nfix_galfit_bd', -99l, $
+                                    'chi2nu_galfit_bd', -99., $
+                                    'iter_bd', -99, $
+                                    'neigh_galfit_bd', -99, 'flag_galfit_bd', 1)
+ ; TO BE ADDED:
+; fitting time
+; NEIGH_GALFIT HAS TO BE ADAPTED!
+       ENDIF
+
    ENDELSE
    return, feedback
 ;[mag, magerr, re, reerr, n, nerr, q, qerr, pa, paerr, $
@@ -2967,7 +3090,7 @@ FUNCTION read_sersic_results, obj, nband
 ;            nfree_galfit, nfix_galfit, chi2nu_galfit]
 END
 
-FUNCTION read_sersic_results_old_galfit, obj
+FUNCTION read_sersic_results_old_galfit, obj, bd=bd
    IF file_test(obj) THEN BEGIN
        hd = headfits(obj, exten = 2)
        mag0 = sxpar(hd, '2_MAG')
@@ -3031,50 +3154,150 @@ FUNCTION read_sersic_results_old_galfit, obj
        psf='none'
    ENDELSE
    
-   feedback = create_struct('mag_galfit', mag, 'magerr_galfit', magerr, $
-                            're_galfit', re, 'reerr_galfit', reerr, $
-                            'n_galfit', n, 'nerr_galfit', nerr, $
-                            'q_galfit', q, 'qerr_galfit', qerr, $
-                            'pa_galfit', pa, 'paerr_galfit', paerr, $
-                            'x_galfit', x, 'xerr_galfit', xerr, $
-                            'y_galfit', y, 'yerr_galfit', yerr, $
-                            'psf_galfit', psf, 'sky_galfit', sky, $
-                            'mag_galfit_band', mag, 'magerr_galfit_band', magerr, $
-                            're_galfit_band', re, 'reerr_galfit_band', reerr, $
-                            'n_galfit_band', n, 'nerr_galfit_band', nerr, $
-                            'q_galfit_band', q, 'qerr_galfit_band', qerr, $
-                            'pa_galfit_band', pa, 'paerr_galfit_band', paerr, $
-                            'sky_galfit_band', sky, $
-                            'x_galfit_band', x, 'xerr_galfit_band', xerr, $
-                            'y_galfit_band', y, 'yerr_galfit_band', yerr, $
-                            'mag_galfit_cheb', mag, 'magerr_galfit_cheb', magerr, $
-                            're_galfit_cheb', re, 'reerr_galfit_cheb', reerr, $
-                            'n_galfit_cheb', n, 'nerr_galfit_cheb', nerr, $
-                            'q_galfit_cheb', q, 'qerr_galfit_cheb', qerr, $
-                            'pa_galfit_cheb', pa, 'paerr_galfit_cheb', paerr, $
-                            'x_galfit_cheb', x, 'xerr_galfit_cheb', xerr, $
-                            'y_galfit_cheb', y, 'yerr_galfit_cheb', yerr, $
-                            'sky_galfit_cheb', sky, $
-                            'psf_galfit_band', psf, $
-                            'chisq_galfit', chisq_galfit, $
-                            'ndof_galfit', ndof_galfit, $
-                            'nfree_galfit', nfree_galfit, $
-                            'nfix_galfit', nfix_galfit, $
-                            'chi2nu_galfit', chi2nu_galfit, $
-                            'neigh_galfit', neigh_galfit, 'flag_galfit', flag_galfit)
-     return, feedback
+   if not keyword_set(bd) then BEGIN
+       feedback = create_struct('mag_galfit', mag, 'magerr_galfit', magerr, $
+                                're_galfit', re, 'reerr_galfit', reerr, $
+                                'n_galfit', n, 'nerr_galfit', nerr, $
+                                'q_galfit', q, 'qerr_galfit', qerr, $
+                                'pa_galfit', pa, 'paerr_galfit', paerr, $
+                                'x_galfit', x, 'xerr_galfit', xerr, $
+                                'y_galfit', y, 'yerr_galfit', yerr, $
+                                'psf_galfit', psf, 'sky_galfit', sky, $
+                                'mag_galfit_band', mag, 'magerr_galfit_band', magerr, $
+                                're_galfit_band', re, 'reerr_galfit_band', reerr, $
+                                'n_galfit_band', n, 'nerr_galfit_band', nerr, $
+                                'q_galfit_band', q, 'qerr_galfit_band', qerr, $
+                                'pa_galfit_band', pa, 'paerr_galfit_band', paerr, $
+                                'x_galfit_band', x, 'xerr_galfit_band', xerr, $
+                                'y_galfit_band', y, 'yerr_galfit_band', yerr, $
+                                'sky_galfit_band', sky, $
+                                'mag_galfit_cheb', mag, 'magerr_galfit_cheb', magerr, $
+                                're_galfit_cheb', re, 'reerr_galfit_cheb', reerr, $
+                                'n_galfit_cheb', n, 'nerr_galfit_cheb', nerr, $
+                                'q_galfit_cheb', q, 'qerr_galfit_cheb', qerr, $
+                                'pa_galfit_cheb', pa, 'paerr_galfit_cheb', paerr, $
+                                'x_galfit_cheb', x, 'xerr_galfit_cheb', xerr, $
+                                'y_galfit_cheb', y, 'yerr_galfit_cheb', yerr, $
+                                'sky_galfit_cheb', sky, $
+                                'psf_galfit_band', psf, $
+                                'chisq_galfit', chisq_galfit, $
+                                'ndof_galfit', ndof_galfit, $
+                                'nfree_galfit', nfree_galfit, $
+                                'nfix_galfit', nfix_galfit, $
+                                'chi2nu_galfit', chi2nu_galfit, $
+                                'neigh_galfit', neigh_galfit, 'flag_galfit', flag_galfit)
+   endif
+
+   if keyword_set(bd) then begin
+       IF file_test(obj) THEN BEGIN
+           hd = headfits(obj, exten = 2)
+           mag0_b = sxpar(hd, '3_MAG')
+           mag_b = float(strmid(mag0_b, 0, strpos(mag0_b, '+/-')))
+           magerr_b = float(strmid(mag0_b, strpos(mag0_b, '+/-')+3, strlen(mag0_b)))
+           re0_b = sxpar(hd, '3_RE')
+           re_b = float(strmid(re0_b, 0, strpos(re0_b, '+/-')))
+           reerr_b = float(strmid(re0_b, strpos(re0_b, '+/-')+3, strlen(re0_b)))
+           n0_b = sxpar(hd, '3_N')
+           n_b = float(strmid(n0_b, 0, strpos(n0_b, '+/-')))
+           nerr_b = float(strmid(n0_b, strpos(n0_b, '+/-')+3, strlen(n0_b)))
+           q0_b = sxpar(hd, '3_AR')
+           q_b = float(strmid(q0_b, 0, strpos(q0_b, '+/-')))
+           qerr_b = float(strmid(q0_b, strpos(q0_b, '+/-')+3, strlen(q0_b)))
+           pa0_b = sxpar(hd, '3_PA')
+           pa_b = float(strmid(pa0_b, 0, strpos(pa0_b, '+/-')))
+           paerr_b = float(strmid(pa0_b, strpos(pa0_b, '+/-')+3, strlen(pa0_b)))
+           x0_b = sxpar(hd, '3_XC')
+           x_b = float(strmid(x0_b, 0, strpos(x0_b, '+/-')))
+           xerr_b = float(strmid(x0_b, strpos(x0_b, '+/-')+3, strlen(x0_b)))
+           y0_b = sxpar(hd, '3_YC')
+           y_b = float(strmid(y0_b, 0, strpos(y0_b, '+/-')))
+           yerr_b = float(strmid(y0_b, strpos(y0_b, '+/-')+3, strlen(y0_b)))
+; find number of neighbors
+           neigh_galfit = comp-4
+       ENDIF ELSE BEGIN
+           mag_b = -999.
+           magerr_b = 99999.
+           re_b = -99.
+           reerr_b = 99999.
+           n_b = -99.
+           nerr_b = 99999.
+           q_b = -99.
+           qerr_b = 99999.
+           pa_b = 0.
+           paerr_b = 99999.
+           x_b = 0.
+           xerr_b = 99999.
+           y_b = 0.
+           yerr_b = 99999.
+       ENDELSE
+
+       feedback = create_struct('mag_galfit_d', mag, 'magerr_galfit_d', magerr, $
+                                're_galfit_d', re, 'reerr_galfit_d', reerr, $
+                                'n_galfit_d', n, 'nerr_galfit_d', nerr, $
+                                'q_galfit_d', q, 'qerr_galfit_d', qerr, $
+                                'pa_galfit_d', pa, 'paerr_galfit_d', paerr, $
+                                'x_galfit_d', x, 'xerr_galfit_d', xerr, $
+                                'y_galfit_d', y, 'yerr_galfit_d', yerr, $
+                                'mag_galfit_b', mag_b, 'magerr_galfit_b', magerr_b, $
+                                're_galfit_b', re_b, 'reerr_galfit_b', reerr_b, $
+                                'n_galfit_b', n_b, 'nerr_galfit_b', nerr_b, $
+                                'q_galfit_b', q_b, 'qerr_galfit_b', qerr_b, $
+                                'pa_galfit_b', pa_b, 'paerr_galfit_b', paerr_b, $
+                                'x_galfit_b', x_b, 'xerr_galfit_b', xerr_b, $
+                                'y_galfit_b', y_b, 'yerr_galfit_b', yerr_b, $
+                                'psf_galfit', psf, 'sky_galfit', sky, $
+                                'mag_galfit_band_d', mag, 'magerr_galfit_band_d', magerr, $
+                                're_galfit_band_d', re, 'reerr_galfit_band_d', reerr, $
+                                'n_galfit_band_d', n, 'nerr_galfit_band_d', nerr, $
+                                'q_galfit_band_d', q, 'qerr_galfit_band_d', qerr, $
+                                'pa_galfit_band_d', pa, 'paerr_galfit_band_d', paerr, $
+                                'x_galfit_band_d', x, 'xerr_galfit_band_d', xerr, $
+                                'y_galfit_band_d', y, 'yerr_galfit_band_d', yerr, $
+                                'mag_galfit_band_b', mag_b, 'magerr_galfit_band_b', magerr_b, $
+                                're_galfit_band_b', re_b, 'reerr_galfit_band_b', reerr_b, $
+                                'n_galfit_band_b', n_b, 'nerr_galfit_band_b', nerr_b, $
+                                'q_galfit_band_b', q_b, 'qerr_galfit_band_b', qerr_b, $
+                                'pa_galfit_band_b', pa_b, 'paerr_galfit_band_b', paerr_b, $
+                                'x_galfit_band_b', x_b, 'xerr_galfit_band_b', xerr_b, $
+                                'y_galfit_band_b', y_b, 'yerr_galfit_band_b', yerr_b, $
+                                'sky_galfit_band', sky, $
+                                'mag_galfit_cheb_d', mag, 'magerr_galfit_cheb_d', magerr, $
+                                're_galfit_cheb_d', re, 'reerr_galfit_cheb_d', reerr, $
+                                'n_galfit_cheb_d', n, 'nerr_galfit_cheb_d', nerr, $
+                                'q_galfit_cheb_d', q, 'qerr_galfit_cheb_d', qerr, $
+                                'pa_galfit_cheb_d', pa, 'paerr_galfit_cheb_d', paerr, $
+                                'x_galfit_cheb_d', x, 'xerr_galfit_cheb_d', xerr, $
+                                'y_galfit_cheb_d', y, 'yerr_galfit_cheb_d', yerr, $
+                                'mag_galfit_cheb_b', mag_b, 'magerr_galfit_cheb_b', magerr_b, $
+                                're_galfit_cheb_b', re_b, 'reerr_galfit_cheb_b', reerr_b, $
+                                'n_galfit_cheb_b', n_b, 'nerr_galfit_cheb_b', nerr_b, $
+                                'q_galfit_cheb_b', q_b, 'qerr_galfit_cheb_b', qerr_b, $
+                                'pa_galfit_cheb_b', pa_b, 'paerr_galfit_cheb_b', paerr_b, $
+                                'x_galfit_cheb_b', x_b, 'xerr_galfit_cheb_b', xerr_b, $
+                                'y_galfit_cheb_b', y_b, 'yerr_galfit_cheb_b', yerr_b, $
+                                'sky_galfit_cheb', sky, $
+                                'psf_galfit_band', psf, $
+                                'chisq_galfit_bd', chisq_galfit, $
+                                'ndof_galfit_bd', ndof_galfit, $
+                                'nfree_galfit_bd', nfree_galfit, $
+                                'nfix_galfit_bd', nfix_galfit, $
+                                'chi2nu_galfit_bd', chi2nu_galfit, $
+                                'neigh_galfit_bd', neigh_galfit, 'flag_galfit_bd', flag_galfit)
+   ENDIF       
+   return, feedback
 END
 
-PRO update_table, fittab, table, i, out_file, obj_file, sky_file, nband, setup, final = final
+PRO update_table, fittab, table, i, out_file, obj_file, sky_file, nband, setup, final = final, bd=bd
 ; HAS TO BE CHANGED FOR POSSIBILITY FOR B/D DECOMPOSITION
 forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
 ; this routine takes care of objects with non-existent output files
 ; (e.g. crashed)
-    IF setup.version ge 4 then res = read_sersic_results(out_file,nband)
-    IF setup.version lt 4 then res = read_sersic_results_old_galfit(out_file)      
+    IF setup.version ge 4 then res = read_sersic_results(out_file, nband, bd=bd)
+    IF setup.version lt 4 then res = read_sersic_results_old_galfit(out_file, bd=bd)      
     name_fittab = tag_names(fittab)
     name_res = tag_names(res)
+if keyword_set(bd) then stop
     
     for j=0,n_elements(name_res)-1 do begin
         tagidx=where(name_fittab eq name_res[j], ct)
@@ -3102,41 +3325,66 @@ forward_function read_sersic_results_old_galfit
 ;          if ct gt 0 then print, 'changed'
         fittab[i].(tagidx) = res.(j)          
     ENDFOR
-    fittab[i].flag_galfit = res.flag_galfit    
+
+    if not keyword_set(bd) then fittab[i].flag_galfit = res.flag_galfit    
+    if keyword_set(bd) then fittab[i].flag_galfit_bd = res.flag_galfit_bd    
+
     
     if not file_test(out_file) then begin
         if not file_test(obj_file) then begin
 ; object has not yet been started.
-            table[i].flag_galfit = 0
-            fittab[i].flag_galfit = 0
+            if not keyword_set(bd) then begin
+                table[i].flag_galfit = 0
+                fittab[i].flag_galfit = 0
+            endif
+            if keyword_set(bd) then begin
+                table[i].flag_galfit_bd = 0
+                fittab[i].flag_galfit_bd = 0
+            endif
         endif else begin
 ; object has been started and crashed (or is currently doing sky determination)
-            table[i].flag_galfit = 1
-            fittab[i].flag_galfit = 1
+            if not keyword_set(bd) then begin
+                table[i].flag_galfit = 1
+                fittab[i].flag_galfit = 1
+            endif
+            if keyword_set(bd) then begin
+                table[i].flag_galfit_bd = 1
+                fittab[i].flag_galfit_bd = 1
+            endif
 ; read all sky files (for the case that the fit crashed and the output
 ; file does not exist. Useful to find systematic crashes with sky value)
-            for b=1,nband do begin
+            if not keyword_set(bd) then begin
+                for b=1,nband do begin
 ; check whether sky file exists first
 ; overwrite -999. from above with true value
-                if file_test(sky_file[b]) eq 1 then begin
-                    openr, 99, sky_file[b]
-                    readf, 99, sky, dsky, minrad, maxrad, flag
-                    close, 99
-                    fittab[i].sky_galfit_band[b-1] = round_digit(sky,3)
-                    if b eq 1 then $
-                      fittab[i].sky_galfit = round_digit(sky,3)
-                endif
-            endfor
-        ENDELSE    
+                    if file_test(sky_file[b]) eq 1 then begin
+                        openr, 99, sky_file[b]
+                        readf, 99, sky, dsky, minrad, maxrad, flag
+                        close, 99
+                        fittab[i].sky_galfit_band[b-1] = round_digit(sky,3)
+                        if b eq 1 then $
+                          fittab[i].sky_galfit = round_digit(sky,3)
+                    endif
+                endfor
+            ENDIF
+        ENDELSE
     ENDIF ELSE BEGIN
+
+; IN B/D THIS BIT WILL BE DONE IN EACH READIN, BUT RESULT IS EQUIVALENT
         if keyword_set(final) then begin
             fittab[i].org_image = table[i].tile
             fittab[i].org_image_band = table[i].tile
         ENDIF
         if not keyword_set(final) then fittab[i].org_image = table[i].frame[0]
-
-        table[i].flag_galfit=2
-        fittab[i].file_galfit = out_file    
+        
+        if not keyword_set(bd) then begin
+            table[i].flag_galfit = 2
+            fittab[i].file_galfit = out_file
+        ENDIF
+        if keyword_set(bd) then begin
+            table[i].flag_galfit_bd = 2
+            fittab[i].file_galfit_bd = out_file
+        ENDIF
     ENDELSE
 END
 
@@ -4006,7 +4254,8 @@ delvarx, out
 ; be better
       nbr = n_elements(where(table.mag_best lt setup.bd_maglim))
 
-; make table.frame multi-wavelength-ready to be passed onto gala_bridge
+; make table.frame multi-wavelength-ready to be passed onto
+; gala_bridge (NOT PASSED OVER, WRITTEN OUT AND READ IN!)
       tableim = strarr(nband+1,n_elements(table.org_image))
       for i = 0, n_elements(images[*,0])-1 do begin
           whtableim = where(table.org_image eq images[i,0], ct)
@@ -4133,10 +4382,10 @@ loopstart2_bd:
                   sky_file = strarr(nband+1)
                   for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
 
-;;;;;;;;;;;;;;;;;;;; UPDATE_TABLE HAS TO BE ADAPTED!!!
-;check if file was done successfully or bombed
+;check if file was done successfully or bombed (done in update_table)
 stop
-;;;;;;                  update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup, /bd
+                  update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup, /bd
+stop
 ;else table is automatically filled with standard values
                   
 ;clear object
@@ -4205,7 +4454,8 @@ stop
                       print, obj_file+' found.'
                       print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
 stop
-;;;;;;                      update_table, fittab, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup
+                      update_table, fittab, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup, /bd
+stop
                       IF n_elements(todo) ne 1 then goto, loopstart_bd
                       IF n_elements(todo) eq 1 then goto, loopend_bd
                   ENDIF
@@ -4320,7 +4570,9 @@ loopend_bd:
             
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
-;            update_table, fittab, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup
+stop
+            update_table, fittab, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup, /bd
+stop
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
         ENDFOR
@@ -4372,7 +4624,13 @@ jump_over_this:
          sky_file = strarr(nband+1)
          for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
 
+stop
+; read in single sersic again
          update_table, out, tab, i, out_file, obj_file, sky_file, nband, setup, /final
+stop
+; read in B/D again
+         update_table, out, tab, i, out_file, obj_file, sky_file, nband, setup, /final, /bd
+stop
          out[i].org_image_band = orgim[idx[0],1:nband]
 
       ENDFOR

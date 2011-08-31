@@ -7,6 +7,8 @@ PRO gala_bridge, filein, fit_bd = fit_bd
 ;orgpath_file_no_band, seed
 
 restore, filein
+; THIS TABLE SHOULD BE HANDED OVER THROUGH THE SAVE FILE, not through
+; a .ttmp file
 if not keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
 if keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.bd.ttmp', 1)
 
@@ -14,7 +16,11 @@ for b=1,nband do begin
 ;read in image and weight (takes few sec)
     im=readfits(table[cur].frame[b], hd,/silent)
     wht=readfits(orgwht[idx,b], whd,/silent)
-    
+;read segmentation map (needed for excluding neighbouring sources)
+    seg = readfits(orgpath_file[idx,0]+setup.outseg, seghd,/silent)
+;read the skymap
+    map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', maphd,/silent)
+
 ;image size
     sz_im = (size(im))[1:2]
     
@@ -25,12 +31,6 @@ for b=1,nband do begin
         xarr = (lindgen(sz_im[0], sz_im[1]) MOD sz_im[0])+1
         yarr = (transpose(lindgen(sz_im[1], sz_im[0]) MOD sz_im[1]))+1
     ENDIF
-
-;read segmentation map (needed for excluding neighbouring sources)
-    seg = readfits(orgpath_file[idx,0]+setup.outseg, seghd,/silent)
-
-;read the skymap
-    map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', maphd,/silent)
 
 ;rad is the minimum starting radius for the sky calculation (outside
 ;the aperture of the object)
