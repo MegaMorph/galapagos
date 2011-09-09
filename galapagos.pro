@@ -2,6 +2,10 @@
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxmove.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_hread.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/valid_num.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
