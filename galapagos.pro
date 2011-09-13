@@ -3020,6 +3020,8 @@ if not file_test(out_file) then begin
                    fittab[i].sky_galfit = round_digit(sky,3)
            endif
        endfor
+; define standard values!
+
     ENDELSE    
 ENDIF
 
@@ -3823,7 +3825,6 @@ loopend:
       add_tag, tab, 'flag_galfit', 0, tab2
       tab=tab2
       delvarx, tab2
-
       ntab = n_elements(tab)
       out = read_sex_param(outpath_file[0,0]+setup.outparam, ntab, $
                            add_column = addcol)
