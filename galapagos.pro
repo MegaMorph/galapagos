@@ -1962,11 +1962,13 @@ forward_function read_sersic_results_old_galfit
            par.y_galfit_band = fltarr(nband)+table[objects[i]].y_image
            par.y_galfit_cheb = fltarr(nband)
            par.y_galfit_cheb[0] = table[objects[i]].y_image
-; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS! DONE using offset
            par.mag_galfit = table[objects[i]].mag_best
            par.mag_galfit_band = fltarr(nband)+table[objects[i]].mag_best+setup.mag_offset[1:nband]
            par.mag_galfit_cheb = fltarr(nband)
            par.mag_galfit_cheb[0] = table[objects[i]].mag_best
+; THESE VALUES ARE CIRCULATIZED VALUES!! NEED TO BE AR CORRECTED
+; (FROM LEE!)
            par.re_galfit = 10.^(-0.79)*table[objects[i]].flux_radius^1.87
            par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[objects[i]].flux_radius^1.87
            par.re_galfit_cheb = fltarr(nband)
@@ -2230,7 +2232,7 @@ forward_function read_sersic_results_old_galfit
                    par.y_galfit_band = fltarr(nband)+table[i_con].y_image
                    par.y_galfit_cheb = fltarr(nband)
                    par.y_galfit_cheb[0] = table[i_con].y_image
-; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS! DONE using offset
                    par.mag_galfit = table[i_con].mag_best
                    par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best+setup.mag_offset[1:nband]
                    par.mag_galfit_cheb = fltarr(nband)
@@ -2275,7 +2277,7 @@ forward_function read_sersic_results_old_galfit
                par.y_galfit_band = fltarr(nband)+table[i_con].y_image
                par.y_galfit_cheb = fltarr(nband)
                par.y_galfit_cheb[0] = table[i_con].y_image
-; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS! DONE using offset
                par.mag_galfit = table[i_con].mag_best
                par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best+setup.mag_offset[1:nband]
                par.mag_galfit_cheb = fltarr(nband)
@@ -3304,6 +3306,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        br = sort(sexcat.mag_best)
        nbr = round(n_elements(sexcat.mag_best)*setup.bright/100.)
        
+; table only contains brightest objects
        table = sexcat[br]
 ; make table.frame multi-wavelength-ready to be passed onto gala_bridge
        tableim = strarr(nband+1,n_elements(table.frame))
@@ -3321,6 +3324,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        table=table2
        delvarx, table2
        
+; this table contains ALL columns, but only
        fittab = read_sex_param(outpath_file[0,0]+setup.outparam, nbr, $
                                add_column = addcol)
        struct_assign, table, fittab
