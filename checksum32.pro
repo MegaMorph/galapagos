@@ -42,14 +42,13 @@ pro checksum32, array, checksum, FROM_IEEE = from_IEEE, NOSAVE = nosave
 ;      implementation) but then the array-oriented TOTAL() function could not 
 ;      be used.
 ; RESTRICTIONS:
-;       (1) Requires V5.2 or later (uses unsigned integers)
-;       (2) Not valid for object or pointer data types
+;       (1) Not valid for object or pointer data types
 ; EXAMPLE:
 ;       Find the 32 bit checksum of the array x = findgen(35)
 ;
 ;       IDL> checksum32, x, s    ===> s =  2920022024
 ; FUNCTION CALLED:
-;       IS_IEEE_BIG(), N_BYTES()
+;       HOST_TO_IEEE, IS_IEEE_BIG(), N_BYTES()
 ; MODIFICATION HISTORY:
 ;       Written    W. Landsman          June 2001
 ;       Work correctly on little endian machines, added /FROM_IEEE and /NoSave
@@ -58,6 +57,8 @@ pro checksum32, array, checksum, FROM_IEEE = from_IEEE, NOSAVE = nosave
 ;       Always copy to new array, somewhat slower but more robust algorithm
 ;           especially for Linux boxes   W. Landsman Sep. 2004 
 ;       Sep. 2004 update not implemented correctly (sigh) W. Landsman Dec 2004         
+;       No need to byteswap 4 byte datatypes on little endian W. L. May 2009
+;       Use /INTEGER keyword to TOTAL() function W.L. June 2009
 ;       
 ;-
  if N_params() LT 2 then begin
@@ -65,6 +66,10 @@ pro checksum32, array, checksum, FROM_IEEE = from_IEEE, NOSAVE = nosave
       return
  endif
  idltype = size(array,/type)
+
+; Convert data to byte.  If array size is not a multiple of 4, then we pad with
+; zeros 
+
  N = N_bytes(array)
  Nremain = N mod 4
  if Nremain GT 0 then begin 
@@ -81,20 +86,22 @@ pro checksum32, array, checksum, FROM_IEEE = from_IEEE, NOSAVE = nosave
 ; Get maximum number of base 2 digits available in double precision, and 
 ; compute maximum number of longword values that can be coadded without losing
 ; any precision.    Since we will sum unsigned longwords, the original array
-; must be byteswapped as longwords -- we'll restore the original (unless
-; from_IEEE is set) later.
+; must be byteswapped as longwords.
 
- str = machar(/double)
- maxnum = 2L^(str.it-33)          
+ maxnum = long64(2)^31       
  Niter =  (N-1)/maxnum
- checksum = 0.d0
-  word32 =  2.d^32
+ checksum = long64(0)
+  word32 =  long64(2)^32
   bswap  = 1 - is_ieee_big()
   if bswap then begin
-       if not keyword_set( from_ieee) then host_to_ieee, uarray,idltype=idltype   
-      byteorder,uarray,/NTOHL
+       if not keyword_set( from_ieee) then begin 
+            if (idltype NE 3) and (idltype NE 4) then begin 
+	         if idltype NE 1 then host_to_ieee, uarray,idltype=idltype   
+                 byteorder,uarray,/NTOHL
+	   endif	 
+       endif else byteorder,uarray,/NTOHL	     
  endif
-
+ 
  for i=0, Niter do begin
 
    if i EQ Niter then begin 
@@ -102,7 +109,7 @@ pro checksum32, array, checksum, FROM_IEEE = from_IEEE, NOSAVE = nosave
            if nbyte EQ 0 then nbyte = maxnum
    endif else nbyte = maxnum
 
-   checksum = checksum + total(ulong(  uarray,maxnum*i,nbyte/4), /double)
+   checksum = checksum + total(ulong(  uarray,maxnum*i,nbyte/4), /integer)
 ; Fold any overflow bits beyond 32 back into the word.
 
    hibits = long(checksum/word32)

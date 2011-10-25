@@ -83,16 +83,18 @@ PRO TEXTOPEN,PROGRAM,TEXTOUT=TEXTOUT, STDOUT = STDOUT, MORE_SET = more_set, $
 ;       Modified for output terminals without a TTY  W. Landsman  August 1995
 ;       Added /STDOUT keyword   W. Landsman    April 1996
 ;       added textout=7 option, D. Lindler, July, 1996
-;       Converted to IDL V5.0   W. Landsman   September 1997
 ;       Exit with RETURN instead of RETALL  W. Landsman  June 1999
 ;       In IDL V5.4 filepath(/TERMINAL) not allowed in the IDLDE WL August 2001
 ;       Added MORE_SET output keyword   W.Landsman   January 2002
 ;       Added /SILENT keyword  W. Landsman  June 2002  
 ;	Define !TEXTOUT and !TEXTUNIT if needed.  R. Sterner, 2002 Aug 27
 ;       Return Calling Sequence if no parameters supplied W.Landsman Nov 2002
+;       Remove VMS specific code  W. Landsman Sep 2006
+;       Make sure MORE_SET is always defined   W. Landsman Jan 2007
 ;-
 ;-----------------------------------------------------------
   On_Error,2
+  compile_opt idl2
 
   if N_params() LT 1 then begin
       print,'Syntax - TEXTOPEN, program, [ TEXTOUT =, /STDOUT, /SILENT,' 
@@ -104,6 +106,7 @@ PRO TEXTOPEN,PROGRAM,TEXTOUT=TEXTOUT, STDOUT = STDOUT, MORE_SET = more_set, $
   if ex eq 0 then defsysv,'!TEXTOUT',1		; If not define it.
   defsysv,'!TEXTUNIT',exists=ex			; Check if !TEXTUNIT exists.
   if ex eq 0 then defsysv,'!TEXTUNIT',0		; If not define it.
+  more_set = 0                                  
   ;
   ; Open proper unit.
   ;
@@ -152,10 +155,8 @@ PRO TEXTOPEN,PROGRAM,TEXTOUT=TEXTOUT, STDOUT = STDOUT, MORE_SET = more_set, $
      2: if isatty then openw, !TEXTUNIT, filepath(/TERMINAL) 
 
      3: begin
-        oname = strtrim( PROGRAM,2) +'.prt'
-        if !VERSION.OS EQ "vms" then oname = strupcase(oname) $
-                                else oname = strlowcase(oname)
-        openw, !TEXTUNIT, oname
+        oname = strlowcase( strtrim( PROGRAM,2) +'.prt')
+         openw, !TEXTUNIT, oname
         if not keyword_set(SILENT) then $
         message,'Output is being directed to a file ' + oname,/INFORM
         end

@@ -7,17 +7,17 @@
 ; EXPLANATION:
 ;       Computes a spherical coordinate rotation between native coordinates 
 ;       and  standard celestial coordinate system (celestial, Galactic, or
-;       ecliptic).   Applies the equations in Appendix A of the paper 
+;       ecliptic).   Applies the equations in Appendix B of the paper 
 ;       "Representation of Celestial Coordinates in FITS" by Calabretta 
 ;       Greisen (2002, A&A, 395, 1077).    Also see 
-;       http://www.aoc.nrao.edu/~egreisen
+;       http://fits.gsfc.nasa.gov/fits_wcs.html
 ;
 ; CATEGORY:
 ;       Mapping and Auxiliary FITS Routine
 ;
 ; CALLING SEQUENCE:
 ;       WCS_ROTATE, longitude, latitude, phi, theta, crval, 
-;               [LONGPOLE = , /REVERSE, /ORIGIN ]
+;               [LONGPOLE = , LATPOLE = , /REVERSE, /ORIGIN ]
 ;
 ; INPUT PARAMETERS:
 ;       crval - 2 element vector containing standard system coordinates (the 
@@ -51,8 +51,8 @@
 ;               Spherical Cube - TSC)
 ;
 ;       LONGPOLE - native longitude of standard system's North Pole, default
-;               is 180 degrees
-;
+;               for a Zenithal system is 180 degrees
+;       LATPOLE -  native latitude of the standard system's North Pole
 ;       /REVERSE - if set then phi and theta are input parameters and longitude
 ;                  and latitude are computed.    By default, longitude and
 ;                  latitude are input parameters and phi and theta are computed.
@@ -66,17 +66,20 @@
 ;               W. Landsman    May 1998
 ;       Ensure argument of ASIN() is -1<x<-1 after roundoff 
 ;               W. Landsman/R. Arendt  June 2002
-;
+;       Call WCS_GETPOLE, accept LATPOLE keyword, update cylindrical coords
+;               W. Landsman  June 2003 
+;       Don't attempt to rotate NaN values   W. Landsman  May 2004
+;       
 ;-
 
 pro wcs_rotate, longitude, latitude, phi, theta, crval, LONGPOLE = longpole, $
-          REVERSE=reverse, ORIGIN = origin
+          LATPOLE = latpole,REVERSE=reverse, ORIGIN = origin, THETA0 = theta0
 
 
 ; check to see that enough parameters (at least 4) were sent
  if (N_params() lt 5) then begin
     print,'Syntax - WCS_ROTATE, longitude, latitude, phi, theta, crval'
-    print,'                LONGPOLE = , /REVERSE, /ORIGIN' 
+    print,'               LATPOLE =,  LONGPOLE = , /REVERSE, /ORIGIN' 
     return
  endif 
 
@@ -101,24 +104,16 @@ pro wcs_rotate, longitude, latitude, phi, theta, crval, LONGPOLE = longpole, $
  sp = sin(phi_p)
  cp = cos(phi_p)
 
-; If /ORIGIN is set then CRVAL gives the coordinates of the origin in the
+; If Theta0 = 90 then CRVAL gives the coordinates of the origin in the
 ; native system.   This must be converted (using Eq. 7 in Greisen & Calabretta
 ; with theta0 = 0) to give the coordinates of the North pole (alpha_p, delta_p)
 
- if keyword_set(ORIGIN) then begin
-        alpha_0 = double(crval[0])/radeg
-        delta_0 = double(crval[1])/radeg
-        sd = sin(delta_0)
-        cd = cos(delta_0)
-        tand = tan(delta_0)
-        delta_p = acos( sd/cp)               ;Updated May 98
-        if longpole EQ 1.8d2 then alpha_p = alpha_0 else $
-                alpha_p = alpha_0  - atan(sp/cd, -tan(delta_p)*tand )
- endif else begin
+ if theta0 EQ 90 then begin
         alpha_p = double(crval[0])/radeg
         delta_p = double(crval[1])/radeg
- endelse        
-
+ endif else WCS_GETPOLE, crval, longpole, theta0, alpha_p, delta_p, $
+            LATPOLE = latpole
+    
 ; compute useful quantities relating to reference angles
   sa = sin(alpha_p)
   ca = cos(alpha_p)
@@ -134,10 +129,15 @@ pro wcs_rotate, longitude, latitude, phi, theta, crval, LONGPOLE = longpole, $
 ; solve the set of equations for each datum point
 
  if keyword_set(REVERSE) then begin
-        phi1 = double(phi)/radeg
-        theta1 = double(theta)/radeg
+        latitude = phi
+        longitude = theta
+        g = where( finite(phi) and finite(theta), Ng )
+        if Ng EQ 0 then return
+        phi1 = double(phi[g])/radeg
+        theta1 = double(theta[g])/radeg
         r = transpose(r)
  endif else begin
+        phi = longitude
         phi1 = double(longitude)/radeg
         theta1 = double(latitude)/radeg
  endelse
@@ -158,8 +158,8 @@ pro wcs_rotate, longitude, latitude, phi, theta, crval, LONGPOLE = longpole, $
 ; use b0,b1,b2 to compute "native" latitude and longitude
 
  if keyword_set(REVERSE) then begin
-        latitude = asin(b2)*radeg
-        longitude = atan( b1, b0)*radeg
+        latitude[g] = asin(b2)*radeg
+        longitude[g] = atan( b1, b0)*radeg
  endif else begin
         theta = asin(b2)*radeg
         phi = atan( b1, b0)*radeg

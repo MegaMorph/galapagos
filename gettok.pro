@@ -1,64 +1,81 @@
-function gettok,st,char
+function gettok,st,char, exact=exact
 ;+
 ; NAME:
 ;	GETTOK                                    
 ; PURPOSE:
-;	Retrieve the first part of the string up to a specified character
+;	Retrieve the first part of a (vector) string up to a specified character
 ; EXPLANATION:
 ;	GET TOKen - Retrieve first part of string until the character char 
-;	is encountered.
+;	is encountered.   
 ;
 ; CALLING SEQUENCE:
-;	token = gettok( st, char )
+;	token = gettok( st, char, [ /EXACT ] )
 ;
 ; INPUT:
 ;	char - character separating tokens, scalar string
 ;
 ; INPUT-OUTPUT:
-;	st - (scalar) string to get token from (on output token is removed)
+;	st - string to get token from (on output token is removed),
+;            scalar or vector
 ;
 ; OUTPUT:
-;	token - scalar string value is returned 
+;	token - extracted string value is returned, same dimensions as st
+; OPTIONAL INPUT KEYWORD:
+;       /EXACT -  The default behaviour of GETTOK is to remove any leading 
+;              blanks and (if the token is a blank) convert tabs to blanks.    
+;              Set the /EXACT keyword to skip these steps and leave the 
+;              input string unchanged before searching for the  character 
+;              tokens. 
 ;
 ; EXAMPLE:
-;	If ST is 'abc=999' then gettok(ST,'=') would return
-;	'abc' and ST would be left as '999' 
+;	If ST is ['abc=999','x=3.4234'] then gettok(ST,'=') would return
+;	['abc','x'] and ST would be left as ['999','3.4234'] 
 ;
-; NOTES:
-;       A version of GETTOK that accepts vector strings is available for users 
-;       of IDL V5.3 or later from  http://idlastro.gsfc.nasa.gov/ftp/v53/
+; PROCEDURE CALLS:
+;       REPCHR()
 ; HISTORY
 ;	version 1  by D. Lindler APR,86
 ;	Remove leading blanks    W. Landsman (from JKF)    Aug. 1991
 ;	Converted to IDL V5.0   W. Landsman   September 1997
+;       V5.3 version, accept vector input   W. Landsman February 2000
+;       Slightly faster implementation  W. Landsman   February 2001
+;       Added EXACT keyword  W. Landsman March 2004
+;       Assume since V5.4, Use COMPLEMENT keyword to WHERE W. Landsman Apr 2006
 ;-
 ;----------------------------------------------------------------------
   On_error,2                           ;Return to caller
+  compile_opt idl2
+
+   if N_params() LT 2 then begin
+       print,'Syntax - token = gettok( st, char, [ /EXACT ] )'
+       return,-1
+   endif
 
 ; if char is a blank treat tabs as blanks
 
-  tab = string(9b)
-  while strpos(st,tab) GE 0 do begin    ;Search for tabs
-	pos = strpos(st,tab)
-	strput,st,' ',pos
-  endwhile
-
-  st = strtrim(st,1)              ;Remove leading blanks
+ if not keyword_set(exact) then begin
+    st = strtrim(st,1)              ;Remove leading blanks and tabs
+    if char EQ ' ' then begin 
+       tab = string(9b)                 
+       if max(strpos(st,tab)) GE 0 then st = repchr(st,tab,' ')
+    endif
+  endif
+  token = st
 
 ; find character in string
 
   pos = strpos(st,char)
-  if pos EQ -1 then begin         ;char not found?
-	token = st
- 	st = ''
- 	return, token
-  endif
-
+  test = pos EQ -1
+  bad = where(test, Nbad, Complement = good, Ncomplement=Ngood)
+  if Nbad GT 0 then st[bad] = ''
+ 
 ; extract token
-
- token = strmid(st,0,pos)
- len = strlen(st)
- if pos EQ (len-1) then st = '' else st = strmid(st,pos+1,len-pos-1)
+ if Ngood GT 0 then begin
+    stg = st[good]
+    pos = reform( pos[good], 1, Ngood )
+    token[good] = strmid(stg,0,pos)
+    st[good] = strmid(stg,pos+1)
+ endif
 
 ;  Return the result.
 

@@ -1,4 +1,5 @@
-pro mrd_hread, unit, header, status, SILENT = silent, FIRSTBLOCK = firstblock
+pro mrd_hread, unit, header, status, SILENT = silent, FIRSTBLOCK = firstblock, $
+    ERRMSG = errmsg,SKIPDATA=skipdata
 ;+
 ; NAME: 
 ;     MRD_HREAD
@@ -9,7 +10,7 @@ pro mrd_hread, unit, header, status, SILENT = silent, FIRSTBLOCK = firstblock
 ;     Like FXHREAD but also works with compressed Unix files
 ;
 ; CALLING SEQUENCE: 
-;     MRD_HREAD, UNIT, HEADER  [, STATUS, /SILENT ]
+;     MRD_HREAD, UNIT, HEADER  [, STATUS, /SILENT, ERRMSG =, /FIRSTBLOCK ]
 ; INPUTS: 
 ;     UNIT    = Logical unit number of an open FITS file
 ; OUTPUTS: 
@@ -19,14 +20,23 @@ pro mrd_hread, unit, header, status, SILENT = silent, FIRSTBLOCK = firstblock
 ;                 is zero, but is set to -1 if an error occurs, or if the
 ;                 first byte of the header is zero (ASCII null).
 ; OPTIONAL KEYWORD INPUT:
-;      /SILENT - If set, then warning messages about any invalid characters in
-;                the header are suppressed.
 ;      /FIRSTBLOCK - If set, then only the first block (36 lines or less) of 
 ;                the FITS header are read into the output variable.   If only
 ;                size information (e.g. BITPIX, NAXIS) is needed from the
 ;                header, then the use of this keyword can save time.  The 
 ;                file pointer is still positioned at the end of the header,
 ;                even if the /FIRSTBLOCK keyword is supplied.
+;      /SILENT - If set, then warning messages about any invalid characters in
+;                the header are suppressed.
+;     /SKIPDATA - If set, then the file point is positioned at the end of the
+;                HDU after the header is read, i.e. the following data block
+;                is skipped.   Useful, when one wants to the read the headers
+;                of multiple extensions.
+; OPTIONAL OUTPUT PARAMETER:
+;       ERRMSG  = If this keyword is present, then any error messages will be
+;                 returned to the user in this parameter rather than
+;                 depending on the MESSAGE routine in IDL.  If no errors are
+;                 encountered, then a null string is returned.
 ; RESTRICTIONS: 
 ;      The file must already be positioned at the start of the header.  It
 ;      must be a proper FITS file.
@@ -42,55 +52,75 @@ pro mrd_hread, unit, header, status, SILENT = silent, FIRSTBLOCK = firstblock
 ;          not in the last 2880 byte block of the header.  Note that
 ;          such characters are illegal in the header but frequently
 ;          are produced by poor FITS writers.
-;      Converted to IDL V5.0   W. Landsman   September 1997
 ;      Added /SILENT keyword   W. Landsman   December 2000
 ;      Added /FIRSTBLOCK keyword  W. Landsman   February 2003
+;      Added ERRMSG, SKIPDATA keyword W. Landsman          April 2009
 ;-
- 	block = string(replicate(32b, 80, 36))
-		
-	w = [-1]
-        nblock = 0
+  On_error,2
+  compile_opt idl2
+  printerr = not arg_present(errmsg)
+  errmsg = ''
 
-	while w[0] eq -1 do begin
+  block = string(replicate(32b, 80, 36))
 		
-		; Shouldn't get eof in middle of header.
-		if eof(unit) then begin
-			free_lun, unit
-			status = -1
-			return
+  Nend = 0                  ;Signal if 'END     ' statement is found
+  nblock = 0
+
+  while Nend EQ 0 do begin
+		
+; Shouldn't get eof in middle of header.
+       if eof(unit) then begin
+                errmsg = 'EOF encountered in middle of FITS header'
+		if printerr then message,errmsg
+		free_lun, unit
+		status = -1
+		return
 		endif
 		
-		on_ioerror, error_return
-		readu, unit, block
-		on_ioerror, null
+	on_ioerror, error_return
+	readu, unit, block
+	on_ioerror, null
 
-		; Check that there aren't improper null characters
-		; in strings that are causing them to be truncated.
-		; Issue a warning but continue if problems are found.
-		w = where(strlen(block) ne 80)
-		if (w[0] ne -1) then begin
-			if not keyword_set(SILENT) then message, /INF, $
+; Check that there aren't improper null characters in strings that are causing 
+; them to be truncated.   Issue a warning but continue if problems are found.
+
+	w = where(strlen(block) ne 80, Nbad)
+	if (Nbad GT 0) then begin
+		if not keyword_set(SILENT) then message, /INF, $
                             'Warning-Invalid characters in header'
-			block[w] = string(replicate(32b, 80))
-		endif
-		w = where(strmid(block, 0, 8) eq 'END     ')
-                if nblock EQ 0 then begin
-		  if w[0] eq -1 then header = block $
-		                else header = [block[0:w[0]]]
-		  nblock = nblock + 1
-                endif else begin
-                    if not keyword_set(firstblock) then begin
-		          if w[0] eq -1 then header = [header, block] $
-		                        else header = [header, block[0:w[0]]]
-		     endif
-                endelse
+		block[w] = string(replicate(32b, 80))
+	endif	       
+	w = where(strmid(block, 0, 8) eq 'END     ', Nend)
+        if nblock EQ 0 then begin
+               header = Nend GT 0 ?  block[ 0:w[0] ] : block
+	       nblock = nblock + 1
+        endif else $
+	       if not keyword_set(firstblock) then $
+	         header = Nend GT 0 ? [header,block[0:w[0]]] : [header, block]
 			
 	endwhile
 		
+        if keyword_set(skipdata) then begin 
+                bitpix = fxpar(header,'bitpix')
+                naxis  = fxpar(header,'naxis')
+                gcount = fxpar(header,'gcount') 
+                if gcount eq 0 then gcount = 1
+                pcount = fxpar(header,'pcount')
+               
+                if naxis gt 0 then begin 
+                        dims = fxpar(header,'naxis*')           ;read dimensions
+  			ndata = product(dims,/integer)
+                endif else ndata = 0
+                
+                nbytes = long64(abs(bitpix) / 8) * gcount * (pcount + ndata)
+	        mrd_skip, unit, nbytes
+	endif	
 	status = 0
 	return
 error_return:
         status = -1
+	errmsg = 'END Statement not found in FITS header'
+        if printerr then message, 'ERROR ' + errmsg	
 	return
 end
 			

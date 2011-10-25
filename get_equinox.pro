@@ -5,7 +5,7 @@ FUNCTION GET_EQUINOX,HDR,CODE
 ; PURPOSE:
 ;       Return the equinox value from a FITS header.  
 ; EXPLANATION:
-;       Checks for 3 possibilities:
+;       Checks for 4 possibilities:
 ;
 ;       (1)  If the EQUINOX keyword is found and has a numeric value, then this
 ;               value is returned
@@ -13,11 +13,14 @@ FUNCTION GET_EQUINOX,HDR,CODE
 ;               either 2000. or 1950. is returned.
 ;       (3)  If the EQUINOX keyword is not found, then GET_EQUINOX will return
 ;               the EPOCH keyword value.   This usage of EPOCH is disparaged.
+;       (4)  If neither EQUINOX no EPOCH is found, then the RADECSYS keyword
+;               is checked.   If the value is 'ICRS' or 'FK5' then 2000 is
+;               is returned, if it is 'FK4' then 1950 is returned.
 ;
 ;       According Calabretta & Greisen (2002, A&A, 395, 1077) the EQUINOX should
 ;       be written as a numeric value, as in format (1).   However, in older 
 ;       FITS headers, the EQUINOX might have been written using formats (2) or 
-;       (3) 
+;       (3).      
 ; CALLING SEQUENCE:
 ;       Year = GET_EQUINOX( Hdr, [ Code ] )   
 ;
@@ -29,11 +32,13 @@ FUNCTION GET_EQUINOX,HDR,CODE
 ;       Year - Year of equinox in FITS header, numeric scalar
 ; OPTIONAL OUTPUT:
 ;       Code - Result of header search, scalar
-;               -1 - EQUINOX or EPOCH keyword not found in header
+;               -1 - EQUINOX, EPOCH or RADECSYS keyword not found in header
 ;               0 - EQUINOX found as a numeric value
 ;               1 - EPOCH keyword used for equinox (not recommended)
 ;               2 - EQUINOX found as  'B1950'
 ;               3 - EQUINOX found as  'J2000'
+;               4 - EQUINOX derived from value of RADECSYS keyword
+;                   'ICRS', 'FK5' ==> 2000,  'FK4' ==> 1950
 ;
 ; PROCEDURES USED:
 ;       ZPARCHECK, SXPAR()
@@ -51,8 +56,19 @@ FUNCTION GET_EQUINOX,HDR,CODE
  if n EQ 0 then begin
 
      year = sxpar( Hdr, 'EPOCH', Count = n )  ;Check EPOCH if EQUINOX not found
-     if n EQ 1 then code = 1                    ;EPOCH keyword found
-
+     if n EQ 1 then code = 1 else begin       ;EPOCH keyword found
+            
+         sys = sxpar( Hdr, 'RADECSYS', Count = n) 
+              if n EQ 1 then begin
+                  code = 4 
+                  case strmid(sys,0,3) of
+                  'ICR': year = 2000
+                  'FK5': year = 2000
+                  'FK4': year = 1950
+                  else: 
+                  endcase
+               endif
+         endelse
  endif else begin  
 
     tst = strmid(year,0,1)     ;Check for 'J2000' or 'B1950' values

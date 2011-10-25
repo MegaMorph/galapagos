@@ -4,80 +4,77 @@ pro fits_cd_fix,hdr, REVERSE = reverse
 ;    FITS_CD_FIX
 ;
 ; PURPOSE:
-;    Convert between different representations of the CD matrix in a FITS header   
+;    Update obsolete representations of the CD matrix in a FITS header   
 ;
 ; EXPLANATION:
 ;    According the paper, "Representations of Celestial Coordinates in FITS"
-;    by Griesen and Calabretta, available at 
-;    http://www.cv.nrao.edu/fits/documents/wcs/wcs.html
-;    the rotation of an image from standard coordinates is represented by a 
-;    coordinate description (CD) matrix.    However, there have been several
-;    different representations proposed for the CD matrix.   Currently, 
-;    (April 2000), the preferred form is CDn_m (as used in IRAF), which 
-;    contains both rotation & plate scale info.    However,
-;    an earlier draft of Griesen & Calabretta proposed the CD00n00m form.
-;    containing only rotation (and skew) info, with the plate scale stored in
-;    the CDELT* keywords.
-;
-;    FITS_CD_FIX converts from the representation of the CD matrix with an 
-;    underscore (e.g. CDn_m) to that with all integers (e.g. CD00n00m).    Users
-;    will more commonly go in the reverse direction (since the CDn_m format
-;    is now prefered) using the /REVERSE keyword.  
+;    by Calabretta & Greisen (2002, A&A, 395, 1077, available at 
+;    http://fits.gsfc.nasa.gov/fits_wcs.html) the rotation of an image from 
+;    standard coordinates is represented by a coordinate description (CD) 
+;    matrix.    The standard representation of the CD matrix are PCn_m 
+;    keywords, but CDn_m keywords (which include the scale factors) are
+;    also allowed.    However, earliers drafts of the standard allowed the
+;    keywords forms CD00n00m and PC00n00m.      This procedure will convert
+;    FITS CD matrix keywords containing zeros into the standard forms 
+;    CDn_m and PCn_m containing only underscores.
 ;
 ; CALLING SEQUENCE:
-;    FITS_CD_FIX, Hdr, [/REVERSE]
+;    FITS_CD_FIX, Hdr
 ;
 ; INPUT-OUTPUT: 
 ;       HDR - FITS header, 80 x N string array.   If the header does not
-;           contain the CDn_m keywords then it is left unmodified.  Other-
-;           wise the CDn_m keywords are removed and the CD00n00m keywords
-;           inserted (with the same values).
+;           contain 'CD00n00m' or 'PC00n00m' keywords then it is left 
+;           unmodified.  Otherwise, the keywords containing integers are
+;           replaced with those containing underscores.
 ;   
 ; OPTIONAL KEYWORD INPUT
-;      /REVERSE - If this keyword is set and non-zero, then the process is
-;               reversed, i.e. CD00n00m keywords are removed from the header
-;               and CDn_m keywords are inserted.
+;      /REVERSE - this keyword does nothing, but is kept for compatiblity with
+;            earlier versions.
 ; PROCEDURES USED:
-;    SXADDPAR, SXDELPAR, SXPAR
+;    SXADDPAR, SXDELPAR, SXPAR()
 ; REVISION HISTORY:
 ;    Written   W. Landsman             Feb 1990
 ;    Major rewrite                     Feb 1994
 ;    Converted to IDL V5.0   W. Landsman   September 1997
 ;    Use double precision formatting of CD matrix   W. Landsman  April 2000
+;    Major rewrite to convert only to forms recognized by the Greisen
+;       & Calabretta standard   W. Landsman   July 2003
 ;-
  On_error,2
+ compile_opt idl2
 
  if N_params() LT 1 then begin
-        print,'Syntax - FITS_CD_FIX, hdr, [/REVERSE]'
+        print,'Syntax - FITS_CD_FIX, hdr'
         return
  endif
 
  cd00 = ['CD001001','CD001002','CD002001','CD002002']
- cd_ = ['CD1_1','CD1_2','CD2_1','CD2_2']
- comment = [' DL/DX',' DL/DY',' DM/DX',' DM/DY']
+ pc00 = ['PC001001','PC001002','PC002001','PC002002']
 
- if keyword_set( REVERSE ) then begin
+  cd_ = ['CD1_1','CD1_2','CD2_1','CD2_2']
+  pc_ = ['PC1_1','PC1_2','PC2_1','PC2_2']
+ 
 
  for i= 0 ,3 do begin
- cd = sxpar(hdr,cd00[i], COUNT = N )
- if N GE 1 then begin
-        sxaddpar,hdr,cd_[i],cd,comment[i],cd00[i]
+   pc = sxpar(hdr,pc00[i], COUNT = N)
+   if N GE 1 then begin
+        sxaddpar,hdr,pc_[i],pc,'',pc00[i]
+        sxdelpar,hdr,pc00[i]
+        if i EQ 0 then sxaddhist,'FITS_CD_FIX:' + strmid(systime(),4,20) + $
+                  ' PC00n00m keywords changed to PCn_m',hdr
+ endif  else begin
+      
+    cd = sxpar(hdr,cd00[i], COUNT = N )
+    if N GE 1 then begin
+        sxaddpar,hdr,cd_[i],cd,'',cd00[i]
         sxdelpar,hdr,cd00[i]
+        if i EQ 0 then sxaddhist,'FITS_CD_FIX:' + strmid(systime(),4,20) + $
+                  ' CD00n00m keywords changed to CDn_m',hdr
  endif
+ endelse 
  endfor
 
- endif else begin
-
- for i= 0 ,3 do begin
- cd = sxpar(hdr,cd_[i], COUNT = N )
- if N GE 1 then begin
-        sxaddpar,hdr,cd00[i],cd,comment[i],cd_[i]
-        sxdelpar,hdr,cd_[i]
- endif
- endfor
-
- endelse
-
+ 
  return
  end
                                 

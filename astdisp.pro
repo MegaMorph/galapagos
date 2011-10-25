@@ -21,7 +21,7 @@ pro AstDisp, x, y, ra, dec, DN, Coords=Coords, silent=silent
 ;	Y  - The Y pixel coordinate(s), scalar or vector
 ;
 ; OPTIONAL INPUTS:
-;	RA -  Right Ascention in *degrees*, scalar or vector
+;	RA -  Right Ascension in *degrees*, scalar or vector
 ;	DEC - DEClination in *degrees*, scalar or vector (if RA is supplied, DEC must also be supplied)
 ;	DN -  Data Number or Flux values
 ;

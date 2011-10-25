@@ -55,11 +55,12 @@ pro make_astr,astr, CD=cd, DELTA = cdelt, CRPIX = crpix, CRVAL = crval, $
 ;               LATPOLE tag was added.
 ; REVISION HISTORY:
 ;       Written by   W. Landsman              Mar. 1994
-;       Converted to IDL V5.0                 Jun  1998
 ;       Added LATPOLE, all angles double precision  W. Landsman July 2003
 ;       Use PV2 keyword rather than PROJP1, PROJP2 W. Landsman May 2004
+;       Make .CRPIX tag double precision  W. Landsman April 2007
 ;-
  On_error,2
+ compile_opt idl2
 
  if ( N_params() LT 1 ) then begin
 	print,'Syntax - MAKE_ASTR, astr, CD = , DELT =, CRPIX =, CRVAL =, '
@@ -86,7 +87,7 @@ pro make_astr,astr, CD=cd, DELTA = cdelt, CRPIX = crpix, CRVAL = crval, $
  if N_elements(pv2) EQ 0 then pv2 = 0.0D
  
  ASTR = {CD: double(cd), CDELT: double(cdelt), $
-		CRPIX: float(crpix), CRVAL:double(crval), $
+		CRPIX: double(crpix), CRVAL:double(crval), $
 		CTYPE: string(ctype), LONGPOLE: double( longpole[0]),  $
 		LATPOLE: double( latpole[0]), PV2: pv2}  
 

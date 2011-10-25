@@ -1,69 +1,86 @@
-pro adxy, hdr, a, d, x, y, PRINT = print	;Ra, Dec to X,Y
+pro adxy, hdr, a, d, x, y, PRINT = print, ALT = alt        ;Ra, Dec to X,Y
 ;+
 ; NAME:
-;	ADXY
+;       ADXY
 ; PURPOSE:
-;	Use a FITS header to convert celestial (RA,Dec) to pixel coordinates
+;       Use a FITS header to convert astronomical to pixel coordinates
 ; EXPLANATION:
-;	Use an image header to compute X and Y positions, given the
-;	RA and Dec in decimal degrees.  
+;       Use an image header to compute X and Y positions, given the
+;       RA and Dec (or longitude, latitude) in decimal degrees.  
 ;
 ; CALLING SEQUENCE:
-;	ADXY, HDR		;Prompt for Ra and DEC 
-;	ADXY, hdr, a, d, x, y, [ /PRINT ]
+;       ADXY, HDR               ;Prompt for Ra and DEC 
+;       ADXY, hdr, a, d, x, y, [ /PRINT, ALT= ]
 ;
 ; INPUTS:
-;	HDR - FITS Image header containing astrometry parameters
+;       HDR - FITS Image header containing astrometry parameters
 ;
 ; OPTIONAL INPUTS:
-;	A - Right ascension in decimal DEGREES, scalar or vector
-;	D - Declination in decimal DEGREES, scalar or vector        
+;       A - Right ascension in decimal DEGREES, scalar or vector
+;       D - Declination in decimal DEGREES, scalar or vector        
 ;
-;	If A and D are not supplied, user will be prompted to supply
-;	them in either decimal degrees or HR,MIN,SEC,DEG,MN,SC format.
+;       If A and D are not supplied, user will be prompted to supply
+;       them in either decimal degrees or HR,MIN,SEC,DEG,MN,SC format.
 ;
 ; OPTIONAL OUTPUT:
-;	X     - row position in pixels, same number of elements as A and D
-;	Y     - column position in pixels
+;       X     - row position in pixels, same number of elements as A and D
+;       Y     - column position in pixels
 ;
 ;       X and Y will be in standard IDL convention (first pixel is 0) and not
-;       the FITS convention (first pixel is 1).
+;       the FITS convention (first pixel is 1).      As in FITS an integral
+;       value corresponds to the center of a pixel.
 ; OPTIONAL KEYWORD INPUT:
-;	/PRINT - If this keyword is set and non-zero, then results are displayed
-;		at the terminal.
+;       /PRINT - If this keyword is set and non-zero, then results are displayed
+;               at the terminal.
+;       ALT -  single character 'A' through 'Z' or ' ' specifying an alternate 
+;             astrometry system present in the FITS header.    The default is
+;             to use the primary astrometry or ALT = ' '.   If /ALT is set, 
+;             then this is equivalent to ALT = 'A'.   See Section 3.3 of 
+;             Greisen & Calabretta (2002, A&A, 395, 1061) for information about
+;             alternate astrometry keywords.
 ;
 ; OPERATIONAL NOTES:
-;	If less than 5 parameters are supplied, or if the /PRINT keyword is
-;	set, then then the X and Y positions are displayed at the terminal.
+;       If less than 5 parameters are supplied, or if the /PRINT keyword is
+;       set, then the X and Y positions are displayed at the terminal.
 ;
-;	If the procedure is to be used repeatedly with the same header,
-; 	then it would be faster to use AD2XY.
+;       If the procedure is to be used repeatedly with the same header,
+;       then it would be faster to use AD2XY.
 ;
 ; PROCEDURES CALLED:
-;	AD2XY, ADSTRING(), EXTAST, GETOPT()
+;       AD2XY, ADSTRING(), EXTAST, GETOPT(), TEN()
 ;
 ; REVISION HISTORY:
-;	W. Landsman                 HSTX          January, 1988
-;	Use astrometry structure   W. Landsman   January, 1994	
-;	Changed default ADSTRING format   W. Landsman    September, 1995
-;	Converted to IDL V5.0   W. Landsman   September 1997
+;       W. Landsman                 HSTX          January, 1988
+;       Use astrometry structure   W. Landsman   January, 1994  
+;       Changed default ADSTRING format   W. Landsman    September, 1995
+;       Check if latitude/longitude reversed in CTYPE keyword W. L. Feb. 2004
+;       Added ALT keyword   W. Landsman   September 2004
+;       Work for non-spherical coordinate transformation W. Landsman May 2005 
+;       More informative error message if astrometry missing W.L. Feb 2008       
 ;-
+ Compile_opt idl2
  On_error,2
 
  npar = N_params()
 
  if ( npar EQ 0 ) then begin
-	print,'Syntax - adxy, hdr, [a, d, x, y ]'
+        print,'Syntax - ADXY, hdr, [a, d, x, y, /PRINT, ALT= ]'
         print,'If supplied, A and D must be in decimal DEGREES'
-	return
+        return
  endif                                                                  
  
- extast, hdr, astr, noparams   ;Extract astrometry from FITS header
- if ( noparams LT 0 ) then return 
+ extast, hdr, astr, noparams, ALT = alt   ;Extract astrometry from FITS header
+  if ( noparams LT 0 ) then begin
+        if N_elements(alt) EQ 0 then $
+        message,'ERROR - No astrometry info in supplied FITS header' $
+	else  message, $
+	'ERROR  - No alt=' + alt + ' astrometry info in supplied FITS header'
+  endif	
+
  
  if npar lt 3 then begin
-   RD: print,'Coordinates must be entered with either 2 or 6 parameters'
-   print,'Either RA,DEC or  HR,MIN,SEC,DEG,MIN,SEC
+   RD: print,'Coordinates must be entered in either decimal (2 parameter) ' 
+   print,'  or sexigesimal (6 parameter) format'
    inp = ''
    read,'ADXY: Enter coordinates: ',inp
    radec = getopt(inp,'F')
@@ -73,11 +90,11 @@ pro adxy, hdr, a, d, x, y, PRINT = print	;Ra, Dec to X,Y
          end
       6: begin
          a = ten(radec[0:2]*15.) & d = ten(radec[3:5])
-	 end
+         end
    else: begin
-         print,string(7b),'ADXY: ERROR - Illegal Format'
-	 return
-	 end
+         print,'ADXY: ERROR - Either 2 or 6 parameters must be entered'
+         return
+         end
    endcase 
  endif
 
@@ -87,12 +104,31 @@ pro adxy, hdr, a, d, x, y, PRINT = print	;Ra, Dec to X,Y
  endcase
 
  if (npar lt 5) or keyword_set( PRINT ) then begin
-	npts = N_elements(a)
+        npts = N_elements(a)
+        tit = strmid(astr.ctype,0,4)
+         spherical = strmid(astr.ctype[0],4,1) EQ '-'
+	if spherical then begin
         fmt = '(2F9.4,A,2X,2F8.2)'
         str = adstring(a,d,1)
-	print,'    RA       DEC       RA         DEC          X       Y'
-	for i = 0l, npts-1 do $
-	print,FORMAT = fmt, a[i], d[i], str[i], x[i], y[i] 
+        tit = strmid(astr.ctype,0,4)
+        tit = repchr(tit,'-',' ')
+        if (tit[0] EQ 'DEC ') or (tit[0] EQ 'ELAT') or $
+           (tit[0] EQ 'GLAT') then tit = rotate(tit,2)
+        print,'    ' + tit[0] + '    ' + tit[1] + '       ' + tit[0]  + $
+              '         ' + tit[1]  + '        X       Y'
+        for i = 0l, npts-1 do $
+        print,FORMAT = fmt, a[i], d[i], str[i], x[i], y[i] 
+        endif else begin
+	 unit1 = strtrim( sxpar( hdr, 'CUNIT1'+alt,count = N_unit1),2)
+	 if N_unit1 EQ 0 then unit1 = ''
+	 unit2 = strtrim( sxpar( hdr, 'CUNIT2'+alt,count = N_unit2),2)
+	 if N_unit2 EQ 0 then unit2 = ''
+	 print,'   ' + tit[0] + '     ' + tit[1] + '         X       Y'
+	 if (N_unit1 GT 0) or (N_unit2 GT 0) then $
+	     print,unit1 ,unit2,f='(t5,a,t14,a)'
+	     for i=0l, npts-1 do $
+	 print, a[i], d[i], x[i], y[i], f='(2F9.4,2X,2F8.2)'
+       endelse
   endif
  
  return

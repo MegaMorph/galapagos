@@ -11,7 +11,7 @@ function ZBRENT, x1, x2, FUNC_NAME=func_name,    $
 ;     Press et al. (1992), Section 9.3
 ;
 ; CALLING:
-;       x_zero = ZBRENT( x1, x2, FUNC_NAME="name" )
+;       x_zero = ZBRENT( x1, x2, FUNC_NAME="name", MaX_Iter=, Tolerance= )
 ;
 ; INPUTS:
 ;       x1, x2 = scalars, 2 points which bracket location of function zero,
@@ -26,7 +26,7 @@ function ZBRENT, x1, x2, FUNC_NAME=func_name,    $
 ;                       F = scalar value of function at px,
 ;                           should be same precision (single/double) as input.
 ;
-; OPTIONAL INPUT KEYWORD:
+; OPTIONAL INPUT KEYWORDS:
 ;       MAX_ITER = maximum allowed number iterations, default=100.
 ;       TOLERANCE = desired accuracy of minimum location, default = 1.e-3.
 ;
@@ -47,27 +47,25 @@ function ZBRENT, x1, x2, FUNC_NAME=func_name,    $
 ;       Written, Frank Varosi NASA/GSFC 1992.
 ;       FV.1994, mod to check for single/double prec. and set zeps accordingly.
 ;       Converted to IDL V5.0   W. Landsman   September 1997
+;       Use MACHAR() to define machine precision   W. Landsman September 2002
 ;-
         if N_params() LT 2 then begin
-             print,'Syntax - result = ZBRENT( x1, x2, FUNC_NAME = ,
-             print,'                  [ MAX_ITER = , TOLERANCE = ])
+             print,'Syntax - result = ZBRENT( x1, x2, FUNC_NAME = ,'
+             print,'                  [ MAX_ITER = , TOLERANCE = ])'
              return, -1
         endif
 
         if N_elements( TOL ) NE 1 then TOL = 1.e-3
         if N_elements( maxit ) NE 1 then maxit = 100
 
-        sz1 = size( x1 )
-        sz2 = size( x2 )
-
-        if (sz1[sz1[0]+1] EQ 5) OR (sz2[sz2[0]+1] EQ 5) then begin
+        if size(x1,/TNAME) EQ 'DOUBLE' OR size(x2,/TNAME) EQ 'DOUBLE' then begin
                 xa = double( x1 )
                 xb = double( x2 )
-                zeps = 1.d-14   ;machine epsilon in double precision.
+                zeps = (machar(/DOUBLE)).eps   ;machine epsilon in double.
           endif else begin
                 xa = x1
                 xb = x2
-                zeps = 1.e-7    ;machine epsilon, smallest add, single prec.
+                zeps = (machar(/DOUBLE)).eps   ;machine epsilon, in single 
            endelse
 
         fa = call_function( func_name, xa )

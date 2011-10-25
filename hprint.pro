@@ -3,11 +3,12 @@ pro hprint, h, firstline
 ; NAME:
 ;       HPRINT
 ; PURPOSE:
-;       Print a FITS header (or other string array) one line at a time
+;       Display a FITS header (or other string array) 
 ; EXPLANATION:
-;       The string array is  printed 1 line at a time.
-;       Needed because IDL will add an extra space to the 80 character
-;       FITS lines on TTY terminals, causing a space to appear between lines.
+;       On a GUI terminal, the string array is displayed using XDISPSTR.    
+;       If printing at a non-GUI terminal, the string array is  printed 1 line 
+;       at a  time, to make sure that each element of the string array is 
+;       displayed on a separate line. 
 ;
 ; CALLING SEQUENCE:
 ;       HPRINT, h, [ firstline ]
@@ -22,7 +23,8 @@ pro hprint, h, firstline
 ;               line to be printed is counted backward from the last line.
 ;
 ; NOTES:
-;       HPRINT has the following differences from the intrinsic PRINT procedure
+;       When displaying at the terminal, HPRINT has the following differences 
+;       from the intrinsic PRINT procedure
 ;
 ;       (1) Arrays are printed one line at a time to avoid a space between 80
 ;               character lines
@@ -48,8 +50,13 @@ pro hprint, h, firstline
 ;       Modified for when STDOUT is not a TTY W. Landsman  September 1995
 ;       Converted to IDL V5.0   W. Landsman   September 1997
 ;       Fixed printing in IDLDE, C. Gehman      August, 1998
+;       Skip PRINTF if IDL in demo mode  W. Landsman  October 2004
+;       Fixed bug on non-terminals, William Thompson, 18-Oct-2004
+;       Assume since V5.4 Use BREAK instead of GOTO  W. Landsman Apr 2006
+;       Call XDISPSTR on a GUI terminal  W. Landsman Jun 2006
 ;-
   On_error,2                        ;Return to Caller
+  compile_opt idl2
 
   if N_params() EQ 0 then begin
        print,'Syntax - HPRINT, h, [ firstline ]'
@@ -59,29 +66,35 @@ pro hprint, h, firstline
   n = N_elements(h)
   if ( n EQ 0 ) then    $               ;Make sure input array is defined
      message,'String array (first parameter) not defined'
-  stdout = fstat(-1)
 
-  if stdout.isatty then $       ;Open with /MORE if a TTY
-        openw, outunit, filepath(/TERMINAL), /MORE, /GET_LUN  
-
-  if N_elements( firstline ) EQ 0 then firstline = 1
+   if N_elements( firstline ) EQ 0 then firstline = 1
   if ( firstline[0] LT 0 ) then firstline = ( n + firstline[0]) > 1 < n  $
                                 else firstline = firstline[0] > 1 < n
 
+  stdout = fstat(-1)
+  if stdout.isagui then begin 
+           xdispstr,h,tit='HPRINT',top_line=firstline-1
+           return
+  endif	   
+  if lmgr(/demo) then begin      ;in demo mode?
+      for i=firstline-1, n-1 do print,h[i]
+      return
+  endif
+
+
 ; Now print the array one line at a time
-
- if stdout.isatty then begin
-
-  for i = firstline-1, n-1 do begin
+  if (stdout.isatty) then begin  ;Open with /MORE if a TTY
+      
+      openw, outunit, filepath(/TERMINAL), /MORE, /GET_LUN  
+      for i = firstline-1, n-1 do begin
 
      printf, outunit, strtrim( h[i] )
-     if !ERR EQ 1 then goto, DONE      ;User entered "Q" in response to /more
+     if !ERR EQ 1 then BREAK     ;User entered "Q" in response to /more
 
   endfor
+  free_lun, outunit
 
-DONE:  free_lun, outunit
-
- endif else printf,-1,strtrim(h[firstline:*]), FORMAT='(A)'
+ endif else printf,-1,strtrim(h[firstline-1:*]), FORMAT='(A)'
 
   return
   end
