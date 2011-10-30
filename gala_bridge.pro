@@ -2,15 +2,15 @@ PRO gala_bridge, filein, fit_bd = fit_bd
 ;variables provided in filein:
 ;cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
 ;stamp_param_file, mask_file, im_file, obj_file, 
-;constr_file, out_file, fittab, nband, outpath_file
+;constr_file, out_file, table, nband, outpath_file
 ;orgpath_band, orgpath_pre, orgpath_galfit, orgpath_file,
 ;orgpath_file_no_band, seed
 
 restore, filein
 ; THIS TABLE SHOULD BE HANDED OVER THROUGH THE SAVE FILE, not through
 ; a .ttmp file
-if not keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
-if keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.bd.ttmp', 1)
+;if not keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
+;if keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.bd.ttmp', 1)
 
 for b=1,nband do begin
 ;read in image and weight (takes few sec)
@@ -82,7 +82,7 @@ for b=1,nband do begin
      setup.wstep, setup.gap, setup.nslope, sky_file[b], $
      setup.galfit_out, setup.outcat, setup.outparam, $
      setup.stampfile, global_sky, global_sigsky, $
-     setup.convbox, nums, frames, setup.galexe, fittab, b, $
+     setup.convbox, nums, frames, setup.galexe, b, $
      orgpath_pre, outpath_file, outpath_file_no_band, nband, $
      xarr, yarr, seed
 ;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§

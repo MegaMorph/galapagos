@@ -964,7 +964,7 @@ FUNCTION sersic_flux, _r, _phi, _q, _f0, _re, _n
 END
 
 PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
-                     nums, frames, fit_table
+                     nums, frames
 ;power: convert flux_radius to proper half-light radius of a spheroid (1.4)
 ;t: sextractor table (ASSUMES THAT ALL IMAGE POSITIONS ARE ON THE SAME WCS
 ;FRAME)
@@ -977,20 +977,20 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
   re = t.flux_radius^power
   mag = t.mag_best
   theta_image = t.theta_world-t[c].theta_world+t[c].theta_image
-  IF n_elements(fit_table) GT 0 THEN BEGIN
+  IF n_elements(table) GT 0 THEN BEGIN
       
 ; try using 'match'
-      ident1 = strtrim(fit_table.org_image,2)+':'+strtrim(fit_table.number,2)
+      ident1 = strtrim(table.org_image,2)+':'+strtrim(table.number,2)
       ident2 = strtrim(t.frame[0],2)+':'+strtrim(t.number,2)
       match, ident1, ident2, id_idx1, id_idx2
-      wh_re_gt0 = where(fit_table[id_idx1].re_galfit GE 0,cntregt0)
+      wh_re_gt0 = where(table[id_idx1].re_galfit GE 0,cntregt0)
       if cntregt0 gt 0 then begin
-          n[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].n_galfit
-          q[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].q_galfit
-          re[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].re_galfit
-          mag[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].mag_galfit
+          n[id_idx2[wh_re_gt0]] = table[id_idx1[wh_re_gt0]].n_galfit
+          q[id_idx2[wh_re_gt0]] = table[id_idx1[wh_re_gt0]].q_galfit
+          re[id_idx2[wh_re_gt0]] = table[id_idx1[wh_re_gt0]].re_galfit
+          mag[id_idx2[wh_re_gt0]] = table[id_idx1[wh_re_gt0]].mag_galfit
           theta_image[id_idx2[wh_re_gt0]] = theta_image[id_idx2[wh_re_gt0]]-t[c].theta_image+ $
-            90+fit_table[id_idx1[wh_re_gt0]].pa_galfit
+            90+table[id_idx1[wh_re_gt0]].pa_galfit
       endif
       wh_theta_gt0 = where(theta_image GT 180, cnt_gt)
       if cnt_gt gt 0 then theta_image[wh_theta_gt0] -= 180
@@ -1111,7 +1111,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
                  scale, offset, power, cut, files, psf, dstep, wstep, gap, $
                  nslope, sky_file, out_file, out_cat, out_param, out_stamps, $
                  global_sky, global_sigsky, conv_box, nums, frames, galexe, $
-                 fit_table, b, orgpath_pre, outpath_file, outpath_file_no_band, $
+                 b, orgpath_pre, outpath_file, outpath_file_no_band, $
                  nband, xarr, yarr, seed
 ;current_obj: idx of the current object in table
 ;table: sextractor table (frame of current object and surrounding
@@ -1176,7 +1176,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ; the run on the reference band.
    if b eq 1 then $
      contrib_targets, exptime[b], zero_pt[b], scale, offset, power, table, $
-     current_obj, cut, nums, frames, fit_table
+     current_obj, cut, nums, frames
    
    contrib_sky = 1e30
    
@@ -1728,7 +1728,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
                     constr_file, mask_file, psf_file, out_file, sky_file, $
                     conv_box, zero_pt, plate_scl, num_contrib, frame_contrib, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
-                    conminm, conmaxm, fit_table, setup_version, nband, $
+                    conminm, conmaxm, setup_version, nband, $
                     outpre
 ;   setup_version = 4
 ;objects contains an index of secondary sources
@@ -2171,10 +2171,10 @@ forward_function read_sersic_results_old_galfit
            fix = ['0', '0', '0', '0', '0', '0', '0']
        ENDIF ELSE BEGIN
 ;the source might be in the fit_table
-           i_fit = where(fit_table.number EQ num_contrib[i] AND $
-                         fit_table.org_image EQ frame_contrib[i], ct)
+           i_fit = where(table.number EQ num_contrib[i] AND $
+                         table.org_image EQ frame_contrib[i], ct)
            IF ct GT 0 THEN BEGIN
-               IF fit_table[i_fit].re_galfit GE 0 THEN BEGIN
+               IF table[i_fit].re_galfit GE 0 THEN BEGIN
                    
 ; reading in file works, because it returns the correct FORMAT, but
 ; with useless values in it. As they will be replaced here, that does
@@ -2193,26 +2193,22 @@ forward_function read_sersic_results_old_galfit
                    par.y_galfit_cheb = fltarr(nband)
                    par.y_galfit_cheb[0] = table[i_con].y_image
 ; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
-                   par.mag_galfit = fit_table[i_fit].mag_galfit
-                   par.mag_galfit_band = fit_table[i_fit].mag_galfit_band
-                   par.mag_galfit_cheb = fit_table[i_fit].mag_galfit_cheb
-                   par.re_galfit = fit_table[i_fit].re_galfit
-                   par.re_galfit_band = fit_table[i_fit].re_galfit_band
-                   par.re_galfit_cheb = fit_table[i_fit].re_galfit_cheb
-                   par.n_galfit = fit_table[i_fit].n_galfit
-                   par.n_galfit_band = fit_table[i_fit].n_galfit_band
-                   par.n_galfit_cheb = fit_table[i_fit].n_galfit_cheb
-                   par.q_galfit = fit_table[i_fit].q_galfit
-                   par.q_galfit_band = fit_table[i_fit].q_galfit_band
-                   par.q_galfit_cheb = fit_table[i_fit].q_galfit_cheb
-                   par.pa_galfit = fit_table[i_fit].pa_galfit
-                   par.pa_galfit_band = fit_table[i_fit].pa_galfit_band
-                   par.pa_galfit_cheb = fit_table[i_fit].pa_galfit_cheb
+                   par.mag_galfit = table[i_fit].mag_galfit
+                   par.mag_galfit_band = table[i_fit].mag_galfit_band
+                   par.mag_galfit_cheb = table[i_fit].mag_galfit_cheb
+                   par.re_galfit = table[i_fit].re_galfit
+                   par.re_galfit_band = table[i_fit].re_galfit_band
+                   par.re_galfit_cheb = table[i_fit].re_galfit_cheb
+                   par.n_galfit = table[i_fit].n_galfit
+                   par.n_galfit_band = table[i_fit].n_galfit_band
+                   par.n_galfit_cheb = table[i_fit].n_galfit_cheb
+                   par.q_galfit = table[i_fit].q_galfit
+                   par.q_galfit_band = table[i_fit].q_galfit_band
+                   par.q_galfit_cheb = table[i_fit].q_galfit_cheb
+                   par.pa_galfit = table[i_fit].pa_galfit
+                   par.pa_galfit_band = table[i_fit].pa_galfit_band
+                   par.pa_galfit_cheb = table[i_fit].pa_galfit_cheb
                    
-;               par = [table[i_con].x_image, table[i_con].y_image, $
-;                      fit_table[i_fit].mag_galfit, $
-;                      fit_table[i_fit].re_galfit, fit_table[i_fit].n_galfit, $
-;                      fit_table[i_fit].q_galfit, fit_table[i_fit].pa_galfit]
 ;if so fixate the fit
                    fix = ['0', '0', '0', '0', '0', '0', '0']
                ENDIF ELSE BEGIN
@@ -2310,7 +2306,7 @@ forward_function read_sersic_results_old_galfit
            IF par.x_galfit GT 1 AND par.x_galfit LT xmax-1 AND $
              par.y_galfit GT 1 AND par.y_galfit LT ymax-1 THEN BEGIN
                IF ct GT 0 THEN BEGIN
-                   IF fit_table[i_fit].re_galfit GE 0 THEN $
+                   IF table[i_fit].re_galfit GE 0 THEN $
                      fix = ['1', '1', '0', '0', '0', '0', '0'] $
                    ELSE fix = ['1', '1', '1', '1', '1', '1', '1']
                ENDIF ELSE fix = ['1', '1', '1', '1', '1', '1', '1']
@@ -3287,7 +3283,7 @@ FUNCTION read_sersic_results_old_galfit, obj, bd=bd
    return, feedback
 END
 
-PRO update_table, fittab, table, i, out_file, obj_file, sky_file, nband, setup, final = final, bd=bd
+PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = final, bd=bd
 ; HAS TO BE CHANGED FOR POSSIBILITY FOR B/D DECOMPOSITION
 forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
@@ -3295,12 +3291,12 @@ forward_function read_sersic_results_old_galfit
 ; (e.g. crashed)
     IF setup.version ge 4 then res = read_sersic_results(out_file, nband, bd=bd)
     IF setup.version lt 4 then res = read_sersic_results_old_galfit(out_file, bd=bd)      
-    name_fittab = tag_names(fittab)
+    name_table = tag_names(table)
     name_res = tag_names(res)
 if keyword_set(bd) then stop
     
     for j=0,n_elements(name_res)-1 do begin
-        tagidx=where(name_fittab eq name_res[j], ct)
+        tagidx=where(name_table eq name_res[j], ct)
         type=size(res.(j))
 ; if keyword is INT
         if type[1] eq 2 or type[1] eq 3 then begin
@@ -3323,11 +3319,11 @@ if keyword_set(bd) then stop
             if ct gt 0 then res[wh].(j)='null'
         ENDIF
 ;          if ct gt 0 then print, 'changed'
-        fittab[i].(tagidx) = res.(j)          
+        table[i].(tagidx) = res.(j)          
     ENDFOR
 
-    if not keyword_set(bd) then fittab[i].flag_galfit = res.flag_galfit    
-    if keyword_set(bd) then fittab[i].flag_galfit_bd = res.flag_galfit_bd    
+    if not keyword_set(bd) then table[i].flag_galfit = res.flag_galfit    
+    if keyword_set(bd) then table[i].flag_galfit_bd = res.flag_galfit_bd    
 
     
     if not file_test(out_file) then begin
@@ -3335,21 +3331,17 @@ if keyword_set(bd) then stop
 ; object has not yet been started.
             if not keyword_set(bd) then begin
                 table[i].flag_galfit = 0
-                fittab[i].flag_galfit = 0
             endif
             if keyword_set(bd) then begin
                 table[i].flag_galfit_bd = 0
-                fittab[i].flag_galfit_bd = 0
             endif
         endif else begin
 ; object has been started and crashed (or is currently doing sky determination)
             if not keyword_set(bd) then begin
                 table[i].flag_galfit = 1
-                fittab[i].flag_galfit = 1
             endif
             if keyword_set(bd) then begin
                 table[i].flag_galfit_bd = 1
-                fittab[i].flag_galfit_bd = 1
             endif
 ; read all sky files (for the case that the fit crashed and the output
 ; file does not exist. Useful to find systematic crashes with sky value)
@@ -3361,9 +3353,9 @@ if keyword_set(bd) then stop
                         openr, 99, sky_file[b]
                         readf, 99, sky, dsky, minrad, maxrad, flag
                         close, 99
-                        fittab[i].sky_galfit_band[b-1] = round_digit(sky,3)
+                        table[i].sky_galfit_band[b-1] = round_digit(sky,3)
                         if b eq 1 then $
-                          fittab[i].sky_galfit = round_digit(sky,3)
+                          table[i].sky_galfit = round_digit(sky,3)
                     endif
                 endfor
             ENDIF
@@ -3372,18 +3364,18 @@ if keyword_set(bd) then stop
 
 ; IN B/D THIS BIT WILL BE DONE IN EACH READIN, BUT RESULT IS EQUIVALENT
         if keyword_set(final) then begin
-            fittab[i].org_image = table[i].tile
-            fittab[i].org_image_band = table[i].tile
+            table[i].org_image = table[i].tile
+            table[i].org_image_band = table[i].tile
         ENDIF
-        if not keyword_set(final) then fittab[i].org_image = table[i].frame[0]
+        if not keyword_set(final) then table[i].org_image = table[i].frame[0]
         
         if not keyword_set(bd) then begin
             table[i].flag_galfit = 2
-            fittab[i].file_galfit = out_file
+            table[i].file_galfit = out_file
         ENDIF
         if keyword_set(bd) then begin
             table[i].flag_galfit_bd = 2
-            fittab[i].file_galfit_bd = out_file
+            table[i].file_galfit_bd = out_file
         ENDIF
     ENDELSE
 END
@@ -3672,12 +3664,13 @@ stop
        fittab.q_galfit = -99.
        fittab.q_galfit_band = fltarr(nband)-99.
 
+delvarx, table
 table = fittab
 delvarx, fittab
 
 stop
 ; is writing out this table necessary? Or can I pass on the needed table through the save file without creating overhead and slow the code down?
-       mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
+;       mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
 ;find the image files for the sources
        orgim = setup.images
        orgwht = setup.weights
@@ -3729,7 +3722,7 @@ stop
           
 ;check if current object exists
 loopstart:
-          todo=where(fittab.flag_galfit eq 0)
+          todo=where(table.flag_galfit eq 0)
           if todo[0] eq -1 then begin
               FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
               goto, loopend
@@ -3761,7 +3754,7 @@ loopstart2:
                   for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
  
 ;check if file was done successfully or bombed
-                  update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup
+                  update_table, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup
 ;else table is automatically filled with standard values
                   
 ;clear object
@@ -3820,7 +3813,7 @@ loopstart2:
                   IF file_test(obj_file) THEN BEGIN
 ;                      print, obj_file+' found.'
                       print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
-                      update_table, fittab, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup
+                      update_table, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup
                       IF n_elements(todo) ne 1 then goto, loopstart
                       IF n_elements(todo) eq 1 then goto, loopend
                   ENDIF
@@ -3830,7 +3823,6 @@ loopstart2:
               bridge_obj[free[0]] = cur
               bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
               table[cur].flag_galfit = 1
-              fittab[cur].flag_galfit = 1
               print, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(sexcat),2)+'   '
 ;              print, obj_file
               if keyword_set(plot) then begin
@@ -3880,9 +3872,10 @@ loopstart2:
 ;            delvarx, randxxx 
               seed=table[cur].number
 ; create sav file for gala_bridge to read in
+; OLD FILE: FITTAB SAVED, TABLE READ IN IN GALA_BRIDGE! WHYH??
               save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
                 sky_file, stamp_param_file, mask_file, im_file, obj_file, $
-                constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
+                constr_file, out_file, table, nband, orgpath_pre, outpath_file, $
                 outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
                 orgpath_band, orgpath_file, seed,$
                 filename=out_file+'.sav'
@@ -3945,21 +3938,20 @@ loopend:
             
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
-            update_table, fittab, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup
+            update_table, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
          ENDFOR
       ENDIF
 
-
 ;==============================================================================
 ; start B/D fitting.
-; a) optimized queue is not needed, all the single sersic fits already exist and should be read in
-; b) sky estimations can be re-used.
-; c) decision on neighbours could be re-used, too. Information need to be
+; ?? a) optimized queue is not needed, all the single sersic fits already exist and should be read in
+; !! b) sky estimations can be re-used.
+; !! c) decision on neighbours could be re-used, too. Information need to be
 ; written out into a file, though. Or decision is reconsidered, as
 ; object parameters have changed and decision might be a different one.
-; d) Neighbours will only be deblended as single sersics!
+; ?? d) Neighbours will only be deblended as single sersics!
   IF setup.dobd THEN BEGIN
 ;goto, jump_over_this
 goto, jump_over_this2
@@ -4092,8 +4084,11 @@ delvarx, out
       fittab.n_galfit_band_b = fltarr(nband)-99.
       fittab.q_galfit_b = -99.
       fittab.q_galfit_band_b = fltarr(nband)-99.
-      
-      mwrfits, table, setup.outdir+setup.sexcomb+'.bd.ttmp', /create
+
+table=fittab
+delvarx,fittab
+
+;      mwrfits, table, setup.outdir+setup.sexcomb+'.bd.ttmp', /create
 ;find the image files for the sources
       orgim = setup.images
       orgwht = setup.weights
@@ -4133,7 +4128,7 @@ stop
       
       if keyword_set(plot) then begin
           loadct,39,/silent
-          plot, fittab.alpha_j2000, fittab.delta_j2000, psym=3, ystyle=1, xstyle=1
+          plot, table.alpha_j2000, table.delta_j2000, psym=3, ystyle=1, xstyle=1
       endif
       
 ;loop over all objects
@@ -4153,7 +4148,7 @@ loopstart_bd:
 ; only successful single sersic object??
 ; todo eq flag_galfit eq 2 and flag_galfit_bd eq 0?????
 
-          todo=where(fittab.flag_galfit_bd eq 0)
+          todo=where(table.flag_galfit_bd eq 0)
           if todo[0] eq -1 then begin
               FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
               goto, loopend_bd
@@ -4186,7 +4181,7 @@ loopstart2_bd:
 
 ;check if file was done successfully or bombed (done in update_table)
 stop
-                  update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup, /bd
+                  update_table, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup, /bd
 stop
 ;else table is automatically filled with standard values
                   
@@ -4237,7 +4232,6 @@ stop
 ;              if table[cur].class_star gt 0.8 then begin
 ;                  print, strtrim(cur,2)+' SEEMS TO BE A STAR! trying next object'
 ;                  table[cur].flag_galfit_bd = -1
-;                  fittab[cur].flag_galfit_bd = -1
 ;                  goto, loopstart_bd
 ;              ENDIF
 
@@ -4256,7 +4250,7 @@ stop
                       print, obj_file+' found.'
                       print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
 stop
-                      update_table, fittab, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup, /bd
+                      update_table, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup, /bd
 stop
                       IF n_elements(todo) ne 1 then goto, loopstart_bd
                       IF n_elements(todo) eq 1 then goto, loopend_bd
@@ -4267,7 +4261,6 @@ stop
               bridge_obj[free[0]] = cur
               bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
               table[cur].flag_galfit_bd = 1
-              fittab[cur].flag_galfit_bd = 1
               print, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit_bd ge 1)),2)+' of '+strtrim(n_elements(table.number),2)+'   '
               if keyword_set(plot) then begin
                   plot, table.alpha_J2000,table.delta_J2000, psym=3, ystyle=1, xstyle=1
@@ -4318,7 +4311,7 @@ stop
 ; create sav file for gala_bridge to read in
               save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
                 sky_file, stamp_param_file, mask_file, im_file, obj_file, $
-                constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
+                constr_file, out_file, table, nband, orgpath_pre, outpath_file, $
                 outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
                 orgpath_band, orgpath_file, seed,$
                 filename=out_file+'.sav'
@@ -4373,7 +4366,7 @@ loopend_bd:
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
 stop
-            update_table, fittab, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup, /bd
+            update_table, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup, /bd
 stop
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
