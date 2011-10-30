@@ -3656,7 +3656,8 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ; this table contains additional columns, but only brightes br% of
 ; objects
 ; this line only created an empty structure, no values in yet!
-       fittab = read_sex_param(outpath_file[0,0]+setup.outparam, nbr, $
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       fittab = read_sex_param(outpath_file[0,0]+setup.outparam, n_elements(sexcat.mag_best), $
                                add_column = addcol)
 stop
 ; fittab does NOT contain FRAME (which is needed quite often!) Other
