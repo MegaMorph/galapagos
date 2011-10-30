@@ -3634,7 +3634,6 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        br = sort(sexcat.mag_best)
        nbr = round(n_elements(sexcat.mag_best)*setup.bright/100.)
 
-; this table contains all objects, but only sextracor parameters.
 ; reordering objects to be in brightness order
        table = sexcat[br]
 ; make table.frame multi-wavelength-ready to be passed onto gala_bridge
@@ -3653,10 +3652,9 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        table=table2
        delvarx, table2
        
-; this table contains additional columns, but only brightes br% of
-; objects
 ; this line only created an empty structure, no values in yet!
-;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+; fittab read in because for now this seems to be easier. Will be renamed to 'table' below.
+; could and should be cleaned up at some point !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        fittab = read_sex_param(outpath_file[0,0]+setup.outparam, n_elements(sexcat.mag_best), $
                                add_column = addcol)
 stop
@@ -3674,7 +3672,11 @@ stop
        fittab.q_galfit = -99.
        fittab.q_galfit_band = fltarr(nband)-99.
 
+table = fittab
+delvarx, fittab
+
 stop
+; is writing out this table necessary? Or can I pass on the needed table through the save file without creating overhead and slow the code down?
        mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
 ;find the image files for the sources
        orgim = setup.images
