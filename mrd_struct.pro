@@ -124,6 +124,7 @@ function mrd_struct, names, values, nrow, no_execute = no_execute,  $
 		dimen_string = gettok(value,')')	
 		dimen = long(strsplit(dimen_string,',',/extract))
 		case type of
+		    'strarr': v = make_array(dimen=dimen,/string)
 		    'bytarr': v = make_array(dimen=dimen,/byte)
 		    'intarr': v = make_array(dimen=dimen,/int)
 		    'fltarr': v = make_array(dimen=dimen,/float)
