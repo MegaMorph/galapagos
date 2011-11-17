@@ -19,9 +19,9 @@ PRO define_addcol, addcol, nband, pre, cheb
     bandstring = 'strarr('+strtrim(nband,2)+')'
     bandfloat = 'fltarr('+strtrim(nband,2)+')'
     addcol = [['FLAG_GALFIT', '0'], $
-              ['NEIGH_GALFIT', '0'], ['CHISQ_GALFIT','0'], $
+              ['NEIGH_GALFIT', '0'], ['CHISQ_GALFIT','0.'], $
               ['NDOF_GALFIT','0'], ['NFREE_GALFIT','0'], $
-              ['NFIX_GALFIT','0'], ['CHI2NU_GALFIT','0'], $
+              ['NFIX_GALFIT','0'], ['CHI2NU_GALFIT','0.'], $
               ['ORG_IMAGE', '" "'], ['FILE_GALFIT', '" "'], $
               ['X_GALFIT', '0.'], ['XERR_GALFIT', '0.'], $
               ['X_GALFIT_CHEB', hlpcheb0], ['XERR_GALFIT_CHEB', hlpcheb0], $
