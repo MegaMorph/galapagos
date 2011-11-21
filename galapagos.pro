@@ -2811,9 +2811,13 @@ END
 
 FUNCTION read_sersic_results, obj, nband
    IF file_test(obj[0]) THEN BEGIN
-       result=mrdfits(obj[0], 'FINAL_BAND',/silent)
-       res_cheb=mrdfits(obj[0], 'FINAL_CHEB',/silent)
-       hd = headfits(obj[0], exten = nband+1)
+       result = mrdfits(obj[0], 'FINAL_BAND',/silent)
+       res_cheb = mrdfits(obj[0], 'FINAL_CHEB',/silent)
+; using newer versions of Galfit, some informations should be read
+; from tables, not header!
+       band_info = mrdfits(obj[0], 'BAND_INFO',/silent)
+       fit_info = mrdfits(obj[0], 'FIT_INFO',/silent)
+;       hd = headfits(obj[0], exten = nband+1)
        comp=1
        repeat comp = comp +1 until tag_exist(result, 'COMP'+strtrim(comp,2)+'_MAG') eq 0
 ; delete feedback, just in case the format of one is different,
@@ -2826,8 +2830,8 @@ FUNCTION read_sersic_results, obj, nband
                                 'pa_galfit', result[0].COMP2_PA, 'paerr_galfit', result[0].COMP2_PA_ERR, $
                                 'x_galfit', result[0].COMP2_XC, 'xerr_galfit', result[0].COMP2_XC_ERR, $
                                 'y_galfit', result[0].COMP2_YC, 'yerr_galfit', result[0].COMP2_YC_ERR, $
-;adapt psf
-                                'psf_galfit', strtrim(sxpar(hd, 'PSF_A'),2), 'sky_galfit', result[0].COMP1_SKY, $
+                                'psf_galfit', strtrim(band_info[0].psf), 'sky_galfit', result[0].COMP1_SKY, $
+;                                'psf_galfit', strtrim(sxpar(hd, 'PSF_A'),2), 'sky_galfit', result[0].COMP1_SKY, $
                                 'mag_galfit_band', result.COMP2_MAG, 'magerr_galfit_band',result.COMP2_MAG_ERR, $
                                 're_galfit_band', result.COMP2_RE, 'reerr_galfit_band', result.COMP2_RE_ERR, $
                                 'n_galfit_band', result.COMP2_N, 'nerr_galfit_band' ,result.COMP2_N_ERR, $
@@ -2844,17 +2848,32 @@ FUNCTION read_sersic_results, obj, nband
                                 'x_galfit_cheb', res_cheb.COMP2_XC, 'xerr_galfit_cheb', res_cheb.COMP2_XC_ERR, $
                                 'y_galfit_cheb', res_cheb.COMP2_YC, 'yerr_galfit_cheb', res_cheb.COMP2_YC_ERR, $
                                 'sky_galfit_cheb', res_cheb.COMP1_SKY, $
-; PSF_BAND HAS TO BE ADAPTED!!
-                                'psf_galfit_band', strtrim(sxpar(hd, 'PSF'), 2), $
-                                'chisq_galfit', float(strmid(sxpar(hd, 'CHISQ'),2)), $
-                                'ndof_galfit', float(strmid(sxpar(hd, 'NDOF'),2)), $
-                                'nfree_galfit', float(strmid(sxpar(hd, 'NFREE'),2)), $
-                                'nfix_galfit', float(strmid(sxpar(hd, 'NFIX'),2)), $
-                                'chi2nu_galfit', float(strmid(sxpar(hd, 'CHI2NU'),2)), $
-; TO BE ADDED:
-; #iterations, time
-; NEIGH_GALFIT HAS TO BE ADAPTED! WHY??
+                                'initfile', strtrim(fit_info.initfile,2), $
+                                'constrnt', strtrim(fit_info.constrnt,2), $
+                                'fitsect', strtrim(fit_info.fitsect,2), $
+                                'convbox', strtrim(fit_info.convbox,2), $
+                                'psf_galfit_band', strtrim(band_info.psf, 2), $
+                                'chisq_galfit', fit_info.chisq, $
+                                'ndof_galfit', fit_info.ndof, $
+                                'nfree_galfit', fit_info.nfree, $
+                                'nfix_galfit', fit_info.nfix, $
+                                'chi2nu_galfit', fit_info.chi2nu, $
+                                'niter_galfit', fit_info.niter, $
+; time does not exist yet. Already in GALAPAGOS table, though
+;                                'time_galfit', fit_info.time, $
                                 'neigh_galfit', comp-3, 'flag_galfit', 2)
+;; old version for old GALFIT
+;                                'psf_galfit_band', strtrim(sxpar(hd, 'PSF'), 2), $
+;                                'chisq_galfit', float(strmid(sxpar(hd, 'CHISQ'),2)), $
+;                                'ndof_galfit', float(strmid(sxpar(hd, 'NDOF'),2)), $
+;                                'nfree_galfit', float(strmid(sxpar(hd, 'NFREE'),2)), $
+;                                'nfix_galfit', float(strmid(sxpar(hd, 'NFIX'),2)), $
+;                                'chi2nu_galfit', float(strmid(sxpar(hd, 'CHI2NU'),2)), $
+;                                'neigh_galfit', comp-3, 'flag_galfit', 2)
+
+; to include:
+; there is more band_info which is not used yet (band, wl, datain,
+; sigma, MASL, magzpt) Not sure we'll need them!
    ENDIF ELSE BEGIN
        psf=strarr(nband)
        for n=0,nband-1 do psf[n]='none'
@@ -2881,23 +2900,23 @@ FUNCTION read_sersic_results, obj, nband
                                 'pa_galfit_cheb', fltarr(nband), 'paerr_galfit_cheb', fltarr(nband)+99999., $
                                 'x_galfit_cheb', fltarr(nband), 'xerr_galfit_cheb', fltarr(nband)+99999., $
                                 'y_galfit_cheb', fltarr(nband), 'yerr_galfit_cheb', fltarr(nband)+99999., $
-                               'sky_galfit_band', fltarr(nband)-999.,'sky_galfit_cheb', fltarr(nband)-999., $
-   ; PSF_BAND HAS TO BE ADAPTED!!
+                                'sky_galfit_band', fltarr(nband)-999.,'sky_galfit_cheb', fltarr(nband)-999., $
+; PSF_BAND HAS TO BE ADAPTED!! WHERE DO I GET THE INFORMATION FROM IF FIT FAILED?
+                                'initfile', ' ', $
+                                'constrnt', ' ', $
+                                'fitsect', ' ', $
+                                'convbox', ' ', $
                                 'psf_galfit_band', strarr(nband), $
                                 'chisq_galfit', -99., $
                                 'ndof_galfit', -99., $
                                 'nfree_galfit', -99., $
                                 'nfix_galfit', -99., $
                                 'chi2nu_galfit', -99., $
-; TO BE ADDED:
-; #iterations, time
-; NEIGH_GALFIT HAS TO BE ADAPTED!
+                                'niter_galfit', -99, $
+;                                'time_galfit', -99., $
                                 'neigh_galfit', -99, 'flag_galfit', 1)
    ENDELSE
    return, feedback
-;[mag, magerr, re, reerr, n, nerr, q, qerr, pa, paerr, $
-;            x, xerr, y, yerr, sky, neigh_galfit, chisq_galfit, ndof_galfit, $
-;            nfree_galfit, nfix_galfit, chi2nu_galfit]
 END
 
 FUNCTION read_sersic_results_old_galfit, obj
@@ -3178,6 +3197,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ;==============================================================================
 ;run SExtractor
    IF setup.dosex THEN BEGIN
+   print, 'starting SExtractor: '+systime(0)
        IF file_test(setup.exclude) THEN $
          readcol, setup.exclude, exclude_files, exclude_x, exclude_y, $
          format = 'A,F,F', /silent $
@@ -3250,6 +3270,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
          setup.outdir+'sexcomb.reg', 10, color='green', tag = 'comb'
        IF keyword_set(logfile) THEN $
          update_log, logfile, 'SExtraction... done!'
+   print, 'finished SExtractor: '+systime(0)
    ENDIF
 ;==============================================================================
 ;create postage stamp description files 
@@ -3262,7 +3283,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
              outpath_file_no_band[i,0]+setup.stampfile, $
              setup.stampsize
            FOR b=1,nband do begin
-               print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
+;               print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
                cut_stamps, images[i,b], $
                  outpath_file_no_band[i,0]+setup.stampfile, $
                  outpath_band[i,b], $
@@ -3273,7 +3294,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        FOR i=0ul, nframes-1 DO BEGIN
            print, 'creating skymap for image '+strtrim(outpath_file_no_band[i,0],2)
            FOR b=1,nband do begin
-               print, 'creating skymap for '+strtrim(setup.stamp_pre[b],2)+'-band'
+;               print, 'creating skymap for '+strtrim(setup.stamp_pre[b],2)+'-band'
                create_skymap, weights[i,b], $
                  outpath_file[i,0]+setup.outseg, $
                  outpath_file[i,0]+setup.outcat, $
@@ -3284,6 +3305,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        ENDFOR
        IF keyword_set(logfile) THEN $
          update_log, logfile, 'Postage stamps... done!'
+   print, 'finished cutting postage stamps: '+systime(0)
    ENDIF 
 ;==============================================================================
 ; SEED FOR RANDOM NUMBER GENERATOR in getsky_loop!
@@ -3456,7 +3478,7 @@ loopstart2:
                         (min(dist) lt setup.min_dist or min(dist_block) lt setup.min_dist_block) then begin
                           wait, 1
                           ob=0l
-                          print, 'starting over'
+;                          print, 'starting over'
                           goto, loopstart2
                       ENDIF
                       
@@ -3491,6 +3513,7 @@ loopstart2:
               bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
               table[cur].flag_galfit = 1
               fittab[cur].flag_galfit = 1
+;              statusline, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(sexcat),2)+'   '
               print, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(sexcat),2)+'   '
 ;              print, obj_file
               if keyword_set(plot) then begin
