@@ -21,8 +21,10 @@ PRO define_addcol, addcol, nband, pre, cheb
     addcol = [['FLAG_GALFIT', '0'], ['NITER_GALFIT', '0'], $
               ['NEIGH_GALFIT', '0'], ['CHISQ_GALFIT','0.'], $
               ['TIME_GALFIT', '0.'], $
-              ['NDOF_GALFIT','0'], ['NFREE_GALFIT','0'], $
-              ['NFIX_GALFIT','0'], ['CHI2NU_GALFIT','0.'], $
+              ['NDOF_GALFIT','0L'], ['NFREE_GALFIT','0L'], $
+              ['NFIX_GALFIT','0L'], ['CHI2NU_GALFIT','0.'], $
+              ['INITFILE', '" "'], ['CONSTRNT', '" "'], $
+              ['FITSECT', '" "'], ['CONVBOX', '" "'], $
               ['ORG_IMAGE', '" "'], ['FILE_GALFIT', '" "'], $
               ['X_GALFIT', '0.'], ['XERR_GALFIT', '0.'], $
               ['X_GALFIT_CHEB', hlpcheb0], ['XERR_GALFIT_CHEB', hlpcheb0], $
