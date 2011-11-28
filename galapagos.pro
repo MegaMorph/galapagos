@@ -6,6 +6,7 @@
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/valid_num.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/writefits.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
@@ -628,7 +629,7 @@ PRO create_skymap, whtfile, segfile, sex, sexparam, mapfile, scale, offset
    off = where(wht EQ 0, ct)
    IF ct GT 0 THEN map[off] = -1
 
-   writefits, mapfile+'.fits', map, hd
+   writefits, mapfile+'.fits', map, hd,/silent
 
 END
 
@@ -3274,9 +3275,9 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
    ENDIF
 ;==============================================================================
 ;create postage stamp description files 
-   IF setup.dostamps THEN BEGIN
+  IF setup.dostamps THEN BEGIN
        FOR i=0ul, nframes-1 DO BEGIN
-           print, 'cutting postages for image '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
+           print, 'cutting postages for images '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
            create_stamp_file, images[i,0], $
              outpath_file[i,0]+setup.outcat, $
              outpath_file[i,0]+setup.outparam, $
@@ -3288,18 +3289,18 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
                  outpath_file_no_band[i,0]+setup.stampfile, $
                  outpath_band[i,b], $
                  outpre[i,b], '_'+setup.stamp_pre[b]
-          ENDFOR
+           ENDFOR
        ENDFOR
 ;create skymap files 
        FOR i=0ul, nframes-1 DO BEGIN
-           print, 'creating skymap for image '+strtrim(outpath_file_no_band[i,0],2)
+           print, 'creating skymaps for images '+strtrim(outpath_file_no_band[i,0],2)
            FOR b=1,nband do begin
 ;               print, 'creating skymap for '+strtrim(setup.stamp_pre[b],2)+'-band'
                create_skymap, weights[i,b], $
                  outpath_file[i,0]+setup.outseg, $
                  outpath_file[i,0]+setup.outcat, $
                  outpath_file[i,0]+setup.outparam, $
-                 outpath_file_no_band[i,b]+setup.skymap, $
+                 outpath_file_no_band[i,b]+setup.stamp_pre[b]+'.'+setup.skymap, $
                  setup.skyscl, setup.skyoff
            ENDFOR
        ENDFOR
@@ -3728,7 +3729,7 @@ loopend:
                       sz_im = (size(im))[1:2]
                       
 ;read the skymap
-                      map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', xxhd,/silent)
+                      map = readfits(orgpath_file_no_band[idx,b]+setup.stamp_pre[b]+'.'+setup.skymap+'.fits', xxhd,/silent)
                       
 ;rad is the minimum starting radius for the sky calculation (outside
 ;the aperture of the object)
@@ -3795,7 +3796,7 @@ loopend:
 ;read segmentation map (needed for excluding neighbouring sources)
                   seg = readfits(orgpath_file[idx,0]+setup.outseg, xxhd,/silent)
 ;read the skymap
-                  map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', xxhd,/silent)
+                  map = readfits(orgpath_file_no_band[idx,b]+setup.stamp_pre[b]+'.'+setup.skymap+'.fits', xxhd,/silent)
                   
                   seed=table[current_obj].number
                   getsky_loop, setup, current_obj, table, rad, im, hd, map, setup.expt, $

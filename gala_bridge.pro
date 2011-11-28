@@ -28,7 +28,7 @@ for b=1,nband do begin
     seg = readfits(orgpath_file[idx,0]+setup.outseg, seghd,/silent)
 
 ;read the skymap
-    map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', maphd,/silent)
+    map = readfits(orgpath_file_no_band[idx,b]+setup.stamp_pre[b]+'.'+setup.skymap+'.fits', maphd,/silent)
 
 ;rad is the minimum starting radius for the sky calculation (outside
 ;the aperture of the object)
