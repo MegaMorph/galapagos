@@ -2860,6 +2860,9 @@ FUNCTION read_sersic_results, obj, nband
                                 'nfix_galfit', fit_info.nfix, $
                                 'chi2nu_galfit', fit_info.chi2nu, $
                                 'niter_galfit', fit_info.niter, $
+                                'version_galfit', fit_info.version, $
+                                'firstcon_galfit', fit_info.firstcon, $
+                                'lastcon_galfit', fit_info.lastcon, $
 ; time does not exist yet. Already in GALAPAGOS table, though
 ;                                'time_galfit', fit_info.time, $
                                 'neigh_galfit', comp-3, 'flag_galfit', 2)
@@ -2914,6 +2917,9 @@ FUNCTION read_sersic_results, obj, nband
                                 'nfix_galfit', -99., $
                                 'chi2nu_galfit', -99., $
                                 'niter_galfit', -99, $
+                                'version_galfit', 'crash', $
+                                'firstcon_galfit', -99, $
+                                'lastcon_galfit', -99, $
 ;                                'time_galfit', -99., $
                                 'neigh_galfit', -99, 'flag_galfit', 1)
    ENDELSE
