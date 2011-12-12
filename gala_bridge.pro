@@ -10,7 +10,7 @@ PRO gala_bridge, filein
 
 for b=1,nband do begin
 ;read in image and weight (takes few sec)
-    im=readfits(table[cur].frame[b], hd,/silent)
+    im=readfits(strtrim(table[cur].frame[b],2), hd,/silent)
     wht=readfits(orgwht[idx,b], whd,/silent)
 
 ;image size
