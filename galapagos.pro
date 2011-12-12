@@ -2703,6 +2703,7 @@ PRO read_image_files, setup, silent=silent
          format = 'A,A,A,A', comment = '#', /silent
 
        nband=1
+       images = strtrim(images,2)
 ; create arrays in setup needed to store all the data
        add_tag, setup, 'images', strarr(n_elements(images),nband+1), setup2
        setup=setup2
@@ -2765,6 +2766,7 @@ PRO read_image_files, setup, silent=silent
          format = 'A,A,A,A', comment = '#', /silent
        cnt=intarr(nband+1)
 
+       hlpimages = strtrim(hlpimages,2)
 ; create arrays in setup needed to store all the data
        add_tag, setup, 'images', strarr(n_elements(hlpimages),nband+1), setup2
        setup=setup2
@@ -3348,7 +3350,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        table=remove_tags(table,'frame')
        add_tag, table, 'frame', strarr(nband+1), table2
        table=table2
-       table.frame = tableim
+       table.frame = strtrim(tableim,2)
        add_tag, table, 'flag_galfit', 0, table2
        table=table2
        delvarx, table2
