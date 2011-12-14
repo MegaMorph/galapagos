@@ -1071,7 +1071,7 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
       
       grad = where(c_all[o[no_fit]] LT cut, ct)
       IF ct GT 0 THEN nums = t[o[no_fit[grad]]].number ELSE nums = -1
-      IF ct GT 0 THEN frames = t[o[no_fit[grad]]].frame[1] ELSE frames = ''
+      IF ct GT 0 THEN frames = t[o[no_fit[grad]]].frame[0] ELSE frames = ''
    ENDELSE
 ;   print, 'gradient sources:'
 ;   forprint, nums, ' '+frames
@@ -1134,8 +1134,8 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;out_file: galfit output file prefix
 ;global_sky, global_sigsky: global sky value plus scatter
 ;conv_box: convolution box size for subtracting sources
-;nums, frames: object numbers and frames of potential contributing sources
-;curb: current band index (deblending only decided in reference band)
+;nums, frames: object numbers and frames of potential contributing sources (for bands other than the primary (b=1) these are actually INPUT parameters!)
+;b: current band index (deblending only decided in reference band)
 ;compute the sky for a single source
 ;nband: numbers of bands in the data
 ;xarr, yarr: arrays needed for skymap, created outside for all bands at once to improve speed
@@ -1205,7 +1205,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;loop over all contributing sources============================================
        FOR current_contrib=0ul, n_contrib-1 DO BEGIN
            i_con = where(table.number EQ nums[current_contrib] AND $
-                         table.frame[1] EQ frames[current_contrib])
+                         table.frame[0] EQ frames[current_contrib])
            dist[current_contrib] = $
              sqrt((table[i_con].x_image-table[current_obj].x_image)^2+ $
                   (table[i_con].y_image-table[current_obj].y_image)^2)+ $
@@ -1660,7 +1660,7 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
       ENDIF ELSE BEGIN
 ;loop source has NO overlap with current --> tertiary
 ;if loop source is contributing source on current frame, make secondary
-         coni = where(table[i].number EQ nums AND table[i].frame[1] EQ frames, $
+         coni = where(table[i].number EQ nums AND table[i].frame[0] EQ frames, $
                       con)
          IF con GT 0 THEN BEGIN
             plus = 1
@@ -3401,6 +3401,11 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
       FOR i=0, setup.max_proc-1 DO $
        bridge_arr[i] = obj_new('IDL_IDLBridge')
 
+      FOR i=0, setup.max_proc-1 DO BEGIN
+          bridge_arr[i]->execute, 'astrolib'
+          bridge_arr[i]->execute, '.r '+gala_pro
+      ENDFOR
+
       if keyword_set(plot) then begin
           loadct,39,/silent
           plot, fittab.alpha_j2000, fittab.delta_j2000, psym=3, ystyle=1, xstyle=1
@@ -3583,9 +3588,9 @@ loopstart2:
                   IF keyword_set(logfile) THEN $
                     update_log, logfile, 'Starting new bridge... ('+out_file+')'
 ; print, 'starting new object at '+systime(0)
-                  bridge_arr[free[0]]->execute, 'astrolib'
-;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
-                  bridge_arr[free[0]]->execute, '.r '+gala_pro
+;                  bridge_arr[free[0]]->execute, 'astrolib'
+;;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
+;                  bridge_arr[free[0]]->execute, '.r '+gala_pro
                   bridge_arr[free[0]]->execute, $
                     'gala_bridge, "'+out_file+'.sav"', /nowait
               ENDIF ELSE BEGIN
