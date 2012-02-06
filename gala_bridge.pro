@@ -122,7 +122,7 @@ spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
 ;   wait, randomu(systime(/seconds))*8+2
 ;   spawn, 'touch '+out_file
 
-;file_delete, filein
+file_delete, filein
 wait, 1
 END
 

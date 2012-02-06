@@ -2929,6 +2929,7 @@ FUNCTION read_sersic_results, obj, nband
 END
 
 FUNCTION read_sersic_results_old_galfit, obj
+stop
    IF file_test(obj) THEN BEGIN
        hd = headfits(obj, exten = 2)
        mag0 = sxpar(hd, '2_MAG')
