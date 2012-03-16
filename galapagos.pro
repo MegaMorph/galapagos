@@ -238,10 +238,11 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
    IF multi EQ 0 THEN $
     message, 'Neither cold nor hot SExtractor setup-file found'
    IF multi EQ 1 THEN BEGIN
-      cold = hot
-      coldcat = hotcat
-      coldseg = hotseg
-      multi = 2
+       print, 'WARNING!!!!!!!!!! No cold sex setup file found. Using only hot setup (as cold)'
+       cold = hot
+       coldcat = hotcat
+       coldseg = hotseg
+       multi = 2
    ENDIF
 
    path = strmid(outcat, 0, strpos(outcat, '/', /reverse_search)+1)
