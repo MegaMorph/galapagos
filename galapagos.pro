@@ -312,102 +312,112 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
 ;read in hotcat and coldcat
    cold_table = read_sex_table(coldcat, outparam)
    idx = where(cold_table.kron_radius EQ 0, ct)
-   IF ct GT 0 THEN cold_table[idx].kron_radius = median(cold_table.kron_radius)
-
-   IF multi EQ 3 THEN BEGIN
-      hot_table = read_sex_table(hotcat, outparam)
-      idx = where(hot_table.kron_radius EQ 0, ct)
-      IF ct GT 0 THEN $
-       hot_table[idx].kron_radius = median(hot_table.kron_radius)
-   ENDIF
-
+   
+; if cold_table[0].number eq 0, the cold table is empty! In this case,
+; do NOT do all the rest, simply use hotcat as outcat. Copying to new
+; files being done below
+   IF cold_table[0].number NE 0 THEN BEGIN
+       IF ct GT 0 THEN cold_table[idx].kron_radius = median(cold_table.kron_radius)
+       
+       IF multi EQ 3 THEN BEGIN
+           hot_table = read_sex_table(hotcat, outparam)
+           idx = where(hot_table.kron_radius EQ 0, ct)
+           IF ct GT 0 THEN $
+             hot_table[idx].kron_radius = median(hot_table.kron_radius)
+       ENDIF
+       
 ;loop over all elements in cold list and find "good" objects in hot
 ;catalogue, i.e. objects that are not contained in the cold list and 
 ;calculate ellipse parameters
-   print, 'combining hot & cold catalogues'
-   IF multi EQ 3 THEN BEGIN
-      cold_cxx = cold_table.cxx_image / cold_table.kron_radius^2.
-      cold_cyy = cold_table.cyy_image / cold_table.kron_radius^2.
-      cold_cxy = cold_table.cxy_image / cold_table.kron_radius^2.
-      ncold = n_elements(cold_table)
-
-      hot_cxx = hot_table.cxx_image / hot_table.kron_radius^2.
-      hot_cyy = hot_table.cyy_image / hot_table.kron_radius^2.
-      hot_cxy = hot_table.cxy_image / hot_table.kron_radius^2.
-      nhot = n_elements(hot_table)
-
+       print, 'combining hot & cold catalogues'
+       IF multi EQ 3 THEN BEGIN
+           cold_cxx = cold_table.cxx_image / cold_table.kron_radius^2.
+           cold_cyy = cold_table.cyy_image / cold_table.kron_radius^2.
+           cold_cxy = cold_table.cxy_image / cold_table.kron_radius^2.
+           ncold = n_elements(cold_table)
+           
+           hot_cxx = hot_table.cxx_image / hot_table.kron_radius^2.
+           hot_cyy = hot_table.cyy_image / hot_table.kron_radius^2.
+           hot_cxy = hot_table.cxy_image / hot_table.kron_radius^2.
+           nhot = n_elements(hot_table)
+           
 ;      fits_read, coldseg, segim, seghd
 ;      fits_read, hotseg, segim_hot, seghd_hot
-      segim = readfits(coldseg, seghd, /silent)
-      segim_hot = readfits(hotseg, seghd_hot, /silent)
-
-      FOR i=0ul, ncold-1 DO BEGIN
-         idx = where(cold_cxx[i]*(hot_table.x_image- $
-                                  cold_table[i].x_image)^2.+ $
-                     cold_cyy[i]*(hot_table.y_image- $
-                                  cold_table[i].y_image)^2.+ $
-                     cold_cxy[i]*(hot_table.x_image-cold_table[i].x_image)* $
-                     (hot_table.y_image-cold_table[i].y_image) GT enlarge^2., $
-                     ct)
-         IF ct GT 0 THEN BEGIN
-            hot_table = hot_table[idx]
-         ENDIF ELSE BEGIN
-            multi = 2
-            print, 'all objects contained in cold catalogue'
-            i = ulong(ncold)
-         ENDELSE
-      ENDFOR
-   ENDIF
-
+           segim = readfits(coldseg, seghd, /silent)
+           segim_hot = readfits(hotseg, seghd_hot, /silent)
+           
+           FOR i=0ul, ncold-1 DO BEGIN
+               idx = where(cold_cxx[i]*(hot_table.x_image- $
+                                        cold_table[i].x_image)^2.+ $
+                           cold_cyy[i]*(hot_table.y_image- $
+                                        cold_table[i].y_image)^2.+ $
+                           cold_cxy[i]*(hot_table.x_image-cold_table[i].x_image)* $
+                           (hot_table.y_image-cold_table[i].y_image) GT enlarge^2., $
+                           ct)
+               IF ct GT 0 THEN BEGIN
+                   hot_table = hot_table[idx]
+               ENDIF ELSE BEGIN
+                   multi = 2
+                   print, 'all objects contained in cold catalogue'
+                   i = ulong(ncold)
+               ENDELSE
+           ENDFOR
+       ENDIF
+       
 ;read in the segmentation images and add objects from hot segmentation
 ;map to cold segmentation map, but only at pixels where no object was
 ;defined in cold segmentation map. Then write result!
-   IF multi EQ 3 THEN BEGIN
-
-      nhot = n_elements(hot_table)
-      off = max(cold_table.number)+1
-      FOR i=0ul, nhot-1 DO BEGIN
-         idx = where(segim_hot EQ hot_table[i].number, ct)
-         IF ct GT 0 THEN BEGIN
+       IF multi EQ 3 THEN BEGIN
+           
+           nhot = n_elements(hot_table)
+           off = max(cold_table.number)+1
+           FOR i=0ul, nhot-1 DO BEGIN
+               idx = where(segim_hot EQ hot_table[i].number, ct)
+               IF ct GT 0 THEN BEGIN
 ;prefer cold pixels in output segmentation map
 ;        FOR j=0ul, ct-1 DO $
 ;                IF segim[idx[j]] EQ 0 THEN segim[idx[j]] = off+i
 ;prefer hot pixels in output segmentation map
-            segim[idx] = off+i
-        ENDIF
-         hot_table[i].number = off+i
-      ENDFOR
-      writefits, outseg, segim, seghd
-   ENDIF ELSE file_copy, coldseg, outseg, /overwrite
-
-   IF multi EQ 3 THEN table_all = [cold_table, hot_table] $
-   ELSE table_all = cold_table
-
-   IF exclude[0, 0] GE 0 THEN BEGIN
-      x = reform(exclude[0, *])
-      y = reform(exclude[1, *])
-
-      srccor, x, y, table_all.x_image, table_all.y_image, rad, l, e, $
-              option = 1, /silent
-      e = invert_index(table_all.number, e)
-      IF e[0] EQ -1 THEN message, 'No elements left in catalogue!'
-      table_all = table_all[e]
-
-      ntot = n_elements(table_all)
+                   segim[idx] = off+i
+               ENDIF
+               hot_table[i].number = off+i
+           ENDFOR
+           writefits, outseg, segim, seghd
+       ENDIF ELSE file_copy, coldseg, outseg, /overwrite
+       
+       IF multi EQ 3 THEN table_all = [cold_table, hot_table] $
+       ELSE table_all = cold_table
+       
+       IF exclude[0, 0] GE 0 THEN BEGIN
+           x = reform(exclude[0, *])
+           y = reform(exclude[1, *])
+           
+           srccor, x, y, table_all.x_image, table_all.y_image, rad, l, e, $
+             option = 1, /silent
+           e = invert_index(table_all.number, e)
+           IF e[0] EQ -1 THEN message, 'No elements left in catalogue!'
+           table_all = table_all[e]
+           
+           ntot = n_elements(table_all)
 ;      fits_read, outseg, segim_org, seghd
-      segim_org = readfits(outseg, seghd, /silent)
-      segim = segim_org*0
-
-      FOR i=0ul, ntot-1 DO BEGIN
-         idx = where(segim_org EQ table_all[i].number, ct)
-         IF ct GT 0 THEN segim[idx] = i+1
-         table_all[i].number = i+1
-      ENDFOR
-
-      writefits, outseg, segim, seghd
-   ENDIF
-
-   write_sex_table, table_all, outcat
+           segim_org = readfits(outseg, seghd, /silent)
+           segim = segim_org*0
+           
+           FOR i=0ul, ntot-1 DO BEGIN
+               idx = where(segim_org EQ table_all[i].number, ct)
+               IF ct GT 0 THEN segim[idx] = i+1
+               table_all[i].number = i+1
+           ENDFOR
+           
+           writefits, outseg, segim, seghd
+       ENDIF
+       
+       write_sex_table, table_all, outcat
+   ENDIF ELSE BEGIN
+       print, 'cold catalogue is empty, using hot as combined cat'
+       spawn, 'cp '+hotcat+' '+outcat+' '
+       spawn, 'cp '+hotseg+' '+outseg+' '
+   ENDELSE
 
    IF keyword_set(outonly) THEN $
     file_delete, hotcat, coldcat, hotseg, coldseg, /quiet, /allow_nonexistent, /noexpand_path
