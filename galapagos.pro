@@ -2871,13 +2871,14 @@ FUNCTION read_sersic_results, obj, nband
                                 'ndof_galfit', fit_info.ndof, $
                                 'nfree_galfit', fit_info.nfree, $
                                 'nfix_galfit', fit_info.nfix, $
+                                'cputime_setup_galfit', fit_info.cputime_setup, $
+                                'cputime_fit_galfit', fit_info.cputime_fit, $
+                                'cputime_total_galfit', fit_info.cputime_total., $
                                 'chi2nu_galfit', fit_info.chi2nu, $
                                 'niter_galfit', fit_info.niter, $
                                 'version_galfit', fit_info.version, $
                                 'firstcon_galfit', fit_info.firstcon, $
                                 'lastcon_galfit', fit_info.lastcon, $
-; time does not exist yet. Already in GALAPAGOS table, though
-;                                'time_galfit', fit_info.time, $
                                 'neigh_galfit', comp-3, 'flag_galfit', 2)
 ;; old version for old GALFIT
 ;                                'psf_galfit_band', strtrim(sxpar(hd, 'PSF'), 2), $
@@ -2928,19 +2929,20 @@ FUNCTION read_sersic_results, obj, nband
                                 'ndof_galfit', -99., $
                                 'nfree_galfit', -99., $
                                 'nfix_galfit', -99., $
+                                'cputime_setup_galfit', -99.,$
+                                'cputime_fit_galfit', -99.,$
+                                'cputime_total_galfit', -99.,$
                                 'chi2nu_galfit', -99., $
                                 'niter_galfit', -99, $
                                 'version_galfit', 'crash', $
                                 'firstcon_galfit', -99, $
                                 'lastcon_galfit', -99, $
-;                                'time_galfit', -99., $
                                 'neigh_galfit', -99, 'flag_galfit', 1)
    ENDELSE
    return, feedback
 END
 
 FUNCTION read_sersic_results_old_galfit, obj
-stop
    IF file_test(obj) THEN BEGIN
        hd = headfits(obj, exten = 2)
        mag0 = sxpar(hd, '2_MAG')

@@ -20,12 +20,14 @@ PRO define_addcol, addcol, nband, pre, cheb
     bandfloat = 'fltarr('+strtrim(nband,2)+')'
     addcol = [['FLAG_GALFIT', '0'], ['NITER_GALFIT', '0'], $
               ['NEIGH_GALFIT', '0'], ['CHISQ_GALFIT','0.'], $
-              ['TIME_GALFIT', '0.'], ['VERSION_GALFIT', '" "'], $
+              ['VERSION_GALFIT', '" "'], $
               ['FIRSTCON_GALFIT','0'], ['LASTCON_GALFIT','0'], $
               ['NDOF_GALFIT','0L'], ['NFREE_GALFIT','0L'], $
               ['NFIX_GALFIT','0L'], ['CHI2NU_GALFIT','0.'], $
               ['INITFILE', '" "'], ['CONSTRNT', '" "'], $
               ['FITSECT', '" "'], ['CONVBOX', '" "'], $
+              ['CPUTIME_SETUP_GALFIT', '0.'], ['CPUTIME_FIT_GALFIT', '0.'], $
+              ['CPUTIME_TOTAL_GALFIT', '0.'], $
               ['ORG_IMAGE', '" "'], ['FILE_GALFIT', '" "'], $
               ['X_GALFIT', '0.'], ['XERR_GALFIT', '0.'], $
               ['X_GALFIT_CHEB', hlpcheb0], ['XERR_GALFIT_CHEB', hlpcheb0], $
