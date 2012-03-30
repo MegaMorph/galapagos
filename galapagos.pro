@@ -2873,7 +2873,7 @@ FUNCTION read_sersic_results, obj, nband
                                 'nfix_galfit', fit_info.nfix, $
                                 'cputime_setup_galfit', fit_info.cputime_setup, $
                                 'cputime_fit_galfit', fit_info.cputime_fit, $
-                                'cputime_total_galfit', fit_info.cputime_total., $
+                                'cputime_total_galfit', fit_info.cputime_total, $
                                 'chi2nu_galfit', fit_info.chi2nu, $
                                 'niter_galfit', fit_info.niter, $
                                 'version_galfit', fit_info.version, $
@@ -2929,9 +2929,9 @@ FUNCTION read_sersic_results, obj, nband
                                 'ndof_galfit', -99., $
                                 'nfree_galfit', -99., $
                                 'nfix_galfit', -99., $
-                                'cputime_setup_galfit', -99.,$
-                                'cputime_fit_galfit', -99.,$
-                                'cputime_total_galfit', -99.,$
+                                'cputime_setup_galfit', -99., $
+                                'cputime_fit_galfit', -99., $
+                                'cputime_total_galfit', -99., $
                                 'chi2nu_galfit', -99., $
                                 'niter_galfit', -99, $
                                 'version_galfit', 'crash', $
