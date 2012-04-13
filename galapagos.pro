@@ -3087,24 +3087,24 @@ forward_function read_sersic_results_old_galfit
     
     for j=0,n_elements(name_res)-1 do begin
         tagidx=where(name_fittab eq name_res[j], ct)
-        type=size(res.(j))
+        type=size(res.(j),/type)
 ; if keyword is INT
-        if type[1] eq 2 or type[1] eq 3 then begin
+        if type eq 2 or type eq 3 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=-99999
         ENDIF
 ; if keyword is FLOAT
-        if type[1] eq 4 then begin
+        if type eq 4 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=-99999.
         ENDIF
 ; if keyword is DOUBLE
-        if type[1] eq 5 then begin
+        if type eq 5 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=double(-99999.)
         ENDIF
 ; if keyword is STRING
-        if type[1] eq 7 then begin
+        if type eq 7 then begin
             wh=where(res.(j) eq ' ', ct)
             if ct gt 0 then res[wh].(j)='null'
         ENDIF
@@ -3227,11 +3227,11 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        ELSE exclude_files = ''
        
        FOR i=0ul, nframes-1 DO BEGIN
-           j = where(exclude_files EQ images[i,0], ct)
-           IF ct GT 0 THEN $
-             exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] $
-           ELSE exclude = [[-1, -1]]
-           
+           j = where(strtrim(exclude_files,2) EQ strtrim(images[i,0],2), ct)
+           IF ct GT 0 THEN begin
+               exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] 
+           endif Else exclude = [[-1, -1]]
+          
            run_sextractor, setup.sexexe, setup.sexout, setup.zp, $
              images[i,0], weights[i,0], $
              setup.cold, $
