@@ -2509,8 +2509,8 @@ PRO read_setup, setup_file, setup
                          'max_proc', 0.0, $
                          'min_dist', 0.0, $
                          'min_dist_block', 0.0, $
-                         'srclist', '' $
-                         'srclistrad', 0.0,$
+                         'srclist', '', $
+                         'srclistrad', 0.0, $
                          'galexe', '', $ 
                          'batch', '', $
                          'obj', '', $
@@ -3093,29 +3093,31 @@ forward_function read_sersic_results_old_galfit
     
     for j=0,n_elements(name_res)-1 do begin
         tagidx=where(name_fittab eq name_res[j], ct)
-        type=size(res.(j),/type)
-; if keyword is INT
-        if type eq 2 or type eq 3 then begin
-            wh=where(finite(res.(j)) ne 1, ct)
-            if ct gt 0 then res[wh].(j)=-99999
+        IF ct GT 0 THEN BEGIN
+           type=size(res.(j),/type)
+   ; if keyword is INT
+           if type eq 2 or type eq 3 then begin
+               wh=where(finite(res.(j)) ne 1, ct)
+               if ct gt 0 then res[wh].(j)=-99999
+           ENDIF
+   ; if keyword is FLOAT
+           if type eq 4 then begin
+               wh=where(finite(res.(j)) ne 1, ct)
+               if ct gt 0 then res[wh].(j)=-99999.
+           ENDIF
+   ; if keyword is DOUBLE
+           if type eq 5 then begin
+               wh=where(finite(res.(j)) ne 1, ct)
+               if ct gt 0 then res[wh].(j)=double(-99999.)
+           ENDIF
+   ; if keyword is STRING
+           if type eq 7 then begin
+               wh=where(res.(j) eq ' ', ct)
+               if ct gt 0 then res[wh].(j)='null'
+           ENDIF
+   ;          if ct gt 0 then print, 'changed'
+           fittab[i].(tagidx) = res.(j)
         ENDIF
-; if keyword is FLOAT
-        if type eq 4 then begin
-            wh=where(finite(res.(j)) ne 1, ct)
-            if ct gt 0 then res[wh].(j)=-99999.
-        ENDIF
-; if keyword is DOUBLE
-        if type eq 5 then begin
-            wh=where(finite(res.(j)) ne 1, ct)
-            if ct gt 0 then res[wh].(j)=double(-99999.)
-        ENDIF
-; if keyword is STRING
-        if type eq 7 then begin
-            wh=where(res.(j) eq ' ', ct)
-            if ct gt 0 then res[wh].(j)='null'
-        ENDIF
-;          if ct gt 0 then print, 'changed'
-        fittab[i].(tagidx) = res.(j)          
     ENDFOR
     fittab[i].flag_galfit = res.flag_galfit    
 ENDIF
@@ -3351,19 +3353,19 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
                                add_col = ['frame', '" "'])
                                
 ;==============================================================================
-       add_tag, sexcat, 'do', 0, sexcat_new
+       add_tag, sexcat, 'do_list', 0, sexcat_new
        sexcat = sexcat_new
        delvarx, sexcat_new
        
        IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
-          sexcat.do = 1
+          sexcat.do_list = 1
        ENDIF ELSE BEGIN
-          readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#'
+          readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
    
           srccor, do_ra/15., do_dec, sexcat.alpha_j2000/15., sexcat.delta_j2000, $
-                  do_i, sex_i, setup.srclistrad, setup.OPTION=1, /SPHERICAL
+                  setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
                   
-          sexcat[sex_i].do = 1
+          sexcat[sex_i].do_list = 1
        ENDELSE
 ;==============================================================================
 ; check if psf in setup file is an image or a list
@@ -3403,7 +3405,22 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        fittab.n_galfit_band = fltarr(nband)-1
        fittab.q_galfit = -1
        fittab.q_galfit_band = fltarr(nband)-1
+;==============================================================================
+       add_tag, fittab, 'do_list', 0, fittab_new
+       fittab = fittab_new
+       delvarx, fittab_new
        
+       IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
+          fittab.do_list = 1
+       ENDIF ELSE BEGIN
+          readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
+   
+          srccor, do_ra/15., do_dec, fittab.alpha_j2000/15., fittab.delta_j2000, $
+                  setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
+                  
+          fittab[sex_i].do_list = 1
+       ENDELSE
+;==============================================================================
        mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
 ;find the image files for the sources
        orgim = setup.images
@@ -3461,7 +3478,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
           
 ;check if current object exists
 loopstart:
-          todo = where(fittab.flag_galfit eq 0 AND fittab.do EQ 1, ctr)
+          todo = where(fittab.flag_galfit eq 0 AND fittab.do_list EQ 1, ctr)
           if ctr EQ 0 then begin
               FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
               goto, loopend
