@@ -2509,6 +2509,8 @@ PRO read_setup, setup_file, setup
                          'max_proc', 0.0, $
                          'min_dist', 0.0, $
                          'min_dist_block', 0.0, $
+                         'srclist', '' $
+                         'srclistrad', 0.0,$
                          'galexe', '', $ 
                          'batch', '', $
                          'obj', '', $
@@ -2546,6 +2548,8 @@ PRO read_setup, setup_file, setup
    setup.min_dist_block = -1
    for n=0,n_elements(setup.cheb)-1 do setup.cheb[n] = -1
    setup.galfit_out_path = ''
+   setup.srclist = ''
+   setup.srclistrad = -1
 
    line = ''
    openr, 1, setup_file
@@ -2619,6 +2623,8 @@ PRO read_setup, setup_file, setup
          'D19)': setup.max_proc = fix(content)
          'D20)': setup.min_dist = float(content)
          'D21)': setup.min_dist_block = float(content)
+         'D22)': setup.srclist = content
+         'D23)': setup.srclistrad = float(content)
 
          'E00)': setup.galexe = content
          'E01)': setup.batch = content
@@ -2871,13 +2877,14 @@ FUNCTION read_sersic_results, obj, nband
                                 'ndof_galfit', fit_info.ndof, $
                                 'nfree_galfit', fit_info.nfree, $
                                 'nfix_galfit', fit_info.nfix, $
+                                'cputime_setup_galfit', fit_info.cputime_setup, $
+                                'cputime_fit_galfit', fit_info.cputime_fit, $
+                                'cputime_total_galfit', fit_info.cputime_total, $
                                 'chi2nu_galfit', fit_info.chi2nu, $
                                 'niter_galfit', fit_info.niter, $
                                 'version_galfit', fit_info.version, $
                                 'firstcon_galfit', fit_info.firstcon, $
                                 'lastcon_galfit', fit_info.lastcon, $
-; time does not exist yet. Already in GALAPAGOS table, though
-;                                'time_galfit', fit_info.time, $
                                 'neigh_galfit', comp-3, 'flag_galfit', 2)
 ;; old version for old GALFIT
 ;                                'psf_galfit_band', strtrim(sxpar(hd, 'PSF'), 2), $
@@ -2928,19 +2935,20 @@ FUNCTION read_sersic_results, obj, nband
                                 'ndof_galfit', -99., $
                                 'nfree_galfit', -99., $
                                 'nfix_galfit', -99., $
+                                'cputime_setup_galfit', -99., $
+                                'cputime_fit_galfit', -99., $
+                                'cputime_total_galfit', -99., $
                                 'chi2nu_galfit', -99., $
                                 'niter_galfit', -99, $
                                 'version_galfit', 'crash', $
                                 'firstcon_galfit', -99, $
                                 'lastcon_galfit', -99, $
-;                                'time_galfit', -99., $
                                 'neigh_galfit', -99, 'flag_galfit', 1)
    ENDELSE
    return, feedback
 END
 
 FUNCTION read_sersic_results_old_galfit, obj
-stop
    IF file_test(obj) THEN BEGIN
        hd = headfits(obj, exten = 2)
        mag0 = sxpar(hd, '2_MAG')
@@ -3085,24 +3093,24 @@ forward_function read_sersic_results_old_galfit
     
     for j=0,n_elements(name_res)-1 do begin
         tagidx=where(name_fittab eq name_res[j], ct)
-        type=size(res.(j))
+        type=size(res.(j),/type)
 ; if keyword is INT
-        if type[1] eq 2 or type[1] eq 3 then begin
+        if type eq 2 or type eq 3 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=-99999
         ENDIF
 ; if keyword is FLOAT
-        if type[1] eq 4 then begin
+        if type eq 4 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=-99999.
         ENDIF
 ; if keyword is DOUBLE
-        if type[1] eq 5 then begin
+        if type eq 5 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=double(-99999.)
         ENDIF
 ; if keyword is STRING
-        if type[1] eq 7 then begin
+        if type eq 7 then begin
             wh=where(res.(j) eq ' ', ct)
             if ct gt 0 then res[wh].(j)='null'
         ENDIF
@@ -3225,11 +3233,11 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        ELSE exclude_files = ''
        
        FOR i=0ul, nframes-1 DO BEGIN
-           j = where(exclude_files EQ images[i,0], ct)
-           IF ct GT 0 THEN $
-             exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] $
-           ELSE exclude = [[-1, -1]]
-           
+           j = where(strtrim(exclude_files,2) EQ strtrim(images[i,0],2), ct)
+           IF ct GT 0 THEN begin
+               exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] 
+           endif Else exclude = [[-1, -1]]
+          
            run_sextractor, setup.sexexe, setup.sexout, setup.zp, $
              images[i,0], weights[i,0], $
              setup.cold, $
@@ -3341,6 +3349,22 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        sexcat = read_sex_table(setup.outdir+setup.sexcomb, $
                                outpath_file[0,0]+setup.outparam, $
                                add_col = ['frame', '" "'])
+                               
+;==============================================================================
+       add_tag, sexcat, 'do', 0, sexcat_new
+       sexcat = sexcat_new
+       delvarx, sexcat_new
+       
+       IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
+          sexcat.do = 1
+       ENDIF ELSE BEGIN
+          readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#'
+   
+          srccor, do_ra/15., do_dec, sexcat.alpha_j2000/15., sexcat.delta_j2000, $
+                  do_i, sex_i, setup.srclistrad, setup.OPTION=1, /SPHERICAL
+                  
+          sexcat[sex_i].do = 1
+       ENDELSE
 ;==============================================================================
 ; check if psf in setup file is an image or a list
        readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband
@@ -3437,8 +3461,8 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
           
 ;check if current object exists
 loopstart:
-          todo=where(fittab.flag_galfit eq 0)
-          if todo[0] eq -1 then begin
+          todo = where(fittab.flag_galfit eq 0 AND fittab.do EQ 1, ctr)
+          if ctr EQ 0 then begin
               FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
               goto, loopend
           ENDIF
