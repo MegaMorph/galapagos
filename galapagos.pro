@@ -3094,7 +3094,7 @@ forward_function read_sersic_results_old_galfit
     for j=0,n_elements(name_res)-1 do begin
         tagidx=where(name_fittab eq name_res[j], ct)
         IF ct GT 0 THEN BEGIN
-           type=size(res.(j),/type)
+            type=size(res.(j),/type)
    ; if keyword is INT
            if type eq 2 or type eq 3 then begin
                wh=where(finite(res.(j)) ne 1, ct)
