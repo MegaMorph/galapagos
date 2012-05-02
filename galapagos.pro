@@ -3671,7 +3671,6 @@ IF setup.dosky THEN BEGIN
 ; could and should be cleaned up at some point !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     fittab = read_sex_param(outpath_file[0,0]+setup.outparam, n_elements(sexcat.mag_best), $
                             add_column = addcol)
-    stop
 ; fittab does NOT contain FRAME (which is needed quite often!) Other
 ; than that, table is a subset of parameters, fittab is a subset of
 ; objects (only [br])
@@ -3705,7 +3704,6 @@ IF setup.dosky THEN BEGIN
     table = fittab
     delvarx, fittab
     
-    stop
 ; is writing out this table necessary? Or can I pass on the needed table through the save file without creating overhead and slow the code down?
 ;       mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
 ;find the image files for the sources
@@ -4006,25 +4004,9 @@ IF setup.dobd THEN BEGIN
                          outpath_file[0,0]+setup.outparam, $
                          add_col = ['TILE', '" "'])
     
-    add_tag, tab, 'flag_galfit_bd', 0, tab2
+    add_tag, tab, 'flag_galfit', 0, tab2
     tab=tab2
     delvarx, tab2
-    
-    add_tag, fittab, 'do_list_bd', 0, fittab_new
-    fittab = fittab_new
-    delvarx, fittab_new
-    
-    IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
-        fittab.do_list = 1
-    ENDIF ELSE BEGIN
-        readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
-        
-        srccor, do_ra/15., do_dec, fittab.alpha_j2000/15., fittab.delta_j2000, $
-          setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
-        
-        fittab[sex_i].do_list = 1
-    ENDELSE
-    
     
     ntab = n_elements(tab)
     out = read_sex_param(outpath_file[0,0]+setup.outparam, ntab, $
@@ -4118,10 +4100,30 @@ IF setup.dobd THEN BEGIN
     
     fittab = read_sex_param(outpath_file[0,0]+setup.outparam, nbr, $
                             add_column = addcol)
-    
+
+stop
+
 ; fill with single sersic results
     struct_assign, table, fittab
-                                ; set standard values for bulge & disk parameters
+
+; create do_list for source object list (objects to be primaries)
+    add_tag, fittab, 'do_list_bd', 0, fittab_new
+    fittab = fittab_new
+    delvarx, fittab_new
+    
+    IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
+        fittab.do_list = 1
+    ENDIF ELSE BEGIN
+        readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
+        
+        srccor, do_ra/15., do_dec, fittab.alpha_j2000/15., fittab.delta_j2000, $
+          setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
+        
+        fittab[sex_i].do_list = 1
+    ENDELSE
+        
+; set standard values for B/D parameters
+; fill with standard values
     fittab.mag_galfit_d = 999.
     fittab.mag_galfit_band_d = fltarr(nband)+999
     fittab.re_galfit_d = -99.
