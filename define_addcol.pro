@@ -1,4 +1,4 @@
-PRO define_addcol, addcol, nband, fit_bd = fit_bd
+PRO define_addcol, addcol, nband, bd_fit = bd_fit
 
 ; version as it should be!
 ;    hlpcheb0 = 'fltarr('+strtrim(cheb[0]+1,2)+')'
@@ -50,7 +50,7 @@ PRO define_addcol, addcol, nband, fit_bd = fit_bd
               ['PA_GALFIT_BAND', bandfloat], ['PAERR_GALFIT_BAND', bandfloat], $
               ['SKY_GALFIT_BAND', bandfloat], ['PSF_GALFIT_BAND', bandstring], $
               ['SKY_GALFIT_CHEB', bandfloat]]
-    if keyword_set(fit_bd) then addcol=[[addcol], $
+    if keyword_set(bd_fit) then addcol=[[addcol], $
                                          ['FLAG_GALFIT_BD', '0'], $
                                          ['NEIGH_GALFIT_BD', '0'], ['CHISQ_GALFIT_BD','0.'], $
                                          ['NDOF_GALFIT_BD','0l'], ['NFREE_GALFIT_BD','0l'], $

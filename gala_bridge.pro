@@ -1,4 +1,4 @@
-PRO gala_bridge, filein, fit_bd = fit_bd
+PRO gala_bridge, filein, bd_fit = bd_fit
 ;variables provided in filein:
 ;cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
 ;stamp_param_file, mask_file, im_file, obj_file, 
@@ -19,8 +19,7 @@ for b=1,nband do begin
 ;read segmentation map (needed for excluding neighbouring sources)
     seg = readfits(orgpath_file[idx,0]+setup.outseg, seghd,/silent)
 ;read the skymap
-    map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', maphd,/silent)
-
+    map = readfits(orgpath_file_no_band[idx,b]+setup.stamp_pre[b]+'.'+setup.skymap+'.fits', maphd,/silent)
 ;image size
     sz_im = (size(im))[1:2]
     
@@ -100,14 +99,23 @@ for b=1,nband do begin
    ENDIF       
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§tile10_5/t10_5.3416_obj§§§§§§
 endfor
+stop
 
-prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
+if not keyword_set(bd_fit) then prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
   im_file, constr_file, mask_file, chosen_psf_file, $
   out_file, sky_file, setup.convbox, setup.zp, $
   setup.platescl, nums, frames, cur, $
   setup.outcat, setup.outparam, setup.stampfile, $
   setup.conmaxre, setup.conminm, setup.conmaxm, $
   fittab, setup.version, nband, orgpre
+
+if keyword_set(bd_fit) then prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
+  im_file, constr_file, mask_file, chosen_psf_file, $
+  out_file, sky_file, setup.convbox, setup.zp, $
+  setup.platescl, nums, frames, cur, $
+  setup.outcat, setup.outparam, setup.stampfile, $
+  setup.conmaxre, setup.conminm, setup.conmaxm, $
+  fittab, setup.version, nband, orgpre, bd_fit = bd_fit
 ;spawn, 'touch '+filein+'.preparegalfit';§§§§§§§§§§§§§§§§§§§§§§
 
 ;spawn the script
@@ -116,10 +124,7 @@ prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, 
    ELSE spawn, setup.galexe+' '+obj_file
    spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
 
-;   wait, randomu(systime(/seconds))*8+2
-;   spawn, 'touch '+out_file
-
-   file_delete, filein
+;   file_delete, filein
    wait, 1
 END
 

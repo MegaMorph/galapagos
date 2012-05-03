@@ -1729,7 +1729,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
                     conv_box, zero_pt, plate_scl, num_contrib, frame_contrib, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
                     conminm, conmaxm, setup_version, nband, $
-                    outpre
+                    outpre, bd_fit = bd_fit
 ;   setup_version = 4
 ;objects contains an index of secondary sources
 ;in the case of contributing sources, the TABLE is changed, so keep a
@@ -1741,22 +1741,24 @@ xmax = sxpar(hdr, 'NAXIS1')
 ymax = sxpar(hdr, 'NAXIS2')
 
 ;write constraint file for secondaries
-openw, 1, constr_file
-printf, 1, '# Component/    parameter   constraint  Comment'
-printf, 1, '# operation                  values'
-FOR j=2ul, n_elements(objects)+1 DO BEGIN
-    lo = strtrim(setup.conminn, 2)
-    hi = strtrim(setup.conmaxn, 2)
-    printf, 1, j, ' n '+lo+' to '+hi
-    printf, 1, j, ' re 0.3 to '+strtrim(conmaxre, 2)
-    printf, 1, j, ' q 0.0001  to 1.'
-    printf, 1, j, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
-    printf, 1, j, ' mag 0 to 40'
-    printf, 1, j, ' pa -360 to 360'
-    printf, 1, j, ' x '+strtrim(-xmax)+' '+strtrim(xmax)
-    printf, 1, j, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
-ENDFOR
-close, 1
+;if not keyword_set(bd_fit) then begin
+    openw, 1, constr_file
+    printf, 1, '# Component/    parameter   constraint  Comment'
+    printf, 1, '# operation                  values'
+    FOR j=2ul, n_elements(objects)+1 DO BEGIN
+        lo = strtrim(setup.conminn, 2)
+        hi = strtrim(setup.conmaxn, 2)
+        printf, 1, j, ' n '+lo+' to '+hi
+        printf, 1, j, ' re 0.3 to '+strtrim(conmaxre, 2)
+        printf, 1, j, ' q 0.0001  to 1.'
+        printf, 1, j, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
+        printf, 1, j, ' mag 0 to 40'
+        printf, 1, j, ' pa -360 to 360'
+        printf, 1, j, ' x '+strtrim(-xmax)+' '+strtrim(xmax)
+        printf, 1, j, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
+    ENDFOR
+    close, 1
+;ENDIF
 
 ;write obj file header plus sky
 openw, 1, obj_file, width=1000
@@ -1904,7 +1906,7 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
     secout_file = outpath_galfit[idx]+outpre[idx,1]+ $
       round_digit(table[objects[i]].number, 0, /str)+'_'+strtrim(setup.galfit_out,2)+'.fits'
     
-; for some reason needs this is needed to find read_sersic_results as a
+; for some reason this is needed to find read_sersic_results as a
 ; function, not a variable. Worked before and still works fine in the
 ; command line.
     forward_function read_sersic_results
@@ -2516,6 +2518,7 @@ setup = create_struct('files', '', $
                       'version', 0,$
                       'cheb', intarr(7)-1, $
                       'galfit_out_path',' ', $
+                      'bdcat', 0, $
                       'dobd', 0, $
                       'bd_maglim', -1., $
                       'docombine', 0, $
@@ -2556,6 +2559,7 @@ WHILE NOT eof(1) DO BEGIN
     IF pos EQ -1 THEN pos = strlen(line)
     content = strtrim(strmid(line, len_num, pos-len_num), 2)
     IF strupcase(strmid(line, 0, len_num)) eq 'G00)' then block_bd = 1
+    IF strupcase(strmid(line, 0, len_num)) eq 'G00)' then setup.bdcat = 1
     IF strupcase(strmid(line, 0, len_num)) eq 'E19)' then limitn = 1
 ENDWHILE
 close, 1
@@ -2947,7 +2951,7 @@ IF file_test(obj[0]) THEN BEGIN
                                  'q_galfit_band_d', result.COMP2_AR, 'qerr_galfit_band_d', result.COMP2_AR_ERR, $
                                  'pa_galfit_band_d', result.COMP2_PA, 'paerr_galfit_band_d', result.COMP2_PA_ERR, $
                                  'x_galfit_band_d', result.COMP2_XC, 'xerr_galfit_band_d', result.COMP2_XC_ERR, $
-                                 'y_galfit_band_b', result.COMP2_YC, 'yerr_galfit_band_b', result.COMP2_YC_ERR, $
+                                 'y_galfit_band_d', result.COMP2_YC, 'yerr_galfit_band_d', result.COMP2_YC_ERR, $
                                  'mag_galfit_band_b', result.COMP3_MAG, 'magerr_galfit_band_b',result.COMP3_MAG_ERR, $
                                  're_galfit_band_b', result.COMP3_RE, 'reerr_galfit_band_b', result.COMP3_RE_ERR, $
                                  'n_galfit_band_b', result.COMP3_N, 'nerr_galfit_band_b' ,result.COMP3_N_ERR, $
@@ -3290,7 +3294,7 @@ return, feedback
 END
 
 PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = final, bd=bd
-; HAS TO BE CHANGED FOR POSSIBILITY FOR B/D DECOMPOSITION
+ ; HAS TO BE CHANGED FOR POSSIBILITY FOR B/D DECOMPOSITION
 forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
 ; this routine takes care of objects with non-existent output files
@@ -3299,7 +3303,6 @@ IF setup.version ge 4 then res = read_sersic_results(out_file, nband, bd=bd)
 IF setup.version lt 4 then res = read_sersic_results_old_galfit(out_file, bd=bd)      
 name_table = tag_names(table)
 name_res = tag_names(res)
-if keyword_set(bd) then stop
 
 for j=0,n_elements(name_res)-1 do begin
     tagidx=where(name_table eq name_res[j], ct)
@@ -3370,7 +3373,7 @@ if not file_test(out_file) then begin
 ENDIF ELSE BEGIN
     
 ; IN B/D THIS BIT WILL BE DONE IN EACH READIN, BUT RESULT IS EQUIVALENT
-    if keyword_set(final) then begin
+   if keyword_set(final) then begin
         table[i].org_image = table[i].tile
         table[i].org_image_band = table[i].tile
     ENDIF
@@ -3496,7 +3499,7 @@ IF keyword_set(logfile) THEN $
 ; to get output catalogue
 ; This already defines ALL parameters, even the B/D ones if later
 ; needed. Nothing is done to those until starting the BD-block!
-define_addcol, addcol, nband, fit_bd=setup.dobd
+define_addcol, addcol, nband, bd_fit = setup.bdcat
 ;==============================================================================
 ;run SExtractor
 IF setup.dosex THEN BEGIN
@@ -3607,123 +3610,120 @@ IF setup.dostamps THEN BEGIN
     IF keyword_set(logfile) THEN $
       update_log, logfile, 'Postage stamps... done!'
 ENDIF 
+
 ;==============================================================================
-; read in PSF list
-;==============================================================================
-IF setup.dosky or setup.dobd  THEN BEGIN
-    IF keyword_set(logfile) THEN $
-      update_log, logfile, 'Beginning sky loop...'
+IF keyword_set(logfile) THEN $
+  update_log, logfile, 'Setting up output catalogue...'
 ;;==============================================================================
 ;read in the combined SExtractor table
-    sexcat = read_sex_table(setup.outdir+setup.sexcomb, $
-                            outpath_file[0,0]+setup.outparam, $
-                            add_col = ['frame', '" "'])
+sexcat = read_sex_table(setup.outdir+setup.sexcomb, $
+                        outpath_file[0,0]+setup.outparam, $
+                        add_col = ['frame', '" "'])
+
+;sort the total catalogue by magnitude and select the brightest BRIGHT percent
+br = sort(sexcat.mag_best)
+nbr = round(n_elements(sexcat.mag_best)*setup.bright/100.)
+
+; reordering objects to be in brightness order
+table = sexcat[br]
+; make table.frame multi-wavelength-ready to be passed onto gala_bridge
+tableim = strarr(nband+1,n_elements(table.frame))
+
+for i = 0, n_elements(images[*,0])-1 do begin
+    whtableim = where(table.frame eq images[i,0], ct)
+    if ct gt 0 then for b=0,nband do tableim[b,whtableim] = images[i,b]
+ENDFOR 
+
+table=remove_tags(table,'frame')
+add_tag, table, 'frame', strarr(nband+1), table2
+table=table2
+
+table.frame = tableim
+add_tag, table, 'flag_galfit', 0, table2
+table=table2
+delvarx, table2
+
+; this line only created an empty structure, no values in yet!
+; fittab read in because for now this seems to be easier. Will be renamed to 'table' below.
+; could and should be cleaned up at some point !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+fittab = read_sex_param(outpath_file[0,0]+setup.outparam, n_elements(sexcat.mag_best), $
+                        add_column = addcol)
+
+add_tag, fittab, 'frame', strarr(nband+1), fittab2
+fittab = fittab2
+
+; fill in sextractor values
+struct_assign, table, fittab
+delvarx, table
+
+; rename table in order to work in the rest of the code
+table = fittab
+delvarx, fittab
+
+orgim = setup.images
+orgwht = setup.weights
+orgpath = set_trailing_slash(setup.outpath)
+orgpath_band = set_trailing_slash(setup.outpath_band)
+orgpre = setup.outpre
+nband = setup.nband
+
+orgpath_pre = orgpath_band+orgpre
+orgpath_file = orgpath
+for q=0, nband do orgpath_file[*,q]=orgpath_pre[*,q]+strtrim(setup.stamp_pre[q],2)+'.'
+orgpath_file_no_band = orgpath
+for q=0, nband do orgpath_file_no_band[*,q]=orgpath[*,q]+orgpre[*,q]
+
+IF setup.dosky or setup.dobd  THEN BEGIN 
+;==============================================================================
+; check if psf in setup file is an image or a list and read into
+; structure used
+    readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband
     
-    add_tag, sexcat, 'do_list', 0, sexcat_new
-    sexcat = sexcat_new
-    delvarx, sexcat_new
+    IF keyword_set(logfile) THEN $
+      update_log, logfile, 'Setting up objects list to be fit...'
+;;==============================================================================
+    add_tag, table, 'do_list', 0, table_new
+    table = table_new
+    delvarx, table_new
     
     IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
-        sexcat.do_list = 1
+        table.do_list = 1
     ENDIF ELSE BEGIN
         readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
         
-        srccor, do_ra/15., do_dec, sexcat.alpha_j2000/15., sexcat.delta_j2000, $
+        srccor, do_ra/15., do_dec, table.alpha_j2000/15., table.delta_j2000, $
           setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
         
-        sexcat[sex_i].do_list = 1
+        table[sex_i].do_list = 1
     ENDELSE
-;==============================================================================
-; check if psf in setup file is an image or a list
-    readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband
 ENDIF
 
+;goto, jump_over_this
 ;==============================================================================
 ;measure sky and run galfit?
 ;==============================================================================
 IF setup.dosky THEN BEGIN
     IF keyword_set(logfile) THEN $
       update_log, logfile, 'Beginning sky loop...'
-;sort the total catalogue by magnitude and select the brightest BRIGHT percent
-    br = sort(sexcat.mag_best)
-    nbr = round(n_elements(sexcat.mag_best)*setup.bright/100.)
-    
-; reordering objects to be in brightness order
-    table = sexcat[br]
-; make table.frame multi-wavelength-ready to be passed onto gala_bridge
-    tableim = strarr(nband+1,n_elements(table.frame))
-    
-    for i = 0, n_elements(images[*,0])-1 do begin
-        whtableim = where(table.frame eq images[i,0], ct)
-        if ct gt 0 then for b=0,nband do tableim[b,whtableim] = images[i,b]
-    ENDFOR 
-    
-    table=remove_tags(table,'frame')
-    add_tag, table, 'frame', strarr(nband+1), table2
-    table=table2
-    table.frame = tableim
-    add_tag, table, 'flag_galfit', 0, table2
-    table=table2
-    delvarx, table2
-    
-; this line only created an empty structure, no values in yet!
-; fittab read in because for now this seems to be easier. Will be renamed to 'table' below.
-; could and should be cleaned up at some point !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    fittab = read_sex_param(outpath_file[0,0]+setup.outparam, n_elements(sexcat.mag_best), $
-                            add_column = addcol)
+
 ; fittab does NOT contain FRAME (which is needed quite often!) Other
 ; than that, table is a subset of parameters, fittab is a subset of
 ; objects (only [br])
 ; set standard values
-    struct_assign, table, fittab
-    fittab.mag_galfit = 999.
-    fittab.mag_galfit_band = fltarr(nband)+999.
-    fittab.re_galfit = -99.
-    fittab.re_galfit_band = fltarr(nband)-99.
-    fittab.n_galfit = -99.
-    fittab.n_galfit_band = fltarr(nband)-99.
-    fittab.q_galfit = -99.
-    fittab.q_galfit_band = fltarr(nband)-99.
+    table.mag_galfit = 999.
+    table.mag_galfit_band = fltarr(nband)+999.
+    table.re_galfit = -99.
+    table.re_galfit_band = fltarr(nband)-99.
+    table.n_galfit = -99.
+    table.n_galfit_band = fltarr(nband)-99.
+    table.q_galfit = -99.
+    table.q_galfit_band = fltarr(nband)-99.
     
-    add_tag, fittab, 'do_list', 0, fittab_new
-    fittab = fittab_new
-    delvarx, fittab_new
-    
-    IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
-        fittab.do_list = 1
-    ENDIF ELSE BEGIN
-        readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
-        
-        srccor, do_ra/15., do_dec, fittab.alpha_j2000/15., fittab.delta_j2000, $
-          setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
-        
-        fittab[sex_i].do_list = 1
-    ENDELSE
-    
-    delvarx, table
-    table = fittab
-    delvarx, fittab
-    
-; is writing out this table necessary? Or can I pass on the needed table through the save file without creating overhead and slow the code down?
-;       mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
-;find the image files for the sources
-    orgim = setup.images
-    orgwht = setup.weights
-    orgpath = set_trailing_slash(setup.outpath)
-    orgpath_band = set_trailing_slash(setup.outpath_band)
-    orgpre = setup.outpre
-    nband = setup.nband
-    
-    orgpath_pre = orgpath_band+orgpre
-    orgpath_file = orgpath
-    for q=0, nband do orgpath_file[*,q]=orgpath_pre[*,q]+strtrim(setup.stamp_pre[q],2)+'.'
-    orgpath_file_no_band = orgpath
-    for q=0, nband do orgpath_file_no_band[*,q]=orgpath[*,q]+orgpre[*,q]
     
 ;calculate sky for the brightest objects
 ;******************************************************************************
 ;******************************************************************************
-;current object (will be used and overwritten by the neue, optimized, queue)
+;current object (will be used and overwritten by the new, optimized, queue)
     cur = 0l
 ;create object array for child processes 
     bridge_arr = objarr(setup.max_proc)
@@ -3958,8 +3958,8 @@ loopend:
         FOR i=0, ct-1 DO BEGIN
             idx = where(table[bridge_obj[remain[i]]].frame[0] EQ orgim[*,0])
             objnum = round_digit(table[bridge_obj[remain[i]]].number, 0, /str)
-            obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
-            out_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out)[0]
+            obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
+            out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
             sky_file = strarr(nband+1)
             for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
             
@@ -3989,178 +3989,67 @@ ENDIF
 ; object parameters have changed and decision might be a different one.
 ; ?? d) Neighbours will only be deblended as single sersics!
 IF setup.dobd THEN BEGIN
-;goto, jump_over_this
-    goto, jump_over_this2
+   print, 'reading all single sersic results so that B/D has the best possible knowledge' 
+
+;  goto, jump_over_this
+;  goto, jump_over_this2
     
 ; first read in all single sersic results (ALL)
 ; This should NOT be neccessary, when table and fittab contain the
 ; same objects and/or if a proper database is used!!
-    
-    print, 'reading all single sersic results so that B/D has the best possible knowledge' 
-; start again from virgin structure, fill with all fitting resuluts,
-; only reading in, no additional fitting being done
-; called sexcat above
-    tab = read_sex_table(setup.outdir+setup.sexcomb, $
-                         outpath_file[0,0]+setup.outparam, $
-                         add_col = ['TILE', '" "'])
-    
-    add_tag, tab, 'flag_galfit', 0, tab2
-    tab=tab2
-    delvarx, tab2
-    
-    ntab = n_elements(tab)
-    out = read_sex_param(outpath_file[0,0]+setup.outparam, ntab, $
-                         add_column = addcol)
-    
-    struct_assign, tab, out
-    
+
+    ntab = n_elements(table)
+
 ;find the image files for the sources
-    orgim = setup.images
-    orgwht = setup.weights
-    orgpath = set_trailing_slash(setup.outpath)
-    orgpath_band = set_trailing_slash(setup.outpath_band)
-    orgpre = setup.outpre
-    nband = setup.nband
-    
-    orgpath_pre = orgpath_band+orgpre
-    orgpath_file = orgpath
-    for q=0, nband do orgpath_file[*,q]=orgpath_pre[*,q]+strtrim(setup.stamp_pre[q],2)+'.'
-    orgpath_file_no_band = orgpath
-    for q=0, nband do orgpath_file_no_band[*,q]=orgpath[*,q]+orgpre[*,q]
-    
     print,' '
     FOR i=0ul, ntab-1 DO BEGIN
-        statusline, ' reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
-        objnum = round_digit(tab[i].number, 0, /str)
+        statusline, ' reading single sersic result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
+        objnum = round_digit(table[i].number, 0, /str)
         
-        idx = where(tab[i].tile EQ orgim[*,0])
-        out_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+ $
-                    setup.galfit_out)[0]+'.fits'
+        idx = where(table[i].frame EQ orgim[*,0])
+        out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]+'.fits'
         
-        obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
+        obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
         sky_file = strarr(nband+1)
         for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
         
-        update_table, out, tab, i, out_file, obj_file, sky_file, nband, setup, /final
-        out[i].org_image_band = orgim[idx[0],1:nband]
+; read in single sersic again
+        update_table, table, i, out_file, obj_file, sky_file, nband, setup
+        table[i].org_image_band = orgim[idx[0],1:nband]
         
     ENDFOR
     print, ' '
-    IF file_test(setup.bad) THEN BEGIN
-        readcol, setup.bad, tile, x, y, format = 'A,F,F', comment = '#', $
-          /silent
-        tiles = uniq(tile, sort(tile))
-        flag = intarr(n_elements(out))
-        FOR i=0ul, n_elements(tiles)-1 DO BEGIN
-            print, tile[tiles[i]]
-            tileidx = where(tile EQ tile[tiles[i]], ct)
-            IF ct GT 0 THEN BEGIN
-                catidx = where(out.org_image EQ tile[tiles[i]], ct1)
-                IF ct1 GT 0 THEN BEGIN
-                    srccor, x[tileidx], y[tileidx], out[catidx].x_image, $
-                      out[catidx].y_image, setup.exclude_rad, xy, oi, $
-                      option = 1, /silent
-                    IF oi[0] GE 0 THEN flag[catidx[oi]] = 1
-                ENDIF
-            ENDIF
-        ENDFOR
-        good = where(flag EQ 0, ct)
-        IF ct EQ 0 THEN message, 'No objects in output catalogue left' $
-        ELSE out = out[good]
-    ENDIF
     
 ;=========================================================================
 ; finished reading in all single sersic results
 ;=========================================================================
     IF keyword_set(logfile) THEN $
       update_log, logfile, 'Beginning Bulge_Disk_decomposition ...'
-;sort the total catalogue by magnitude and select the brightest BRIGHT
-;percent
-    br = sort(out.mag_best)
-    table = out[br]
-    delvarx, out
-    
-;;;;;;;; currently decided on SExtractor mag. single sersic fitting mag might
-; be better
-    nbr = n_elements(where(table.mag_best lt setup.bd_maglim))
-    
-; make table.frame multi-wavelength-ready to be passed onto
-; gala_bridge (NOT PASSED OVER, WRITTEN OUT AND READ IN!)
-    tableim = strarr(nband+1,n_elements(table.org_image))
-    for i = 0, n_elements(images[*,0])-1 do begin
-        whtableim = where(table.org_image eq images[i,0], ct)
-        if ct gt 0 then for b=0,nband do tableim[b,whtableim] = images[i,b]
-    ENDFOR 
-    
-;      table=remove_tags(table,'frame')
-    add_tag, table, 'frame', strarr(nband+1), table2
-    table=table2
-    table.frame = tableim
-    delvarx, table2, todo
-    
-    fittab = read_sex_param(outpath_file[0,0]+setup.outparam, nbr, $
-                            add_column = addcol)
-
-stop
-
-; fill with single sersic results
-    struct_assign, table, fittab
-
-; create do_list for source object list (objects to be primaries)
-    add_tag, fittab, 'do_list_bd', 0, fittab_new
-    fittab = fittab_new
-    delvarx, fittab_new
-    
-    IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
-        fittab.do_list = 1
-    ENDIF ELSE BEGIN
-        readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
-        
-        srccor, do_ra/15., do_dec, fittab.alpha_j2000/15., fittab.delta_j2000, $
-          setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
-        
-        fittab[sex_i].do_list = 1
-    ENDELSE
-        
 ; set standard values for B/D parameters
 ; fill with standard values
-    fittab.mag_galfit_d = 999.
-    fittab.mag_galfit_band_d = fltarr(nband)+999
-    fittab.re_galfit_d = -99.
-    fittab.re_galfit_band_d = fltarr(nband)-99.
-    fittab.n_galfit_d = -99.
-    fittab.n_galfit_band_d = fltarr(nband)-99.
-    fittab.q_galfit_d = -99.
-    fittab.q_galfit_band_d = fltarr(nband)-99.
-    fittab.mag_galfit_b = 999.
-    fittab.mag_galfit_band_b = fltarr(nband)+999.
-    fittab.re_galfit_b = -99.
-    fittab.re_galfit_band_b = fltarr(nband)-99.
-    fittab.n_galfit_b = -99.
-    fittab.n_galfit_band_b = fltarr(nband)-99.
-    fittab.q_galfit_b = -99.
-    fittab.q_galfit_band_b = fltarr(nband)-99.
-    
-    table=fittab
-    delvarx,fittab
-    
-;      mwrfits, table, setup.outdir+setup.sexcomb+'.bd.ttmp', /create
-;find the image files for the sources
-    orgim = setup.images
-    orgwht = setup.weights
-    orgpath = set_trailing_slash(setup.outpath)
-    orgpath_band = set_trailing_slash(setup.outpath_band)
-    orgpre = setup.outpre
-    nband = setup.nband
-    
-    orgpath_pre = orgpath_band+orgpre
-    orgpath_file = orgpath
-    for q=0, nband do orgpath_file[*,q]=orgpath_pre[*,q]+strtrim(setup.stamp_pre[q],2)+'.'
-    orgpath_file_no_band = orgpath
-    for q=0, nband do orgpath_file_no_band[*,q]=orgpath[*,q]+orgpre[*,q]
-    
+    table.mag_galfit_d = 999.
+    table.mag_galfit_band_d = fltarr(nband)+999
+    table.re_galfit_d = -99.
+    table.re_galfit_band_d = fltarr(nband)-99.
+    table.n_galfit_d = -99.
+    table.n_galfit_band_d = fltarr(nband)-99.
+    table.q_galfit_d = -99.
+    table.q_galfit_band_d = fltarr(nband)-99.
+    table.mag_galfit_b = 999.
+    table.mag_galfit_band_b = fltarr(nband)+999.
+    table.re_galfit_b = -99.
+    table.re_galfit_band_b = fltarr(nband)-99.
+    table.n_galfit_b = -99.
+    table.n_galfit_band_b = fltarr(nband)-99.
+    table.q_galfit_b = -99.
+    table.q_galfit_band_b = fltarr(nband)-99.
+
+;************************ DEBUGGING ONLY!!!!!
+stop
     save, /all, filename = strtrim(setup.outdir,2)+'before_bd2.sav'
+stop
 jump_over_this2:
+stop
     restore, strtrim(setup.outdir,2)+'before_bd2.sav'
     
     stop
@@ -4169,6 +4058,7 @@ jump_over_this2:
 ;******************************************************************************
 ;current object (will be used and overwritten by the neue, optimized, queue)
     cur = 0l
+    delvarx, todo, bridge_arr, bridge_use, bridge_obj, bridge_pos, blocked
 ;create object array for child processes 
     bridge_arr = objarr(setup.max_proc)
 ;allow main to see which process is free
@@ -4199,12 +4089,11 @@ jump_over_this2:
         ENDIF
         loop++
         
-;check if current object exists
 loopstart_bd:
 ; only successful single sersic object??
 ; todo eq flag_galfit eq 2 and flag_galfit_bd eq 0?????
         
-        todo=where(table.flag_galfit_bd eq 0)
+        todo=where(table.flag_galfit_bd eq 0 AND table.do_list EQ 1, ctr)
         if todo[0] eq -1 then begin
             FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
             goto, loopend_bd
@@ -4236,11 +4125,9 @@ loopstart2_bd:
                 for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
                 
 ;check if file was done successfully or bombed (done in update_table)
-                stop
+;else table is automatically filled with standard values                
                 update_table, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup, /bd
-                stop
-;else table is automatically filled with standard values
-                
+
 ;clear object
                 bridge_obj[free[0]] = -1
 ;clear position of finished object
@@ -4305,9 +4192,7 @@ loopstart2_bd:
                 IF file_test(obj_file) THEN BEGIN
                     print, obj_file+' found.'
                     print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
-                    stop
                     update_table, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup, /bd
-                    stop
                     IF n_elements(todo) ne 1 then goto, loopstart_bd
                     IF n_elements(todo) eq 1 then goto, loopend_bd
                 ENDIF
@@ -4377,10 +4262,9 @@ loopstart2_bd:
                   update_log, logfile, 'Starting new bridge... ('+out_file+')'
 ; print, 'starting new object at '+systime(0)
                 bridge_arr[free[0]]->execute, 'astrolib'
-;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
                 bridge_arr[free[0]]->execute, '.r '+gala_pro
                 bridge_arr[free[0]]->execute, $
-                  'gala_bridge, "'+out_file+'.sav", /fit_bd', /nowait
+                  'gala_bridge, "'+out_file+'.sav", /bd_fit', /nowait
             ENDIF ELSE BEGIN
                 IF keyword_set(logfile) THEN $
                   update_log, logfile, 'Starting next object... ('+out_file+')'
@@ -4406,8 +4290,8 @@ loopend_bd:
         FOR i=0, ct-1 DO BEGIN
             idx = where(table[bridge_obj[remain[i]]].frame[0] EQ orgim[*,0])
             objnum = round_digit(table[bridge_obj[remain[i]]].number, 0, /str)
-            obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_bd_'+setup.obj)[0]
-            out_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_bd_'+setup.galfit_out)[0]
+            obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.obj)[0]
+            out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.galfit_out)[0]
             sky_file = strarr(nband+1)
             for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
             
@@ -4421,9 +4305,7 @@ loopend_bd:
             
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
-            stop
             update_table, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup, /bd
-            stop
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
         ENDFOR
@@ -4439,15 +4321,11 @@ IF setup.docombine THEN BEGIN
     tab = read_sex_table(setup.outdir+setup.sexcomb, $
                          outpath_file[0,0]+setup.outparam, $
                          add_col = ['TILE', '" "'])
-    add_tag, tab, 'flag_galfit', 0, tab2
-    tab=tab2
-    delvarx, tab2
-    
     ntab = n_elements(tab)
+
     out = read_sex_param(outpath_file[0,0]+setup.outparam, ntab, $
-                         add_column = addcol)
-    struct_assign, tab, out
-    
+                         add_column = [[addcol],['TILE', '" "']])
+
 ;find the image files for the sources
     orgim = setup.images
     orgwht = setup.weights
@@ -4468,24 +4346,26 @@ IF setup.docombine THEN BEGIN
         objnum = round_digit(tab[i].number, 0, /str)
         
         idx = where(tab[i].tile EQ orgim[*,0])
-        out_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+ $
-                    setup.galfit_out)[0]+'.fits'
+        out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]+'.fits'
         
-        obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
+        obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
         sky_file = strarr(nband+1)
         for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
         
-        stop
 ; read in single sersic again
-        update_table, out, tab, i, out_file, obj_file, sky_file, nband, setup, /final
-        stop
+        update_table, out, i, out_file, obj_file, sky_file, nband, setup, /final
 ; read in B/D again
-        update_table, out, tab, i, out_file, obj_file, sky_file, nband, setup, /final, /bd
-        stop
-        out[i].org_image_band = orgim[idx[0],1:nband]
-        
+        if setup.bdcat then begin
+            out_file_bd = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.galfit_out)[0]+'.fits'
+            update_table, out, i, out_file_bd, obj_file, sky_file, nband, setup, /bd, /final
+            out[i].org_image_band = orgim[idx[0],1:nband]
+        ENDIF
+
     ENDFOR
     print, ' '
+
+; add column frame
+
     IF file_test(setup.bad) THEN BEGIN
         readcol, setup.bad, tile, x, y, format = 'A,F,F', comment = '#', $
           /silent
@@ -4508,7 +4388,7 @@ IF setup.docombine THEN BEGIN
         IF ct EQ 0 THEN message, 'No objects in output catalogue left' $
         ELSE out = out[good]
     ENDIF
-    
+stop    
     mwrfits, out, setup.outdir+setup.cat, /silent, /create
 ENDIF
 d = check_math()
