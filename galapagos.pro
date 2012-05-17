@@ -3075,7 +3075,7 @@ IF file_test(out_file) THEN BEGIN
         fittab[i].org_image_band = table[i].tile
     ENDIF
     if not keyword_set(final) then fittab[i].org_image = table[i].frame[0]
-    
+
     table[i].flag_galfit=2
     fittab[i].file_galfit = out_file
 forward_function read_sersic_results
