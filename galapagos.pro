@@ -11,7 +11,7 @@
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
 ; Backwards compatible to work with Galfit3 on 1-band data
-;==============================================================================
+;=============================================================================
 
 FUNCTION required_entries
    return, ['number', 'x_image', 'y_image', 'cxx_image', 'cyy_image', $
@@ -394,7 +394,12 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
            
            srccor, x, y, table_all.x_image, table_all.y_image, rad, l, e, $
              option = 1, /silent
-           e = invert_index(table_all.number, e)
+
+; can invert_index be replaced with a_not_b.pro????  inv2=a_not_b(arr1,arr2)
+         hlpind = lindgen(n_elements(table_all.number))
+         e = a_not_b(hlpind, e)
+;old version
+;           e = invert_index(table_all.number, e)
            IF e[0] EQ -1 THEN message, 'No elements left in catalogue!'
            table_all = table_all[e]
            
@@ -475,7 +480,7 @@ FUNCTION calc_dist_to_edge, file, catalogue
    return, radius
 END
 
-PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac
+PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac, setup
 ;routine to create postage stamp parameter files OUTPARAM for an
 ;IMAGE, using a SEXCAT with the paramater file SEXPARAM
 ;OUTPARAM has the following format:
@@ -492,6 +497,33 @@ PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac
    nx = sxpar(hd, 'NAXIS1')
    ny = sxpar(hd, 'NAXIS2')
 
+; correlate with object list to create a flag that enables cut_stamp
+; to only cut scientific targets
+   add_tag, cat, 'cut_list', 0, cat_new
+   cat=cat_new
+   delvarx, cat_new
+   
+   IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
+       cat.cut_list = 1
+   ENDIF ELSE BEGIN
+       if file_test(setup.srclist) eq 0 then print, 'supplied object file does not exist'
+       if file_test(setup.srclist) eq 0 then stop
+       readcol, setup.srclist, cut_ra, cut_dec, format='F,F', comment='#', /SILENT
+
+; or is the other way around faster??? NEESSARILY USE FASTER METHOD!
+; Make this dynamic! Usually, in big surveys, srclist would have
+; more objects that a tile, but not always true, e.g. when interested
+; in a very special subsample
+       if n_elements(cat.alpha_j2000) le n_elements(cut_ra) THEN $
+         srccor, cat.alpha_j2000/15., cat.delta_j2000, cut_ra/15., cut_dec, $
+         setup.srclistrad, cat_i, cut_i, OPTION=1, /SPHERICAL, /SILENT
+       if n_elements(cat.alpha_j2000) gt n_elements(cut_ra) THEN $
+         srccor, cut_ra/15., cut_dec, cat.alpha_j2000/15., cat.delta_j2000, $
+         setup.srclistrad, cut_i, cat_i, OPTION=1, /SPHERICAL, /SILENT
+       
+       cat[cat_i].cat_list = 1
+   ENDELSE
+   
    openw, 1, outparam
 ;loop over objects and calculate postage stamp sizes
    FOR i=0ul, n_elements(cat)-1 DO BEGIN
@@ -530,10 +562,16 @@ PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac
       yhi = round(cat[i].y_image)+round(yfac)
       IF yhi GT ny-1 THEN yhi = ny-1
       
-      printf, 1, cat[i].number, cat[i].x_image, cat[i].y_image, $
-              xlo, xhi, ylo, yhi, format = '(I,2(F),4(I))'
-   ENDFOR
-   close, 1
+; write out parameters for postages stamps, but only if object is in
+; srclist
+; in case of an empty catalogue, 0s have to be written ut (if the file
+; doesn't exist, galapapos crases) The check is in the cut_stamps
+      if (cat[i].cut_list eq 1) then begin
+          printf, 1, cat[i].number, cat[i].x_image, cat[i].y_image, $
+            xlo, xhi, ylo, yhi, format = '(I,2(F),4(I))'
+      endif
+  ENDFOR
+  close, 1
 
 END
 
@@ -559,14 +597,18 @@ PRO cut_stamps, image, param, outpath, pre, post
 
    fill_struct, cat, param
 
+; only cut the stampls when the content is useful and not filled with 0s
+   if not cat[0].id eq 0 then begin
+       
 ;  ndigits = fix(alog10(max(cat.id)))+1
-   FOR i=0ul, nobj-1 DO BEGIN
-      hextract, im, hd, out, outhd, $
-                cat[i].xlo, cat[i].xhi, cat[i].ylo, cat[i].yhi, /silent
-      num = strtrim(cat[i].id, 2)
+       FOR i=0ul, nobj-1 DO BEGIN
+           hextract, im, hd, out, outhd, $
+             cat[i].xlo, cat[i].xhi, cat[i].ylo, cat[i].yhi, /silent
+           num = strtrim(cat[i].id, 2)
 ;    WHILE strlen(num) LT ndigits DO num = '0'+num
-      writefits, outpath+pre+num+post+'.fits', out, outhd
-   ENDFOR
+           writefits, outpath+pre+num+post+'.fits', out, outhd
+       ENDFOR
+   ENDIF
 END
 
 PRO create_skymap, whtfile, segfile, sex, sexparam, mapfile, scale, offset
@@ -721,120 +763,128 @@ PRO merge_sex_catalogues, incat, inparam, images, neighbours, outcat
 
 ;read secondary table
       sec = read_sex_table(incat[j], inparam[j])
-      sec_d = calc_dist_to_edge(images[j], sec)
       n_sec = n_elements(sec.number)
       sec_file = strarr(n_sec)+images[j]
       sec_id = intarr(n_main)+j
+      
+; ONLY DO ALL THIS IF THERE ARE ACTUALLY DETECTIONS IN THIS FRAME!!
+      if sec[0].number gt 0 then begin
+          sec_d = calc_dist_to_edge(images[j], sec)
 
 ;extract neighbours from main -> primary table (remove primary from
 ;main)
-
+          
 ;consider only frames from main that are neighbours to sec
-      n_neighbours = n_elements(neighbours[*, 0])
-      nei = 0
-      FOR i=0ul, n_neighbours-1 DO $
-       nei = [nei, where(main_file EQ neighbours[i, j])]
-      nei = nei[1:*]
-      idx = where(nei GT -1, ct)
-      IF ct GT 0 THEN BEGIN
-         nei = nei[idx]
+          n_neighbours = n_elements(neighbours[*, 0])
+          nei = 0
+          FOR i=0ul, n_neighbours-1 DO $
+            nei = [nei, where(main_file EQ neighbours[i, j])]
+          nei = nei[1:*]
+          idx = where(nei GT -1, ct)
+          IF ct GT 0 THEN BEGIN
+              nei = nei[idx]
 ;neighbouring frames will be split from the main catalogue and added
 ;back afterwards
-         pri = main[nei]
-         pri_d = main_d[nei]
-         pri_file = main_file[nei]
-         pri_id = main_id[nei]
-
-         idx = invert_index(main.number, nei)
-         IF idx[0] EQ -1 THEN BEGIN
-            main = main[0]
-            main_d = -1
-            main_file = ''
-            main_id = -1
-         ENDIF ELSE BEGIN
-            main = main[idx]
-            main_d = main_d[idx]
-            main_file = main_file[idx]
-            main_id = main_id[idx]
-         ENDELSE
-
+              pri = main[nei]
+              pri_d = main_d[nei]
+              pri_file = main_file[nei]
+              pri_id = main_id[nei]
+              
+; can invert_index be replaced with a_not_b.pro????  inv2=a_not_b(arr1,arr2)
+              hlpind = lindgen(n_elements(main.number))
+              idx = a_not_b(hlpind, nei)
+; old version
+;         idx = invert_index(main.number, nei)
+              IF idx[0] EQ -1 THEN BEGIN
+                  main = main[0]
+                  main_d = -1
+                  main_file = ''
+                  main_id = -1
+              ENDIF ELSE BEGIN
+                  main = main[idx]
+                  main_d = main_d[idx]
+                  main_file = main_file[idx]
+                  main_id = main_id[idx]
+              ENDELSE
+              
 ;combine primary with secondary
-         tot = [pri, sec]
-         tot_d = [pri_d, sec_d]
-         tot_file = [pri_file, sec_file]
-         tot_id = [pri_id, sec_id]
-
+              tot = [pri, sec]
+              tot_d = [pri_d, sec_d]
+              tot_file = [pri_file, sec_file]
+              tot_id = [pri_id, sec_id]
+              
 ;sort by distance from border
-         ord = reverse(sort(tot_d))
-         tot = tot[ord]
-         tot_d = tot_d[ord]
-         tot_file = tot_file[ord]
-         tot_id = tot_id[ord]
-         tot_dupe = fix(tot_d*0)
-
+              ord = reverse(sort(tot_d))
+              tot = tot[ord]
+              tot_d = tot_d[ord]
+              tot_file = tot_file[ord]
+              tot_id = tot_id[ord]
+              tot_dupe = fix(tot_d*0)
+              
 ;loop over objects
-         cur = 0L
-         WHILE 1 DO BEGIN
+              cur = 0L
+              WHILE 1 DO BEGIN
 ;find objects in other table within SExtractor ellipse and remove
-            IF tot_id[cur] EQ j THEN rc = where(tot_id NE tot_id[cur]) $
-            ELSE rc = where(tot_id EQ j)
-
-            adxy, headfits(tot_file[cur]), tot[rc].alpha_j2000, $
-                  tot[rc].delta_j2000, x_rc, y_rc
-            x_rc++
-            y_rc++
-
-            phi_rc = rel_pos_ang(x_rc, y_rc, tot[cur].x_image, $
-                                 tot[cur].y_image, tot[cur].theta_image/!radeg)
-            rp_rc = 1/sqrt((cos(phi_rc)/(tot[cur].a_image* $
-                                         tot[cur].kron_radius))^2+ $
-                           (sin(phi_rc)/(tot[cur].b_image* $
-                                         tot[cur].kron_radius))^2.)
-            r_rc = sqrt((x_rc-tot[cur].x_image)^2.+(y_rc-tot[cur].y_image)^2.)
-
-            dup = where(r_rc LT rp_rc*1.1+5, ct)
-            IF ct GT 0 THEN BEGIN
-               tot_dupe[rc[dup]] = 1
-               idx = where(tot_dupe EQ 0, ct)
-               tot = tot[idx]
-               tot_d = tot_d[idx]
-               tot_file = tot_file[idx]
-               tot_id = tot_id[idx]
-               tot_dupe = fix(tot_d*0)
-            ENDIF
-            cur++
-
-            IF cur GT n_elements(tot_d)-1 THEN BREAK
-         ENDWHILE
+                  IF tot_id[cur] EQ j THEN rc = where(tot_id NE tot_id[cur]) $
+                  ELSE rc = where(tot_id EQ j)
+                  
+                  adxy, headfits(tot_file[cur]), tot[rc].alpha_j2000, $
+                    tot[rc].delta_j2000, x_rc, y_rc
+                  x_rc++
+                  y_rc++
+                  
+                  phi_rc = rel_pos_ang(x_rc, y_rc, tot[cur].x_image, $
+                                       tot[cur].y_image, tot[cur].theta_image/!radeg)
+                  rp_rc = 1/sqrt((cos(phi_rc)/(tot[cur].a_image* $
+                                               tot[cur].kron_radius))^2+ $
+                                 (sin(phi_rc)/(tot[cur].b_image* $
+                                               tot[cur].kron_radius))^2.)
+                  r_rc = sqrt((x_rc-tot[cur].x_image)^2.+(y_rc-tot[cur].y_image)^2.)
+                  
+                  dup = where(r_rc LT rp_rc*1.1+5, ct)
+                  IF ct GT 0 THEN BEGIN
+                      tot_dupe[rc[dup]] = 1
+                      idx = where(tot_dupe EQ 0, ct)
+                      tot = tot[idx]
+                      tot_d = tot_d[idx]
+                      tot_file = tot_file[idx]
+                      tot_id = tot_id[idx]
+                      tot_dupe = fix(tot_d*0)
+                  ENDIF
+                  cur++
+                  
+                  IF cur GT n_elements(tot_d)-1 THEN BREAK
+              ENDWHILE
 ;end loop over objects
-
-      ENDIF ELSE BEGIN
+              
+          ENDIF ELSE BEGIN
 ;the current frame is too far from already processed tiles (none of
-;its neighbours are in the main_file) --> include all objects in main_file
-         tot = sec
-         tot_d = sec_d
-         tot_file = sec_file
-         tot_id = sec_id
-      ENDELSE
-
+;its neighbousexcomb_multi_wl2rs are in the main_file) --> include all objects in main_file
+              tot = sec
+              tot_d = sec_d
+              tot_file = sec_file
+              tot_id = sec_id
+          ENDELSE
+          
 ;combine main with resulting table
-      main = [main, tot]
-      main_d = [main_d, tot_d]
-      main_file = [main_file, tot_file]
-      main_id = [main_id, tot_id]
-
-      idx = where(main_d GE 0, ct)
-      IF ct EQ 0 THEN message, 'No objects in combined catalogue' $
-      ELSE BEGIN
-         main = main[idx]
-         main_d = main_d[idx]
-         main_file = main_file[idx]
-         main_id = main_id[idx]
-      ENDELSE
-
+          main = [main, tot]
+          main_d = [main_d, tot_d]
+          main_file = [main_file, tot_file]
+          main_id = [main_id, tot_id]
+          
+          idx = where(main_d GE 0, ct)
+          IF ct EQ 0 THEN message, 'No objects in combined catalogue' $
+          ELSE BEGIN
+              main = main[idx]
+              main_d = main_d[idx]
+              main_file = main_file[idx]
+              main_id = main_id[idx]
+          ENDELSE
+      ENDIF
+      
 ;end loop over images
-   ENDFOR
-
+  ENDFOR
+ 
 ;calculate position angle in WCS for all sources
    frames = main_file[uniq(main_file, sort(main_file))]
    nframes = n_elements(frames)
@@ -3240,21 +3290,21 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
                exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] 
            endif Else exclude = [[-1, -1]]
           
-           run_sextractor, setup.sexexe, setup.sexout, setup.zp, $
-             images[i,0], weights[i,0], $
-             setup.cold, $
-             outpath_file[i,0]+setup.coldcat, $
-             outpath_file[i,0]+setup.coldseg, $
-             setup.hot, $
-             outpath_file[i,0]+setup.hotcat, $
-             outpath_file[i,0]+setup.hotseg, $
-             setup.enlarge, $
-             outpath_file[i,0]+setup.outcat, $
-             outpath_file[i,0]+setup.outseg, $
-             outpath_file[i,0]+setup.outparam, $
-             outpath_file[i,0]+setup.check, $
-             setup.chktype, exclude, setup.exclude_rad, $
-             outonly = setup.outonly
+;           run_sextractor, setup.sexexe, setup.sexout, setup.zp, $
+;             images[i,0], weights[i,0], $
+;             setup.cold, $
+;             outpath_file[i,0]+setup.coldcat, $
+;             outpath_file[i,0]+setup.coldseg, $
+;             setup.hot, $
+;             outpath_file[i,0]+setup.hotcat, $
+;             outpath_file[i,0]+setup.hotseg, $
+;             setup.enlarge, $
+;             outpath_file[i,0]+setup.outcat, $
+;             outpath_file[i,0]+setup.outseg, $
+;             outpath_file[i,0]+setup.outparam, $
+;             outpath_file[i,0]+setup.check, $
+;             setup.chktype, exclude, setup.exclude_rad, $
+;             outonly = setup.outonly
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ;         sex2ds9reg, outpath_pre[i]+setup.outcat, outpath_pre[i]+ $
 ;                     setup.outparam, outpath_pre[i]+'reg', 0.5, tag = outpre[i]
@@ -3307,12 +3357,12 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ;create postage stamp description files 
   IF setup.dostamps THEN BEGIN
        FOR i=0ul, nframes-1 DO BEGIN
-           print, 'cutting postages for images '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
+          print, 'cutting postages for images '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
            create_stamp_file, images[i,0], $
              outpath_file[i,0]+setup.outcat, $
              outpath_file[i,0]+setup.outparam, $
              outpath_file_no_band[i,0]+setup.stampfile, $
-             setup.stampsize
+             setup.stampsize, setup
            FOR b=1,nband do begin
 ;               print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
                cut_stamps, images[i,b], $
