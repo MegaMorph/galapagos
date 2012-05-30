@@ -514,6 +514,7 @@ PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac, setup
 ; Make this dynamic! Usually, in big surveys, srclist would have
 ; more objects that a tile, but not always true, e.g. when interested
 ; in a very special subsample
+;if n_elements(cat.alpha_j2000/15.) ne 0 then stop
        if n_elements(cat.alpha_j2000) le n_elements(cut_ra) THEN $
          srccor, cat.alpha_j2000/15., cat.delta_j2000, cut_ra/15., cut_dec, $
          setup.srclistrad, cat_i, cut_i, OPTION=1, /SPHERICAL, /SILENT
@@ -521,7 +522,7 @@ PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac, setup
          srccor, cut_ra/15., cut_dec, cat.alpha_j2000/15., cat.delta_j2000, $
          setup.srclistrad, cut_i, cat_i, OPTION=1, /SPHERICAL, /SILENT
        
-       cat[cat_i].cat_list = 1
+       if cat_i[0] ne -1 then cat[cat_i].cut_list = 1
    ENDELSE
    
    openw, 1, outparam
@@ -564,7 +565,7 @@ PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac, setup
       
 ; write out parameters for postages stamps, but only if object is in
 ; srclist
-; in case of an empty catalogue, 0s have to be written ut (if the file
+; in case of an empty catalogue, 0s have to be written out (if the file
 ; doesn't exist, galapapos crases) The check is in the cut_stamps
       if (cat[i].cut_list eq 1) then begin
           printf, 1, cat[i].number, cat[i].x_image, cat[i].y_image, $
@@ -597,9 +598,9 @@ PRO cut_stamps, image, param, outpath, pre, post
 
    fill_struct, cat, param
 
-; only cut the stampls when the content is useful and not filled with 0s
-   if not cat[0].id eq 0 then begin
-       
+; only cut the stamps when the content is useful and not filled with 0s
+;hlp, cat.id
+   if cat[0].id ne 0 then begin
 ;  ndigits = fix(alog10(max(cat.id)))+1
        FOR i=0ul, nobj-1 DO BEGIN
            hextract, im, hd, out, outhd, $
@@ -3290,21 +3291,21 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
                exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] 
            endif Else exclude = [[-1, -1]]
           
-;           run_sextractor, setup.sexexe, setup.sexout, setup.zp, $
-;             images[i,0], weights[i,0], $
-;             setup.cold, $
-;             outpath_file[i,0]+setup.coldcat, $
-;             outpath_file[i,0]+setup.coldseg, $
-;             setup.hot, $
-;             outpath_file[i,0]+setup.hotcat, $
-;             outpath_file[i,0]+setup.hotseg, $
-;             setup.enlarge, $
-;             outpath_file[i,0]+setup.outcat, $
-;             outpath_file[i,0]+setup.outseg, $
-;             outpath_file[i,0]+setup.outparam, $
-;             outpath_file[i,0]+setup.check, $
-;             setup.chktype, exclude, setup.exclude_rad, $
-;             outonly = setup.outonly
+           run_sextractor, setup.sexexe, setup.sexout, setup.zp, $
+             images[i,0], weights[i,0], $
+             setup.cold, $
+             outpath_file[i,0]+setup.coldcat, $
+             outpath_file[i,0]+setup.coldseg, $
+             setup.hot, $
+             outpath_file[i,0]+setup.hotcat, $
+             outpath_file[i,0]+setup.hotseg, $
+             setup.enlarge, $
+             outpath_file[i,0]+setup.outcat, $
+             outpath_file[i,0]+setup.outseg, $
+             outpath_file[i,0]+setup.outparam, $
+             outpath_file[i,0]+setup.check, $
+             setup.chktype, exclude, setup.exclude_rad, $
+             outonly = setup.outonly
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ;         sex2ds9reg, outpath_pre[i]+setup.outcat, outpath_pre[i]+ $
 ;                     setup.outparam, outpath_pre[i]+'reg', 0.5, tag = outpre[i]
@@ -3355,7 +3356,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
    ENDIF
 ;==============================================================================
 ;create postage stamp description files 
-  IF setup.dostamps THEN BEGIN
+ IF setup.dostamps THEN BEGIN
        FOR i=0ul, nframes-1 DO BEGIN
           print, 'cutting postages for images '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
            create_stamp_file, images[i,0], $
@@ -3391,7 +3392,6 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ;==============================================================================
 ; SEED FOR RANDOM NUMBER GENERATOR in getsky_loop!
    seed=1 ;not actually used at the moment. At the moment 'cur' is passed as the seed
-   
 ;measure sky and run galfit?
    IF setup.dosky THEN BEGIN
        IF keyword_set(logfile) THEN $
