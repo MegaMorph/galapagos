@@ -6,7 +6,15 @@ PRO gala_bridge, filein
 ;orgpath_band, orgpath_pre, orgpath_galfit, orgpath_file,
 ;orgpath_file_no_band, seed
 restore, filein
-table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
+
+;table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
+; rename the tables passed over.
+; These tables contain only objects on neighbouring frames, everything
+; should run a lot faster like this!
+cur = save_cur
+fittab = save_fittab
+table = fittab
+
 
 for b=1,nband do begin
 ;read in image and weight (takes few sec)
@@ -39,6 +47,7 @@ for b=1,nband do begin
 ; new scheme takes around 2 seconds the next, old system, about 6
 ; moment() would be 3 times faster, but returns a MEAN value!
 ;; current version
+; DAMN! HAVE TO CATCH THE CASE WHEN NO PIXELS ARE SKYPIXELS!!!!
     global_sky=median(im[skypix])
     global_sigsky=stddev(im[skypix])
     if finite(global_sky) ne 1 or finite(global_sigsky) ne 1 then begin
@@ -52,7 +61,7 @@ for b=1,nband do begin
 ;   resistant_mean, im[skypix], 3, sky, sigsky, nrej
 ;   sigsky *= sqrt(ct-1-nrej)
 ;   par = [1, sky, sigsky, sigsky]
-;; second step is a curvefit to the histogram
+;; second step in old scheme is a curvefit to the histogram
 ;   plothist, im[skypix], x, y, xr = [-1, 1]*5*sigsky+sky, /peak, /noplot
 ;   IF n_elements(par) LT n_elements(x) THEN $
 ;    yfit = curvefit(x, y, noweight, par, sigma, $

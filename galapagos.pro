@@ -3100,8 +3100,11 @@ END
 PRO update_table, fittab, table, i, out_file, obj_file, sky_file, nband, setup, final = final
 ; HAS TO BE CHANGED FOR POSSIBILITY FOR B/D DECOMPOSITION
 if not file_test(out_file) then begin
-    if not file_test(obj_file) then begin
-; object has not yet been started. Not strictly speakeing true, could
+; SHORT TERM SOLUTION! CHECK THAT SAV FILE DOESN'T EXIST, EITHER!
+; LONG TERM SOLUTION: MAKE SURE THAT BRIDGE DOESN"T CRASH!! EVER!
+; WHY DO WE SET BACK FLAG_GALFIT IN THE FIRST PLACE??????
+    if not file_test(obj_file) and not file_test(out_file+'.sav') then begin        
+; object has not yet been started. Not strictly speaking true, could
 ; be on sky determination.
         table[i].flag_galfit = 0
         fittab[i].flag_galfit = 0
@@ -3122,23 +3125,22 @@ if not file_test(out_file) then begin
            endif
        endfor
 ; define standard values!
-
-    ENDELSE    
+       
+   ENDELSE    
 ENDIF
 
-IF file_test(out_file) THEN BEGIN
+IF file_test(out_file+'.fits') THEN BEGIN
     if keyword_set(final) then begin
         fittab[i].org_image = table[i].tile
         fittab[i].org_image_band = table[i].tile
     ENDIF
     if not keyword_set(final) then fittab[i].org_image = table[i].frame[0]
 
-    table[i].flag_galfit=2
-    fittab[i].file_galfit = out_file
+    fittab[i].file_galfit = out_file+'.fits'
 forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
-    IF setup.version ge 4 then res = read_sersic_results(out_file,nband)
-    IF setup.version lt 4 then res = read_sersic_results_old_galfit(out_file)      
+    IF setup.version ge 4 then res = read_sersic_results(out_file+'.fits',nband)
+    IF setup.version lt 4 then res = read_sersic_results_old_galfit(out_file+'.fits')      
     name_fittab = tag_names(fittab)
     name_res = tag_names(res)
     
@@ -3170,6 +3172,7 @@ forward_function read_sersic_results_old_galfit
            fittab[i].(tagidx) = res.(j)
         ENDIF
     ENDFOR
+    table[i].flag_galfit = res.flag_galfit
     fittab[i].flag_galfit = res.flag_galfit    
 ENDIF
 END
@@ -3279,7 +3282,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ;==============================================================================
 ;run SExtractor
    IF setup.dosex THEN BEGIN
-   print, 'starting SExtractor: '+systime(0)
+       print, 'starting SExtractor: '+systime(0)
        IF file_test(setup.exclude) THEN $
          readcol, setup.exclude, exclude_files, exclude_x, exclude_y, $
          format = 'A,F,F', /silent $
@@ -3290,7 +3293,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
            IF ct GT 0 THEN begin
                exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] 
            endif Else exclude = [[-1, -1]]
-          
+           
            run_sextractor, setup.sexexe, setup.sexout, setup.zp, $
              images[i,0], weights[i,0], $
              setup.cold, $
@@ -3352,13 +3355,13 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
          setup.outdir+'sexcomb.reg', 10, color='green', tag = 'comb'
        IF keyword_set(logfile) THEN $
          update_log, logfile, 'SExtraction... done!'
-   print, 'finished SExtractor: '+systime(0)
+       print, 'finished SExtractor: '+systime(0)
    ENDIF
 ;==============================================================================
 ;create postage stamp description files 
- IF setup.dostamps THEN BEGIN
+   IF setup.dostamps THEN BEGIN
        FOR i=0ul, nframes-1 DO BEGIN
-          print, 'cutting postages for images '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
+           print, 'cutting postages for images '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
            create_stamp_file, images[i,0], $
              outpath_file[i,0]+setup.outcat, $
              outpath_file[i,0]+setup.outparam, $
@@ -3387,41 +3390,47 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        ENDFOR
        IF keyword_set(logfile) THEN $
          update_log, logfile, 'Postage stamps... done!'
-   print, 'finished cutting postage stamps: '+systime(0)
+       print, 'finished cutting postage stamps: '+systime(0)
    ENDIF 
 ;==============================================================================
 ; SEED FOR RANDOM NUMBER GENERATOR in getsky_loop!
    seed=1 ;not actually used at the moment. At the moment 'cur' is passed as the seed
+
 ;measure sky and run galfit?
    IF setup.dosky THEN BEGIN
        IF keyword_set(logfile) THEN $
          update_log, logfile, 'Beginning sky loop...'
 ;;==============================================================================
 ;read in the combined SExtractor table
+       print, 'reading SExtractor output'
        sexcat = read_sex_table(setup.outdir+setup.sexcomb, $
                                outpath_file[0,0]+setup.outparam, $
                                add_col = ['frame', '" "'])
                                
-;==============================================================================
-       add_tag, sexcat, 'do_list', 0, sexcat_new
-       sexcat = sexcat_new
-       delvarx, sexcat_new
-       
-       IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
-          sexcat.do_list = 1
-       ENDIF ELSE BEGIN
-          readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
-   
-          srccor, do_ra/15., do_dec, sexcat.alpha_j2000/15., sexcat.delta_j2000, $
-                  setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
-                  
-          sexcat[sex_i].do_list = 1
-       ENDELSE
-;==============================================================================
+;;==============================================================================
+; THIS IS DONE BELOW FOR FITTAB, NOT NEEDED HERE, I THINK
+;       add_tag, sexcat, 'do_list', 0, sexcat_new
+;       sexcat = sexcat_new
+;       delvarx, sexcat_new
+;       
+;       IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
+;          sexcat.do_list = 1
+;       ENDIF ELSE BEGIN
+;          readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
+;   
+;          print, 'correlating SExtractor catalogue to source list. Might take some time'
+;          srccor, do_ra/15., do_dec, sexcat.alpha_j2000/15., sexcat.delta_j2000, $
+;            setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
+;                  
+;          sexcat[sex_i].do_list = 1
+;       ENDELSE
+;;==============================================================================
 ; check if psf in setup file is an image or a list
+       print, 'reading PSFs'
        readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband
 ;==============================================================================
 ;sort the total catalogue by magnitude and select the brightest BRIGHT percent
+       print, 'setting up table'
        br = sort(sexcat.mag_best)
        nbr = round(n_elements(sexcat.mag_best)*setup.bright/100.)
        
@@ -3435,17 +3444,23 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
                if ct gt 0 then tableim[b,whtableim] = images[i,b]
            ENDFOR
        ENDFOR 
-       table=remove_tags(table,'frame')
+       table = remove_tags(table,'frame')
        add_tag, table, 'frame', strarr(nband+1), table2
-       table=table2
+       table = table2
        table.frame = strtrim(tableim,2)
        add_tag, table, 'flag_galfit', 0, table2
-       table=table2
+       table = table2
        delvarx, table2
        
-; this table contains ALL columns, but only
+; this table contains ALL columns, but only 
+       print, 'setting up second table'
        fittab = read_sex_param(outpath_file[0,0]+setup.outparam, nbr, $
                                add_column = addcol)
+       add_tag, fittab, 'frame', strarr(nband+1), fittab2
+       fittab = fittab2
+;       fittab.frame = table.frame
+       delvarx, fittab2
+
        struct_assign, table, fittab
        fittab.mag_galfit = 999
        fittab.mag_galfit_band = fltarr(nband)+999
@@ -3456,19 +3471,38 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
        fittab.q_galfit = -1
        fittab.q_galfit_band = fltarr(nband)-1
 ;==============================================================================
+
        add_tag, fittab, 'do_list', 0, fittab_new
        fittab = fittab_new
        delvarx, fittab_new
        
+; get sourcelist of intereting (primary) sources and correlate to catalogue
        IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
-          fittab.do_list = 1
+           fittab.do_list = 1
        ENDIF ELSE BEGIN
-          readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
-   
-          srccor, do_ra/15., do_dec, fittab.alpha_j2000/15., fittab.delta_j2000, $
-                  setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
-                  
-          fittab[sex_i].do_list = 1
+; only do this when the sav file does not exist or is older than the
+; sextractor table!
+           sav_file_test = file_info(setup.outdir+'primary_list.sav')
+           sex_file_test = file_info(setup.outdir+setup.sexcomb)
+
+           IF sav_file_test.exists EQ 0 OR (sav_file_test.exists EQ 1 AND sav_file_test.mtime LT sex_file_test.mtime) THEN BEGIN
+               print, 'correlating SExtractor catalogue to source list. Might take some time'
+               readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT   
+               srccor, do_ra/15., do_dec, fittab.alpha_j2000/15., fittab.delta_j2000, $
+                 setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
+
+; print indices in to file to be read in next time (much faster)
+; This has to be done here and not when cutting the postage stamps,
+; because the order of objects is different, so indices would be wrong
+               save, sex_i, filename=setup.outdir+'primary_list.sav'
+           ENDIF ELSE BEGIN
+               print, 'source correlation has already been done, simply reading result!'
+               restore, setup.outdir+'primary_list.sav'
+           ENDELSE
+
+; if sav file exists and is newer than sextractor table, simply read
+; in the indices from there!
+           fittab[sex_i].do_list = 1
        ENDELSE
 ;==============================================================================
        mwrfits, table, setup.outdir+setup.sexcomb+'.ttmp', /create
@@ -3526,7 +3560,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
           ENDIF
           loop++
           
-;check if current object exists
+;figure out which object to do next
 loopstart:
           todo = where(fittab.flag_galfit eq 0 AND fittab.do_list EQ 1, ctr)
           if ctr EQ 0 then begin
@@ -3560,7 +3594,7 @@ loopstart2:
                   for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
  
 ;check if file was done successfully or bombed
-                  update_table, fittab, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup
+                  update_table, fittab, table, bridge_obj[free[0]], out_file, obj_file, sky_file, nband, setup
 ;else table is automatically filled with standard values
                   
 ;clear object
@@ -3602,8 +3636,8 @@ loopstart2:
                   ENDREP UNTIL (min(dist) gt setup.min_dist and min(dist_block) gt setup.min_dist_block) or ob ge n_elements(todo)-1
                   IF min(dist) LT setup.min_dist or min(dist_block) lt setup.min_dist_block THEN CONTINUE
               ENDIF
-              ob=ob-1>0
-              cur=todo[ob]
+              ob = ob-1>0
+              cur = todo[ob]
               
 ; check whether this object has already been done, if so, read in
 ; result
@@ -3616,10 +3650,10 @@ loopstart2:
                   sky_file = strarr(nband+1)
                   for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
 ;check if file was done successfully or bombed and update table                  
-                  IF file_test(obj_file) THEN BEGIN
+                  IF file_test(obj_file) THEN BEGIN                      
                       print, obj_file+' found.'
                       print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
-                      update_table, fittab, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup
+                      update_table, fittab, table, cur, out_file, obj_file, sky_file, nband, setup
                       IF n_elements(todo) ne 1 then goto, loopstart
                       IF n_elements(todo) eq 1 then goto, loopend
                   ENDIF
@@ -3630,8 +3664,8 @@ loopstart2:
               bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
               table[cur].flag_galfit = 1
               fittab[cur].flag_galfit = 1
-;              statusline, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(sexcat),2)+'   '
-              print, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(sexcat),2)+'   '
+
+              print, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(where(fittab.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
 ;              print, obj_file
               if keyword_set(plot) then begin
                   plot, table.alpha_J2000,table.delta_J2000, psym=3, ystyle=1, xstyle=1
@@ -3676,13 +3710,34 @@ loopstart2:
                 psf_struct, table[cur].frame, chosen_psf_file, nband
               
 ; change seed for random in getsky_loop
-;            randxxx=randomu(seed,1)
-;            delvarx, randxxx 
               seed=table[cur].number
 ; create sav file for gala_bridge to read in
-              save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
+; writing out the fittab into the sav file is HUGE for big surveys!
+
+; USE 'NEIGHBOURS' TO CUT DOWN TABLE SIZE OF FITTAB!!
+; cutting doen the fit_table doesnt seem to be a problem. No
+; pre-defined indices are used on it in the bridge.
+; but there's still the table that is being read in in the bridge
+; itself!
+
+;select part of table with frames neighbouring the current frame;
+              int_obj = where(table.frame[0] EQ table[cur].frame[0])
+              
+              FOR i=0ul, n_elements(neighbours[*, idx])-1 DO BEGIN
+                  tabi = where(table.frame[0] EQ neighbours[i, idx[0]], ct)
+                  IF ct GT 0 THEN int_obj = [int_obj, tabi]
+              ENDFOR
+;              save_table = table[int_obj]
+              save_fittab = fittab[int_obj]
+
+; find new values of [cur] and 
+; [idx] will stay the same because it's not the object, but the tile it is on!
+              save_cur = where(save_fittab.frame[0] eq table[cur].frame[0] and save_fittab.number eq table[cur].number)
+              save_cur = save_cur[0]
+
+              save, save_cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
                 sky_file, stamp_param_file, mask_file, im_file, obj_file, $
-                constr_file, out_file, fittab, nband, orgpath_pre, outpath_file, $
+                constr_file, out_file, save_fittab, nband, orgpath_pre, outpath_file, $
                 outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
                 orgpath_band, orgpath_file, seed,$
                 filename=out_file+'.sav'
@@ -3994,9 +4049,7 @@ loopend:
          objnum = round_digit(tab[i].number, 0, /str)
 
          idx = where(tab[i].tile EQ orgim[*,0])
-         out_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+ $
-                     setup.galfit_out)[0]+'.fits'
-
+         out_file = (outpath_galfit[idx]+orgpre[idx,0]+objnum+'_'+setup.galfit_out)[0]
          obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
          sky_file = strarr(nband+1)
          for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
