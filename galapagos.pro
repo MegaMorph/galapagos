@@ -3360,34 +3360,133 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ;==============================================================================
 ;create postage stamp description files 
    IF setup.dostamps THEN BEGIN
-       FOR i=0ul, nframes-1 DO BEGIN
-           print, 'cutting postages for images '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
-           create_stamp_file, images[i,0], $
-             outpath_file[i,0]+setup.outcat, $
-             outpath_file[i,0]+setup.outparam, $
-             outpath_file_no_band[i,0]+setup.stampfile, $
-             setup.stampsize, setup
-           FOR b=1,nband do begin
-;               print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
-               cut_stamps, images[i,b], $
-                 outpath_file_no_band[i,0]+setup.stampfile, $
-                 outpath_band[i,b], $
-                 outpre[i,b], '_'+setup.stamp_pre[b]
-           ENDFOR
+; use bridge to speed up process
+;create object array for child processes 
+; create maximum max_proc parallels. Anything more blocks the harddrive,
+; limiting factor seems to be writing speed of disk.
+max_proc = 4
+       post_bridge_arr = objarr(setup.max_proc <max_proc)
+;allow main to see which process is free
+       post_bridge_use = bytarr(setup.max_proc <max_proc)
+;initialise every bridge (specify output property to allow debugging)
+       FOR i=0, setup.max_proc-1 <max_proc-1 DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+       FOR i=0, setup.max_proc-1 <max_proc-1 DO BEGIN
+           post_bridge_arr[i]->execute, 'astrolib'
+           post_bridge_arr[i]->execute, '.r '+gala_pro
        ENDFOR
-;create skymap files 
-       FOR i=0ul, nframes-1 DO BEGIN
+      
+       done_cnt=0
+       i=0
+       REPEAT BEGIN
+;get status of bridge elements
+           FOR l=0, setup.max_proc-1 <max_proc-1 DO post_bridge_use[l] = post_bridge_arr[l]->status()
+           
+;check for free bridges
+           free = where(post_bridge_use eq 0, ct)
+
+           IF ct GT 0 and done_cnt ne nframes THEN BEGIN
+;at least one bridge is free --> start newobject
+;the available bridge is free[0]
+               print, 'cutting postages for images '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
+               save, i, images, outpath_file, setup, outpath_file_no_band, outpath_band, $
+                 outpre, nband, filename=outpath_file_no_band[i,0]+setup.stampfile+'.sav'
+               IF setup.max_proc <max_proc GT 1 THEN BEGIN
+                   post_bridge_arr[free[0]]->execute, $
+                     'stamp_file_bridge, "'+outpath_file_no_band[i,0]+setup.stampfile+'.sav"', /nowait
+               ENDIF ELSE BEGIN
+                   stamp_file_bridge, outpath_file_no_band[i,0]+setup.stampfile+'.sav'
+               ENDELSE
+               done_cnt = done_cnt+1
+               i=i+1
+               wait, 1
+;switch to next object
+           ENDIF ELSE BEGIN
+;all bridges are busy --> wait
+               wait, 1
+           ENDELSE
+;stop when all done and no bridge in use any more
+       ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
+       
+; original instead of bridge mode
+;               create_stamp_file, images[i,0], $
+;                 outpath_file[i,0]+setup.outcat, $
+;                 outpath_file[i,0]+setup.outparam, $
+;                 outpath_file_no_band[i,0]+setup.stampfile, $
+;                 setup.stampsize, setup
+;               FOR b=1,nband do begin
+;;               print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
+;                   cut_stamps, images[i,b], $
+;                     outpath_file_no_band[i,0]+setup.stampfile, $
+;                     outpath_band[i,b], $
+;                     outpre[i,b], '_'+setup.stamp_pre[b]
+;               ENDFOR
+;           ENDIF
+;       ENDFOR
+       
+stop
+
+; kill bridge, make new one!
+       IF n_elements(post_bridge_arr) GT 0 THEN obj_destroy, post_bridge_arr
+max_proc = setup.max_proc
+       post_bridge_arr = objarr(setup.max_proc <max_proc)
+;allow main to see which process is free
+       post_bridge_use = bytarr(setup.max_proc <max_proc)
+;initialise every bridge (specify output property to allow debugging)
+       FOR i=0, setup.max_proc-1 <max_proc-1 DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+       FOR i=0, setup.max_proc-1 <max_proc-1 DO BEGIN
+           post_bridge_arr[i]->execute, 'astrolib'
+           post_bridge_arr[i]->execute, '.r '+gala_pro
+       ENDFOR
+
+;create skymap files using bridge
+       done_cnt=0
+       i=0
+       REPEAT BEGIN
+;get status of bridge elements
+           FOR l=0, setup.max_proc-1 <max_proc-1 DO post_bridge_use[l] = post_bridge_arr[l]->status()
+           
+;check for free bridges
+           free = where(post_bridge_use eq 0, ct)
+           
+           IF ct GT 0 and done_cnt ne nframes THEN BEGIN
+;at least one bridge is free --> start newobject
+;the available bridge is free[0]
            print, 'creating skymaps for images '+strtrim(outpath_file_no_band[i,0],2)
-           FOR b=1,nband do begin
-;               print, 'creating skymap for '+strtrim(setup.stamp_pre[b],2)+'-band'
-               create_skymap, weights[i,b], $
-                 outpath_file[i,0]+setup.outseg, $
-                 outpath_file[i,0]+setup.outcat, $
-                 outpath_file[i,0]+setup.outparam, $
-                 outpath_file_no_band[i,b]+setup.stamp_pre[b]+'.'+setup.skymap, $
-                 setup.skyscl, setup.skyoff
-           ENDFOR
-       ENDFOR
+               save, i, weights, outpath_file, setup, outpath_file_no_band, filename=outpath_file_no_band[i,0]+setup.stampfile+'_cut.sav'
+               IF setup.max_proc GT 1 THEN BEGIN
+                   post_bridge_arr[free[0]]->execute, $
+                     'skymap_bridge, "'+outpath_file_no_band[i,0]+setup.stampfile+'_cut.sav"', /nowait
+               ENDIF ELSE BEGIN
+                   skymap_bridge, outpath_file_no_band[i,0]+setup.stampfile+'_cut.sav'
+               ENDELSE
+               done_cnt = done_cnt+1
+               i=i+1
+;switch to next object
+           ENDIF ELSE BEGIN
+;all bridges are busy --> wait
+               wait, 1
+           ENDELSE
+;stop when all done and no bridge in use any more
+       ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
+       
+stop
+;
+;       FOR i=0ul, nframes-1 DO BEGIN
+;           print, 'creating skymaps for images '+strtrim(outpath_file_no_band[i,0],2)
+;           FOR b=1,nband do begin
+;;               print, 'creating skymap for '+strtrim(setup.stamp_pre[b],2)+'-band'
+;               create_skymap, weights[i,b], $
+;                 outpath_file[i,0]+setup.outseg, $
+;                 outpath_file[i,0]+setup.outcat, $
+;                 outpath_file[i,0]+setup.outparam, $
+;                 outpath_file_no_band[i,b]+setup.stamp_pre[b]+'.'+setup.skymap, $
+;                 setup.skyscl, setup.skyoff
+;           ENDFOR
+;       ENDFOR
+       
+       
+       IF n_elements(post_bridge_arr) GT 0 THEN obj_destroy, post_bridge_arr
+       
        IF keyword_set(logfile) THEN $
          update_log, logfile, 'Postage stamps... done!'
        print, 'finished cutting postage stamps: '+systime(0)
@@ -3395,7 +3494,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ;==============================================================================
 ; SEED FOR RANDOM NUMBER GENERATOR in getsky_loop!
    seed=1 ;not actually used at the moment. At the moment 'cur' is passed as the seed
-
+   
 ;measure sky and run galfit?
    IF setup.dosky THEN BEGIN
        IF keyword_set(logfile) THEN $
@@ -3746,9 +3845,6 @@ loopstart2:
                   IF keyword_set(logfile) THEN $
                     update_log, logfile, 'Starting new bridge... ('+out_file+')'
 ; print, 'starting new object at '+systime(0)
-;                  bridge_arr[free[0]]->execute, 'astrolib'
-;;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
-;                  bridge_arr[free[0]]->execute, '.r '+gala_pro
                   bridge_arr[free[0]]->execute, $
                     'gala_bridge, "'+out_file+'.sav"', /nowait
               ENDIF ELSE BEGIN
