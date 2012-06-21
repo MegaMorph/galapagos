@@ -3364,7 +3364,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ;create object array for child processes 
 ; create maximum max_proc parallels. Anything more blocks the harddrive,
 ; limiting factor seems to be writing speed of disk.
-max_proc = 4
+       max_proc = 4
        post_bridge_arr = objarr(setup.max_proc <max_proc)
 ;allow main to see which process is free
        post_bridge_use = bytarr(setup.max_proc <max_proc)
@@ -3423,27 +3423,24 @@ max_proc = 4
 ;           ENDIF
 ;       ENDFOR
        
-stop
-
 ; kill bridge, make new one!
        IF n_elements(post_bridge_arr) GT 0 THEN obj_destroy, post_bridge_arr
-max_proc = setup.max_proc
-       post_bridge_arr = objarr(setup.max_proc <max_proc)
+
+       post_bridge_arr = objarr(setup.max_proc)
 ;allow main to see which process is free
-       post_bridge_use = bytarr(setup.max_proc <max_proc)
+       post_bridge_use = bytarr(setup.max_proc)
 ;initialise every bridge (specify output property to allow debugging)
-       FOR i=0, setup.max_proc-1 <max_proc-1 DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
-       FOR i=0, setup.max_proc-1 <max_proc-1 DO BEGIN
+       FOR i=0, setup.max_proc-1 DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+       FOR i=0, setup.max_proc-1 DO BEGIN
            post_bridge_arr[i]->execute, 'astrolib'
            post_bridge_arr[i]->execute, '.r '+gala_pro
        ENDFOR
-
 ;create skymap files using bridge
        done_cnt=0
        i=0
        REPEAT BEGIN
 ;get status of bridge elements
-           FOR l=0, setup.max_proc-1 <max_proc-1 DO post_bridge_use[l] = post_bridge_arr[l]->status()
+           FOR l=0, setup.max_proc-1 DO post_bridge_use[l] = post_bridge_arr[l]->status()
            
 ;check for free bridges
            free = where(post_bridge_use eq 0, ct)
@@ -3451,13 +3448,13 @@ max_proc = setup.max_proc
            IF ct GT 0 and done_cnt ne nframes THEN BEGIN
 ;at least one bridge is free --> start newobject
 ;the available bridge is free[0]
-           print, 'creating skymaps for images '+strtrim(outpath_file_no_band[i,0],2)
-               save, i, weights, outpath_file, setup, outpath_file_no_band, filename=outpath_file_no_band[i,0]+setup.stampfile+'_cut.sav'
+               print, 'creating skymaps for images '+strtrim(outpath_file_no_band[i,0],2)
+               save, i, weights, outpath_file, setup, outpath_file_no_band, nband, filename=outpath_file_no_band[i,0]+'skymap.sav'
                IF setup.max_proc GT 1 THEN BEGIN
                    post_bridge_arr[free[0]]->execute, $
-                     'skymap_bridge, "'+outpath_file_no_band[i,0]+setup.stampfile+'_cut.sav"', /nowait
+                     'skymap_bridge, "'+outpath_file_no_band[i,0]+'skymap.sav"', /nowait
                ENDIF ELSE BEGIN
-                   skymap_bridge, outpath_file_no_band[i,0]+setup.stampfile+'_cut.sav'
+                   skymap_bridge, outpath_file_no_band[i,0]+'skymap.sav'
                ENDELSE
                done_cnt = done_cnt+1
                i=i+1
@@ -3469,8 +3466,7 @@ max_proc = setup.max_proc
 ;stop when all done and no bridge in use any more
        ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
        
-stop
-;
+;original version (no bridge used)
 ;       FOR i=0ul, nframes-1 DO BEGIN
 ;           print, 'creating skymaps for images '+strtrim(outpath_file_no_band[i,0],2)
 ;           FOR b=1,nband do begin
@@ -3505,24 +3501,6 @@ stop
        sexcat = read_sex_table(setup.outdir+setup.sexcomb, $
                                outpath_file[0,0]+setup.outparam, $
                                add_col = ['frame', '" "'])
-                               
-;;==============================================================================
-; THIS IS DONE BELOW FOR FITTAB, NOT NEEDED HERE, I THINK
-;       add_tag, sexcat, 'do_list', 0, sexcat_new
-;       sexcat = sexcat_new
-;       delvarx, sexcat_new
-;       
-;       IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
-;          sexcat.do_list = 1
-;       ENDIF ELSE BEGIN
-;          readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
-;   
-;          print, 'correlating SExtractor catalogue to source list. Might take some time'
-;          srccor, do_ra/15., do_dec, sexcat.alpha_j2000/15., sexcat.delta_j2000, $
-;            setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
-;                  
-;          sexcat[sex_i].do_list = 1
-;       ENDELSE
 ;;==============================================================================
 ; check if psf in setup file is an image or a list
        print, 'reading PSFs'
@@ -3764,7 +3742,7 @@ loopstart2:
               table[cur].flag_galfit = 1
               fittab[cur].flag_galfit = 1
 
-              print, '  currently working on No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(where(fittab.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
+              if n_elements(where(table.flag_galfit)) mod 10 eq 0 then print, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(where(fittab.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
 ;              print, obj_file
               if keyword_set(plot) then begin
                   plot, table.alpha_J2000,table.delta_J2000, psym=3, ystyle=1, xstyle=1
