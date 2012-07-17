@@ -14,7 +14,7 @@ h = fix(strmid(rest, 0, strpos(rest,':')))
 rest = strtrim(strmid(rest, strpos(rest,':')+1),2)
 min = fix(strmid(rest, 0, strpos(rest,':')))
 
-if h*60+min gt time_limit then print, pid+' killed, running too long'
+if h*60+min gt time_limit then print, 'process '+pid+' killed, running too long'
 if h*60+min gt time_limit then spawn, 'kill -9 '+pid
 
 endfor

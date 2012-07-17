@@ -3405,7 +3405,7 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ;all bridges are busy --> wait
                wait, 10
 ; kill all processes that have been running longer than a certain time
-               time_limit = 120
+               time_limit = 150
                kill_galfit, 'galfitm-0.1.2.1', time_limit
 
            ENDELSE
