@@ -48,15 +48,16 @@ for b=1,nband do begin
 ; moment() would be 3 times faster, but returns a MEAN value!
 ;; current version
 ; DAMN! HAVE TO CATCH THE CASE WHEN NO PIXELS ARE SKYPIXELS!!!!
-    global_sky=median(im[skypix])
-    global_sigsky=stddev(im[skypix])
-    if finite(global_sky) ne 1 or finite(global_sigsky) ne 1 then begin
+    if ct gt 0 then begin
+        global_sky=median(im[skypix])
+        global_sigsky=stddev(im[skypix])
+        if finite(global_sky) ne 1 or finite(global_sigsky) ne 1 then begin
 ;; old version
 ;   resistant_mean, im[skypix], 3, sky, sigsky, nrej
 ;   sigsky *= sqrt(ct-1-nrej)
-        global_sky=median(im[skypix],/double)
-        global_sigsky=stddev(im[skypix],/double)
-    endif
+            global_sky=median(im[skypix],/double)
+            global_sigsky=stddev(im[skypix],/double)
+        endif
 ;; also belonging to old version
 ;   resistant_mean, im[skypix], 3, sky, sigsky, nrej
 ;   sigsky *= sqrt(ct-1-nrej)
@@ -69,7 +70,12 @@ for b=1,nband do begin
 ;                    /noderivative, status = status, iter = iter)
 ;   global_sky = par[1]
 ;   global_sigsky = par[2]
-
+    ENDIF
+    IF ct eq 0 then begin
+        global_sky=median(im)
+        global_sigsky=stddev(im)
+    ENDIF
+ 
     delvarx, skypix
     
 ;make sure all positions are relative to the current frame
@@ -91,7 +97,7 @@ for b=1,nband do begin
       setup.stampfile, global_sky, global_sigsky, $
       setup.convbox, nums, frames, setup.galexe, fittab, b, $
       orgpath_pre, outpath_file, outpath_file_no_band, nband, $
-      xarr, yarr, seed
+      xarr, yarr, seed, backup=backup
     if b eq 1 then begin
         delvarx, save_nums,save_frames
         save_nums = nums
@@ -124,14 +130,11 @@ prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, 
 
 ;spawn the script
 cd, outpath_galfit[idx]
-IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file $
-ELSE spawn, setup.galexe+' '+obj_file
+;IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file $
+;ELSE spawn, setup.galexe+' '+obj_file
 spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
 
-;   wait, randomu(systime(/seconds))*8+2
-;   spawn, 'touch '+out_file
-
-file_delete, filein
+;file_delete, filein
 wait, 1
 END
 

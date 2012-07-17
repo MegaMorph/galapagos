@@ -1,12 +1,13 @@
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
-@/home/boris/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapa, col=200gos/fxposit.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxmove.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_hread.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/valid_num.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/writefits.pro
+@
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
@@ -3402,7 +3403,11 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ;switch to next object
            ENDIF ELSE BEGIN
 ;all bridges are busy --> wait
-               wait, 1
+               wait, 10
+; kill all processes that have been running longer than a certain time
+               time_limit = 120
+               kill_galfit, 'galfitm-0.1.2.1', time_limit
+
            ENDELSE
 ;stop when all done and no bridge in use any more
        ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
@@ -3822,7 +3827,6 @@ loopstart2:
               IF setup.max_proc GT 1 THEN BEGIN
                   IF keyword_set(logfile) THEN $
                     update_log, logfile, 'Starting new bridge... ('+out_file+')'
-; print, 'starting new object at '+systime(0)
                   bridge_arr[free[0]]->execute, $
                     'gala_bridge, "'+out_file+'.sav"', /nowait
               ENDIF ELSE BEGIN
@@ -4091,7 +4095,8 @@ loopend:
 ;==============================================================================
 ;read in sextractor table, combine with galfit results, write out
 ;combined fits table
-   IF setup.docombine THEN BEGIN
+  IF setup.docombine THEN BEGIN
+      print, 'reading sexcat for output table'
       tab = read_sex_table(setup.outdir+setup.sexcomb, $
                            outpath_file[0,0]+setup.outparam, $
                            add_col = ['TILE', '" "'])
