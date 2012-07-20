@@ -47,7 +47,8 @@ for b=1,nband do begin
 ; new scheme takes around 2 seconds the next, old system, about 6
 ; moment() would be 3 times faster, but returns a MEAN value!
 ;; current version
-; DAMN! HAVE TO CATCH THE CASE WHEN NO PIXELS ARE SKYPIXELS!!!!
+; DAMN! HAVE TO CATCH THE CASE WHEN NO PIXELS ARE SKYPIXELS!!!! Was
+; that what backup=backup was supposed to do in getsky_loop?
     if ct gt 0 then begin
         global_sky=median(im[skypix])
         global_sigsky=stddev(im[skypix])
@@ -89,7 +90,7 @@ for b=1,nband do begin
     psf = readfits(chosen_psf_file[b], psfhead,/silent)
     
 ; fix contrib_targets
-    getsky_loop, setup, cur, table, rad, im, hd, map, setup.expt, $
+   getsky_loop, setup, cur, table, rad, im, hd, map, setup.expt, $
       setup.zp, setup.neiscl, setup.skyoff, setup.power, $
       setup.cut, setup.files, psf, setup.dstep, $
       setup.wstep, setup.gap, setup.nslope, sky_file[b], $
@@ -97,7 +98,7 @@ for b=1,nband do begin
       setup.stampfile, global_sky, global_sigsky, $
       setup.convbox, nums, frames, setup.galexe, fittab, b, $
       orgpath_pre, outpath_file, outpath_file_no_band, nband, $
-      xarr, yarr, seed, backup=backup
+      xarr, yarr, seed
     if b eq 1 then begin
         delvarx, save_nums,save_frames
         save_nums = nums
@@ -130,11 +131,11 @@ prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, 
 
 ;spawn the script
 cd, outpath_galfit[idx]
-;IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file $
-;ELSE spawn, setup.galexe+' '+obj_file
+IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file $
+ELSE spawn, setup.galexe+' '+obj_file
 spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
 
-;file_delete, filein
+file_delete, filein
 wait, 1
 END
 

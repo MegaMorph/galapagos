@@ -3,6 +3,7 @@ pro kill_galfit, task, time_limit
 ; kill_galfit, 'galfitm-0.1.2.1', 180
 
 spawn, 'ps -e | grep '+task, ps
+ps=strtrim(ps,2)
 
 for i=0,n_elements(ps)-1 do begin
 rest=' '

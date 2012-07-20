@@ -1,13 +1,13 @@
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
-@/home/boris/megamorph_dev/astro-megamorph/galapa, col=200gos/fxposit.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxmove.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_hread.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/valid_num.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/writefits.pro
-@
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/kill_galfit.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
@@ -3403,11 +3403,8 @@ PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
 ;switch to next object
            ENDIF ELSE BEGIN
 ;all bridges are busy --> wait
-               wait, 10
-; kill all processes that have been running longer than a certain time
-               time_limit = 150
-               kill_galfit, 'galfitm-0.1.2.1', time_limit
-
+;wait, 1
+               wait, 1
            ENDELSE
 ;stop when all done and no bridge in use any more
        ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
@@ -3840,16 +3837,12 @@ loopstart2:
 ;switch to next object
           ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
-              wait, 1
-
-; FOR TESTING PURPOSES ONLY!!!
-;; kill all process that have been running for more than 3 hours
-;              countloop=countloop+1
-;              if countloop mod 100 eq 0 then begin
-;                  print, 'trying to kill long running galfits at '+systime(0)
-;                  print, 'ps -uboris -o pid,comm,bsdtime | grep galfit | awk "{split($3, t, ":"); m = int(t[1]); if (t > 60) print $1}" | xargs kill'
-;                                                                               
-;              ENDIF
+              wait, 2
+; kill all processes that have been running longer than a certain
+; time. Not fully automated yet, needs to use input value for
+; time_limit and name of galfit task
+              time_limit = 150
+              kill_galfit, 'galfitm-0.1.2.1', time_limit
 
           ENDELSE
           
