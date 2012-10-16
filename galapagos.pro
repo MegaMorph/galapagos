@@ -1729,7 +1729,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
                     conv_box, zero_pt, plate_scl, num_contrib, frame_contrib, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
                     conminm, conmaxm, setup_version, nband, $
-                    outpre, bd_fit = bd_fit
+                    outpre
 ;   setup_version = 4
 ;objects contains an index of secondary sources
 ;in the case of contributing sources, the TABLE is changed, so keep a
@@ -1741,7 +1741,6 @@ xmax = sxpar(hdr, 'NAXIS1')
 ymax = sxpar(hdr, 'NAXIS2')
 
 ;write constraint file for secondaries
-;if not keyword_set(bd_fit) then begin
     openw, 1, constr_file
     printf, 1, '# Component/    parameter   constraint  Comment'
     printf, 1, '# operation                  values'
@@ -1758,7 +1757,6 @@ ymax = sxpar(hdr, 'NAXIS2')
         printf, 1, j, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
     ENDFOR
     close, 1
-;ENDIF
 
 ;write obj file header plus sky
 openw, 1, obj_file, width=1000
@@ -2944,7 +2942,8 @@ IF file_test(obj[0]) THEN BEGIN
                                  'q_galfit_b', result[0].COMP3_AR, 'qerr_galfit_b', result[0].COMP3_AR_ERR, $
                                  'pa_galfit_b', result[0].COMP3_PA, 'paerr_galfit_b', result[0].COMP3_PA_ERR, $
                                  'x_galfit_b', result[0].COMP3_XC, 'xerr_galfit_b', result[0].COMP3_XC_ERR, $
-                                 'y_galfit_b', result[0].COMP3_YC, 'yerr_galfit_b', result[0].COMP3_YC_ERR, $                                    'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
+                                 'y_galfit_b', result[0].COMP3_YC, 'yerr_galfit_b', result[0].COMP3_YC_ERR, $
+                                 'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
                                  'mag_galfit_band_d', result.COMP2_MAG, 'magerr_galfit_band_d',result.COMP2_MAG_ERR, $
                                  're_galfit_band_d', result.COMP2_RE, 'reerr_galfit_band_d', result.COMP2_RE_ERR, $
                                  'n_galfit_band_d', result.COMP2_N, 'nerr_galfit_band_d' ,result.COMP2_N_ERR, $
@@ -2985,7 +2984,7 @@ IF file_test(obj[0]) THEN BEGIN
                                  'neigh_galfit_bd', comp-4, 'flag_galfit_bd', 2)
 ; TO BE ADDED:
 ; fitting time
-; NEIGH_GALFIT HAS TO BE ADAPTED! WHY??
+; NEIGH_GALFIT HAS TO BE ADAPTED! WHY?? To come from the header?
     ENDIF
     
 ENDIF ELSE BEGIN
