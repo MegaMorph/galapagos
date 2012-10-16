@@ -3919,9 +3919,9 @@ loopstart2:
                 IF keyword_set(logfile) THEN $
                   update_log, logfile, 'Starting new bridge... ('+out_file+')'
 ; print, 'starting new object at '+systime(0)
-                bridge_arr[free[0]]->execute, 'astrolib'
+;                bridge_arr[free[0]]->execute, 'astrolib'
 ;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
-                bridge_arr[free[0]]->execute, '.r '+gala_pro
+;                bridge_arr[free[0]]->execute, '.r '+gala_pro
                 bridge_arr[free[0]]->execute, $
                   'gala_bridge, "'+out_file+'.sav"', /nowait
             ENDIF ELSE BEGIN

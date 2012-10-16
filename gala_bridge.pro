@@ -101,6 +101,8 @@ for b=1,nband do begin
 endfor
 stop
 
+; CANNOT WORK ATM !!! FITTAB DOES NOT EXIST!!
+
 if not keyword_set(bd_fit) then prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
   im_file, constr_file, mask_file, chosen_psf_file, $
   out_file, sky_file, setup.convbox, setup.zp, $
