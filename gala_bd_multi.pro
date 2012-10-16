@@ -4,7 +4,6 @@ PRO bd_fit, obj_fitstab_file, no_fit=no_fit
 ;   obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
 
    fit_info = mrdfits(obj_fitstab_file, 'FIT_INFO', /silent)
-   tmp = mrdfits(obj_fitstab_file, 'MODEL_r', model)
 
    tab = mrdfits(obj_fitstab_file, 'FINAL_BAND')
 
@@ -18,6 +17,8 @@ PRO bd_fit, obj_fitstab_file, no_fit=no_fit
 
    band_str = strupcase(strtrim(band_info.band,2))
    nband = n_elements(band_str)
+
+   tmp = mrdfits(obj_fitstab_file, 'MODEL_'+band_str[0], model)
 
 ;extract info from SS-fit
    ss_mult = read_sersic_results(obj_fitstab_file, nband)
