@@ -22,7 +22,10 @@ FUNCTION bd_quality, obj_fitstab_file, setup_file, r_kron, plot=plot
 
 
    r_kron = 46.2245 ;(a*kron)
+r_kron = 25.5489
    num = '21_17.346'
+num = '20_23.311'
+
    obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
    setup_file = '/home/barden/Desktop/multi/BD_objects/gala.gama_9_complete'
 
@@ -141,8 +144,8 @@ fit_info.initfile = '/home/barden/Desktop/multi/BD_objects/t'+num+'_obj'
 ;total fluxes might help identifying pathetic cases
 ;print, tot_sr-tot_bd, tot_sr/tot_bd-1
 
-;q=''
-;read, q, prompt=band_str[band]+': '+strtrim(quality[band+1], 2)+ $
+;query=''
+;read, query, prompt=band_str[band]+': '+strtrim(quality[band+1], 2)+ $
 ;      ' r_f: '+strtrim(tot_sr/tot_bd-1, 2)
    ENDFOR
 
