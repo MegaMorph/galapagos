@@ -272,3 +272,27 @@ PRO create_batches, n_cores, data_table_file, galexe_str, outdir, outfile
 
    free_lun, lun
 END
+
+PRO extract_bd_info, data_table_file, band_str, out_fits_table, version_num
+;bands in band_str have to be in the proper order!
+
+   setup = {version:0}
+   setup.version = version_num
+
+   nband = n_elements(band_str)
+
+   data_table = mrdfits(data_table_file, 1)
+
+   FOR i=0l, n_elements(data_table) DO BEGIN
+      obj_file = strtrim(data_table[i].initfile, 2)+'_bd'
+      IF obj_file EQ '_bd' THEN CONTINUE
+
+      bd_table = read_sersic_results(obj_file, nband, /bd)
+
+      str = strtrim(data_table[i].initfile, 2)
+      sky_file = strmid(str, 0, strpos(str, '_obj')+'_'+['', band_str]
+
+      update_table, bd_table, i, out_fits_table, obj_file, sky_file, nband, setup, /final, /bd
+   ENDFOR
+
+END
