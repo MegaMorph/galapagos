@@ -1,16 +1,18 @@
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/fxmove.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_hread.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/valid_num.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
 @/home/boris/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
-@/home/boris/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
-@/home/boris/megamorph_dev/astro-megamorph/galapagos/fxmove.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/writefits.pro
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/kill_galfit.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
 ; Backwards compatible to work with Galfit3 on 1-band data
-;==============================================================================
+;=============================================================================
 
 FUNCTION required_entries
 return, ['number', 'x_image', 'y_image', 'cxx_image', 'cyy_image', $
@@ -232,16 +234,17 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
 
 ;create a temporary parameter file with the minimum set of sextractor
 ;parameters
-IF file_test(hot) THEN multi = 1 ELSE multi = 0
-IF file_test(cold) THEN multi += 2
-IF multi EQ 0 THEN $
-  message, 'Neither cold nor hot SExtractor setup-file found'
-IF multi EQ 1 THEN BEGIN
-    cold = hot
-    coldcat = hotcat
-    coldseg = hotseg
-    multi = 2
-ENDIF
+   IF file_test(hot) THEN multi = 1 ELSE multi = 0
+   IF file_test(cold) THEN multi += 2
+   IF multi EQ 0 THEN $
+    message, 'Neither cold nor hot SExtractor setup-file found'
+   IF multi EQ 1 THEN BEGIN
+       print, 'WARNING!!!!!!!!!! No cold sex setup file found. Using only hot setup (as cold)'
+       cold = hot
+       coldcat = hotcat
+       coldseg = hotseg
+       multi = 2
+   ENDIF
 
 path = strmid(outcat, 0, strpos(outcat, '/', /reverse_search)+1)
 label = required_entries()
@@ -267,148 +270,163 @@ print, '---using exptime: '+strtrim(exptime[0], 2)+'s (zp='+zp_eff[0]+') for: '+
   image
 
 ;this will produce a checkimage with all the ellipses
-IF chktype NE 'none' THEN BEGIN
-    print, 'starting cold sex check image on image '+image+' '
-    spawn, sexexe+' '+image+' -c '+cold+ $
-      ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
-      ' -PARAMETERS_NAME '+outparam+ $
-      ' -WEIGHT_IMAGE '+weight+ $
-      ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
-      ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
-      file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
-    IF multi EQ 3 THEN BEGIN
-        print, 'starting hot sex check image'
-        spawn, sexexe+' '+image+' -c '+hot+ $
-          ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
-          ' -PARAMETERS_NAME '+outparam+ $
-          ' -WEIGHT_IMAGE '+weight+ $
-          ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
-          ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
-          file_dirname(check)+'/'+file_basename(check, '.fits')+ $
-          '.hot.fits'
-    ENDIF
-ENDIF
-
+   IF chktype NE 'none' THEN BEGIN
+       print, 'starting cold sex check image on image '+image+' '
+       spawn, sexexe+' '+image+' -c '+cold+ $
+         ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
+         ' -PARAMETERS_NAME '+outparam+ $
+         ' -WEIGHT_IMAGE '+weight+ $
+         ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
+         ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
+         file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
+       IF multi EQ 3 THEN BEGIN
+           print, 'starting hot sex check image'
+           spawn, sexexe+' '+image+' -c '+hot+ $
+             ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
+             ' -PARAMETERS_NAME '+outparam+ $
+             ' -WEIGHT_IMAGE '+weight+ $
+             ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
+             ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
+             file_dirname(check)+'/'+file_basename(check, '.fits')+ $
+             '.hot.fits'
+       ENDIF
+  ENDIF
+  
 ;now start sextractor to create hotcat and coldcat
-print, 'starting cold sex'
-spawn, sexexe+' '+image+' -c '+cold+ $
-  ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
-  ' -PARAMETERS_NAME '+outparam+ $
-  ' -WEIGHT_IMAGE '+weight+ $
-  ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
-  ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
-IF multi EQ 3 THEN BEGIN
-    print, 'starting hot sex'
-    spawn, sexexe+' '+image+' -c '+hot+ $
-      ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
-      ' -PARAMETERS_NAME '+outparam+ $
-      ' -WEIGHT_IMAGE '+weight+ $
-      ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
-      ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+hotseg
-ENDIF
-
+  print, 'starting cold sex'
+  spawn, sexexe+' '+image+' -c '+cold+ $
+    ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
+    ' -PARAMETERS_NAME '+outparam+ $
+    ' -WEIGHT_IMAGE '+weight+ $
+    ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
+    ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
+  IF multi EQ 3 THEN BEGIN
+      print, 'starting hot sex'
+      spawn, sexexe+' '+image+' -c '+hot+ $
+        ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
+        ' -PARAMETERS_NAME '+outparam+ $
+        ' -WEIGHT_IMAGE '+weight+ $
+        ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
+        ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+hotseg
+  ENDIF
+  
 ;read in hotcat and coldcat
-cold_table = read_sex_table(coldcat, outparam)
-idx = where(cold_table.kron_radius EQ 0, ct)
-IF ct GT 0 THEN cold_table[idx].kron_radius = median(cold_table.kron_radius)
-
-IF multi EQ 3 THEN BEGIN
-    hot_table = read_sex_table(hotcat, outparam)
-    idx = where(hot_table.kron_radius EQ 0, ct)
-    IF ct GT 0 THEN $
-      hot_table[idx].kron_radius = median(hot_table.kron_radius)
-ENDIF
-
+   cold_table = read_sex_table(coldcat, outparam)
+   idx = where(cold_table.kron_radius EQ 0, ct)
+   
+; if cold_table[0].number eq 0, the cold table is empty! In this case,
+; do NOT do all the rest, simply use hotcat as outcat. Copying to new
+; files being done below
+   IF cold_table[0].number NE 0 THEN BEGIN
+       IF ct GT 0 THEN cold_table[idx].kron_radius = median(cold_table.kron_radius)
+       
+       IF multi EQ 3 THEN BEGIN
+           hot_table = read_sex_table(hotcat, outparam)
+           idx = where(hot_table.kron_radius EQ 0, ct)
+           IF ct GT 0 THEN $
+             hot_table[idx].kron_radius = median(hot_table.kron_radius)
+       ENDIF
+       
 ;loop over all elements in cold list and find "good" objects in hot
 ;catalogue, i.e. objects that are not contained in the cold list and 
 ;calculate ellipse parameters
-print, 'combining hot & cold catalogues'
-IF multi EQ 3 THEN BEGIN
-    cold_cxx = cold_table.cxx_image / cold_table.kron_radius^2.
-    cold_cyy = cold_table.cyy_image / cold_table.kron_radius^2.
-    cold_cxy = cold_table.cxy_image / cold_table.kron_radius^2.
-    ncold = n_elements(cold_table)
-    
-    hot_cxx = hot_table.cxx_image / hot_table.kron_radius^2.
-    hot_cyy = hot_table.cyy_image / hot_table.kron_radius^2.
-    hot_cxy = hot_table.cxy_image / hot_table.kron_radius^2.
-    nhot = n_elements(hot_table)
-    
+       print, 'combining hot & cold catalogues'
+       IF multi EQ 3 THEN BEGIN
+           cold_cxx = cold_table.cxx_image / cold_table.kron_radius^2.
+           cold_cyy = cold_table.cyy_image / cold_table.kron_radius^2.
+           cold_cxy = cold_table.cxy_image / cold_table.kron_radius^2.
+           ncold = n_elements(cold_table)
+           
+           hot_cxx = hot_table.cxx_image / hot_table.kron_radius^2.
+           hot_cyy = hot_table.cyy_image / hot_table.kron_radius^2.
+           hot_cxy = hot_table.cxy_image / hot_table.kron_radius^2.
+           nhot = n_elements(hot_table)
+           
 ;      fits_read, coldseg, segim, seghd
 ;      fits_read, hotseg, segim_hot, seghd_hot
-    segim = readfits(coldseg, seghd, /silent)
-    segim_hot = readfits(hotseg, seghd_hot, /silent)
-    
-    FOR i=0ul, ncold-1 DO BEGIN
-        idx = where(cold_cxx[i]*(hot_table.x_image- $
-                                 cold_table[i].x_image)^2.+ $
-                    cold_cyy[i]*(hot_table.y_image- $
-                                 cold_table[i].y_image)^2.+ $
-                    cold_cxy[i]*(hot_table.x_image-cold_table[i].x_image)* $
-                    (hot_table.y_image-cold_table[i].y_image) GT enlarge^2., $
-                    ct)
-        IF ct GT 0 THEN BEGIN
-            hot_table = hot_table[idx]
-        ENDIF ELSE BEGIN
-            multi = 2
-            print, 'all objects contained in cold catalogue'
-            i = ulong(ncold)
-        ENDELSE
-    ENDFOR
-ENDIF
-
+           segim = readfits(coldseg, seghd, /silent)
+           segim_hot = readfits(hotseg, seghd_hot, /silent)
+           
+           FOR i=0ul, ncold-1 DO BEGIN
+               idx = where(cold_cxx[i]*(hot_table.x_image- $
+                                        cold_table[i].x_image)^2.+ $
+                           cold_cyy[i]*(hot_table.y_image- $
+                                        cold_table[i].y_image)^2.+ $
+                           cold_cxy[i]*(hot_table.x_image-cold_table[i].x_image)* $
+                           (hot_table.y_image-cold_table[i].y_image) GT enlarge^2., $
+                           ct)
+               IF ct GT 0 THEN BEGIN
+                   hot_table = hot_table[idx]
+               ENDIF ELSE BEGIN
+                   multi = 2
+                   print, 'all objects contained in cold catalogue'
+                   i = ulong(ncold)
+               ENDELSE
+           ENDFOR
+       ENDIF
+       
 ;read in the segmentation images and add objects from hot segmentation
 ;map to cold segmentation map, but only at pixels where no object was
 ;defined in cold segmentation map. Then write result!
-IF multi EQ 3 THEN BEGIN
-    
-    nhot = n_elements(hot_table)
-    off = max(cold_table.number)+1
-    FOR i=0ul, nhot-1 DO BEGIN
-        idx = where(segim_hot EQ hot_table[i].number, ct)
-        IF ct GT 0 THEN BEGIN
+       IF multi EQ 3 THEN BEGIN
+           
+           nhot = n_elements(hot_table)
+           off = max(cold_table.number)+1
+           FOR i=0ul, nhot-1 DO BEGIN
+               idx = where(segim_hot EQ hot_table[i].number, ct)
+               IF ct GT 0 THEN BEGIN
 ;prefer cold pixels in output segmentation map
 ;        FOR j=0ul, ct-1 DO $
 ;                IF segim[idx[j]] EQ 0 THEN segim[idx[j]] = off+i
 ;prefer hot pixels in output segmentation map
-            segim[idx] = off+i
-        ENDIF
-        hot_table[i].number = off+i
-    ENDFOR
-    writefits, outseg, segim, seghd
-ENDIF ELSE file_copy, coldseg, outseg, /overwrite
+                   segim[idx] = off+i
+               ENDIF
+               hot_table[i].number = off+i
+           ENDFOR
+           writefits, outseg, segim, seghd
+       ENDIF ELSE file_copy, coldseg, outseg, /overwrite
+       
+       IF multi EQ 3 THEN table_all = [cold_table, hot_table] $
+       ELSE table_all = cold_table
+       
+       IF exclude[0, 0] GE 0 THEN BEGIN
+           x = reform(exclude[0, *])
+           y = reform(exclude[1, *])
+           
+           srccor, x, y, table_all.x_image, table_all.y_image, rad, l, e, $
+             option = 1, /silent
 
-IF multi EQ 3 THEN table_all = [cold_table, hot_table] $
-ELSE table_all = cold_table
-
-IF exclude[0, 0] GE 0 THEN BEGIN
-    x = reform(exclude[0, *])
-    y = reform(exclude[1, *])
-    
-    srccor, x, y, table_all.x_image, table_all.y_image, rad, l, e, $
-      option = 1, /silent
-    e = invert_index(table_all.number, e)
-    IF e[0] EQ -1 THEN message, 'No elements left in catalogue!'
-    table_all = table_all[e]
-    
-    ntot = n_elements(table_all)
+; can invert_index be replaced with a_not_b.pro????  inv2=a_not_b(arr1,arr2)
+         hlpind = lindgen(n_elements(table_all.number))
+         e = a_not_b(hlpind, e)
+;old version
+;           e = invert_index(table_all.number, e)
+           IF e[0] EQ -1 THEN message, 'No elements left in catalogue!'
+           table_all = table_all[e]
+           
+           ntot = n_elements(table_all)
 ;      fits_read, outseg, segim_org, seghd
-    segim_org = readfits(outseg, seghd, /silent)
-    segim = segim_org*0
-    
-    FOR i=0ul, ntot-1 DO BEGIN
-        idx = where(segim_org EQ table_all[i].number, ct)
-        IF ct GT 0 THEN segim[idx] = i+1
-        table_all[i].number = i+1
-    ENDFOR
-    
-    writefits, outseg, segim, seghd
-ENDIF
+           segim_org = readfits(outseg, seghd, /silent)
+           segim = segim_org*0
+           
+           FOR i=0ul, ntot-1 DO BEGIN
+               idx = where(segim_org EQ table_all[i].number, ct)
+               IF ct GT 0 THEN segim[idx] = i+1
+               table_all[i].number = i+1
+           ENDFOR
+           
+           writefits, outseg, segim, seghd
+       ENDIF
+       
+       write_sex_table, table_all, outcat
+   ENDIF ELSE BEGIN
+       print, 'cold catalogue is empty, using hot as combined cat'
+       spawn, 'cp '+hotcat+' '+outcat+' '
+       spawn, 'cp '+hotseg+' '+outseg+' '
+   ENDELSE
 
-write_sex_table, table_all, outcat
-
-IF keyword_set(outonly) THEN $
-  file_delete, hotcat, coldcat, hotseg, coldseg, /quiet, /allow_nonexistent, /noexpand_path
+   IF keyword_set(outonly) THEN $
+    file_delete, hotcat, coldcat, hotseg, coldseg, /quiet, /allow_nonexistent, /noexpand_path
 END
 
 ;==============================================================================
@@ -418,110 +436,144 @@ FUNCTION calc_dist_to_edge, file, catalogue
 
 ;get image size to calculate central position
 ;   fits_read, file, im, hd, exten_no=0
-im = readfits(file, hd, exten_no=0, /silent)
-xsz = float(sxpar(hd, 'NAXIS1'))
-ysz = float(sxpar(hd, 'NAXIS2'))
-xcnt = xsz*0.5
-ycnt = ysz*0.5
+   im = readfits(file, hd, exten_no=0, /silent)
+   xsz = float(sxpar(hd, 'NAXIS1'))
+   ysz = float(sxpar(hd, 'NAXIS2'))
+   xcnt = xsz*0.5
+   ycnt = ysz*0.5
 
-scale = 5.
+   scale = 5.
 
-nx = fix(xsz/scale)
-ny = fix(ysz/scale)
+   nx = fix(xsz/scale)
+   ny = fix(ysz/scale)
 ;find the value of the outer pixels
-med = median(im)
-null = where(im EQ med)
-sm = im
+   med = median(im)
+   null = where(im EQ med)
+   sm = im
 ;set the border pixels to an extreme value
-nullval = long(-5*max(abs(im)))
-sm[null] = nullval
+   nullval = long(-5*max(abs(im)))
+   sm[null] = nullval
 ;remove inner "border" pixels
-sm = median(sm, 3)
+   sm = median(sm, 3)
 ;to increase computation speed reduce size
-sm = congrid(sm, nx, ny)
+   sm = congrid(sm, nx, ny)
 ;add outermost boundary
-sm[0, *] = nullval
-sm[*, 0] = nullval
-sm[nx-1, *] = nullval
-sm[*, ny-1] = nullval
-null = where(sm EQ nullval)
+   sm[0, *] = nullval
+   sm[*, 0] = nullval
+   sm[nx-1, *] = nullval
+   sm[*, ny-1] = nullval
+   null = where(sm EQ nullval)
 
-x0 = (findgen(nx) MOD nx)+1
-x = sm*0
-FOR i=0ul, ny-1 DO x[*, i] = x0
-y0 = (findgen(ny) MOD ny)+1
-y = sm*0
-FOR i=0ul, nx-1 DO y[i, *] = y0
+   x0 = (findgen(nx) MOD nx)+1
+   x = sm*0
+   FOR i=0ul, ny-1 DO x[*, i] = x0
+   y0 = (findgen(ny) MOD ny)+1
+   y = sm*0
+   FOR i=0ul, nx-1 DO y[i, *] = y0
 
-radius = catalogue.x_image*0.
-x_null = x[null]
-y_null = y[null]
-sx = catalogue.x_image/scale
-sy = catalogue.y_image/scale
-FOR i=0ul, n_elements(catalogue.number)-1 DO $
-  radius[i] = min(sqrt((x_null-sx[i])^2+(y_null-sy[i])^2))*scale
-return, radius
+   radius = catalogue.x_image*0.
+   x_null = x[null]
+   y_null = y[null]
+   sx = catalogue.x_image/scale
+   sy = catalogue.y_image/scale
+   FOR i=0ul, n_elements(catalogue.number)-1 DO $
+    radius[i] = min(sqrt((x_null-sx[i])^2+(y_null-sy[i])^2))*scale
+   return, radius
 END
 
-PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac
+PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac, setup
 ;routine to create postage stamp parameter files OUTPARAM for an
 ;IMAGE, using a SEXCAT with the paramater file SEXPARAM
 ;OUTPARAM has the following format:
 ;NUMBER X_IMAGE Y_IMAGE left_edge right_edge bottom_edge top_edge
 
 ;read in sextractor catalogue
-cat = read_sex_table(sexcat, sexparam)
+   cat = read_sex_table(sexcat, sexparam)
 
-cat.theta_image /= !radeg
-rad = cat.a_image*cat.kron_radius
+   cat.theta_image /= !radeg
+   rad = cat.a_image*cat.kron_radius
 
 ;get image size
-hd = headfits(image)
-nx = sxpar(hd, 'NAXIS1')
-ny = sxpar(hd, 'NAXIS2')
+   hd = headfits(image)
+   nx = sxpar(hd, 'NAXIS1')
+   ny = sxpar(hd, 'NAXIS2')
 
-openw, 1, outparam
+; correlate with object list to create a flag that enables cut_stamp
+; to only cut scientific targets
+   add_tag, cat, 'cut_list', 0, cat_new
+   cat=cat_new
+   delvarx, cat_new
+   
+   IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
+       cat.cut_list = 1
+   ENDIF ELSE BEGIN
+       if file_test(setup.srclist) eq 0 then print, 'supplied object file does not exist'
+       if file_test(setup.srclist) eq 0 then stop
+       readcol, setup.srclist, cut_ra, cut_dec, format='F,F', comment='#', /SILENT
+
+; or is the other way around faster??? NEESSARILY USE FASTER METHOD!
+; Make this dynamic! Usually, in big surveys, srclist would have
+; more objects that a tile, but not always true, e.g. when interested
+; in a very special subsample
+;if n_elements(cat.alpha_j2000/15.) ne 0 then stop
+       if n_elements(cat.alpha_j2000) le n_elements(cut_ra) THEN $
+         srccor, cat.alpha_j2000/15., cat.delta_j2000, cut_ra/15., cut_dec, $
+         setup.srclistrad, cat_i, cut_i, OPTION=1, /SPHERICAL, /SILENT
+       if n_elements(cat.alpha_j2000) gt n_elements(cut_ra) THEN $
+         srccor, cut_ra/15., cut_dec, cat.alpha_j2000/15., cat.delta_j2000, $
+         setup.srclistrad, cut_i, cat_i, OPTION=1, /SPHERICAL, /SILENT
+       
+       if cat_i[0] ne -1 then cat[cat_i].cut_list = 1
+   ENDELSE
+   
+   openw, 1, outparam
 ;loop over objects and calculate postage stamp sizes
-FOR i=0ul, n_elements(cat)-1 DO BEGIN
-    xfac = rad[i]*(abs(sin(cat[i].theta_image))+ $
-                   (1-cat[i].ellipticity)*abs(cos(cat[i].theta_image)))* $
-      sizefac
-    yfac = rad[i]*(abs(cos(cat[i].theta_image))+ $
-                   (1-cat[i].ellipticity)*abs(sin(cat[i].theta_image)))* $
-      sizefac
-    major = max([xfac, yfac])
-    minor = min([xfac, yfac])
-    
-    ang = cat[i].theta_image*!radeg
-    cirrange, ang
-    IF ang GT 180 THEN ang -= 180
-    IF ang GT 90 THEN ang -= 180
-    IF abs(ang) LT 45 THEN BEGIN
-        xfac = major & yfac = minor
-    ENDIF ELSE BEGIN
-        xfac = minor & yfac = major
-    ENDELSE
-    
-    xlo = round(cat[i].x_image)-round(xfac)
-    xa = 0
-    IF xlo LT 0 THEN BEGIN
-        xa = abs(xlo) & xlo = 0
-    ENDIF
-    xhi = round(cat[i].x_image)+round(xfac)
-    IF xhi GT nx-1 THEN xhi = nx-1
-    
-    ylo = round(cat[i].y_image)-round(yfac)
-    ya = 0
-    IF ylo LT 0 THEN BEGIN
-        ya = abs(ylo) & ylo = 0
-    ENDIF
-    yhi = round(cat[i].y_image)+round(yfac)
-    IF yhi GT ny-1 THEN yhi = ny-1
-    
-    printf, 1, cat[i].number, cat[i].x_image, cat[i].y_image, $
-      xlo, xhi, ylo, yhi, format = '(I,2(F),4(I))'
-ENDFOR
-close, 1
+   FOR i=0ul, n_elements(cat)-1 DO BEGIN
+      xfac = rad[i]*(abs(sin(cat[i].theta_image))+ $
+                     (1-cat[i].ellipticity)*abs(cos(cat[i].theta_image)))* $
+             sizefac
+      yfac = rad[i]*(abs(cos(cat[i].theta_image))+ $
+                     (1-cat[i].ellipticity)*abs(sin(cat[i].theta_image)))* $
+             sizefac
+      major = max([xfac, yfac])
+      minor = min([xfac, yfac])
+
+      ang = cat[i].theta_image*!radeg
+      cirrange, ang
+      IF ang GT 180 THEN ang -= 180
+      IF ang GT 90 THEN ang -= 180
+      IF abs(ang) LT 45 THEN BEGIN
+         xfac = major & yfac = minor
+      ENDIF ELSE BEGIN
+         xfac = minor & yfac = major
+      ENDELSE
+
+      xlo = round(cat[i].x_image)-round(xfac)
+      xa = 0
+      IF xlo LT 0 THEN BEGIN
+         xa = abs(xlo) & xlo = 0
+      ENDIF
+      xhi = round(cat[i].x_image)+round(xfac)
+      IF xhi GT nx-1 THEN xhi = nx-1
+
+      ylo = round(cat[i].y_image)-round(yfac)
+      ya = 0
+      IF ylo LT 0 THEN BEGIN
+         ya = abs(ylo) & ylo = 0
+      ENDIF
+      yhi = round(cat[i].y_image)+round(yfac)
+      IF yhi GT ny-1 THEN yhi = ny-1
+      
+; write out parameters for postages stamps, but only if object is in
+; srclist
+; in case of an empty catalogue, 0s have to be written out (if the file
+; doesn't exist, galapapos crases) The check is in the cut_stamps
+      if (cat[i].cut_list eq 1) then begin
+          printf, 1, cat[i].number, cat[i].x_image, cat[i].y_image, $
+            xlo, xhi, ylo, yhi, format = '(I,2(F),4(I))'
+      endif
+  ENDFOR
+  close, 1
 
 END
 
@@ -531,29 +583,34 @@ PRO cut_stamps, image, param, outpath, pre, post
 ;create_stamp_file). Output postage stamps are written into the
 ;OUTPATH. PRE is a string that gets prepended to the individual
 ;postage stamp file names (e.g. 'v'+'123.fits' --> 'v123.fits')
+
 ;   fits_read, image, im, hd
-im = readfits(image, hd, /silent)
-nx = sxpar(hd, 'NAXIS1')
-ny = sxpar(hd, 'NAXIS2')
+   im = readfits(image, hd, /silent)
+   nx = sxpar(hd, 'NAXIS1')
+   ny = sxpar(hd, 'NAXIS2')
 
 ;identify number of lines in the param table
 ;lines beginning with '#' are treated as comments
-nobj = n_lines(param)
+   nobj = n_lines(param)
 
-cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
-                 ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
-                 nobj, /no_execute)
+   cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
+                    ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
+                    nobj, /no_execute)
 
-fill_struct, cat, param
+   fill_struct, cat, param
 
+; only cut the stamps when the content is useful and not filled with 0s
+;hlp, cat.id
+   if cat[0].id ne 0 then begin
 ;  ndigits = fix(alog10(max(cat.id)))+1
-FOR i=0ul, nobj-1 DO BEGIN
-    hextract, im, hd, out, outhd, $
-      cat[i].xlo, cat[i].xhi, cat[i].ylo, cat[i].yhi, /silent
-    num = strtrim(cat[i].id, 2)
+       FOR i=0ul, nobj-1 DO BEGIN
+           hextract, im, hd, out, outhd, $
+             cat[i].xlo, cat[i].xhi, cat[i].ylo, cat[i].yhi, /silent
+           num = strtrim(cat[i].id, 2)
 ;    WHILE strlen(num) LT ndigits DO num = '0'+num
-    writefits, outpath+pre+num+post+'.fits', out, outhd
-ENDFOR
+           writefits, outpath+pre+num+post+'.fits', out, outhd
+       ENDFOR
+   ENDIF
 END
 
 PRO create_skymap, whtfile, segfile, sex, sexparam, mapfile, scale, offset
@@ -574,60 +631,60 @@ PRO create_skymap, whtfile, segfile, sex, sexparam, mapfile, scale, offset
 
 ;   fits_read, whtfile, wht, hd
 ;   fits_read, segfile, seg, hd
-wht = readfits(whtfile, hd,/silent)
-seg = readfits(segfile, hd,/silent)
+   wht = readfits(whtfile, hd,/silent)
+   seg = readfits(segfile, hd,/silent)
 
-nx = n_elements(wht[*, 0])
-ny = n_elements(wht[0, *])
+   nx = n_elements(wht[*, 0])
+   ny = n_elements(wht[0, *])
 
 ;initialise the map with sky-pixels only 
-map = intarr(nx, ny)
+   map = intarr(nx, ny)
 
 ;now calculate sextractor ellipses and mark object positions
-table = read_sex_table(sex, sexparam)
+   table = read_sex_table(sex, sexparam)
 
-theta = table.theta_image/!radeg
-rad = table.a_image*table.kron_radius*scale+offset
-FOR i=0ul, n_elements(table)-1 DO BEGIN
-    xfac = (rad[i]*(abs(sin(theta[i]))+(1-table[i].ellipticity)* $
-                    abs(cos(theta[i])))) > 10
-    yfac = (rad[i]*(abs(cos(theta[i]))+(1-table[i].ellipticity)* $
-                    abs(sin(theta[i])))) > 10
-    major = max([xfac, yfac])
-    minor = min([xfac, yfac])
-    
-    ang = table[i].theta_image
-    cirrange, ang
-    IF ang GT 180 THEN ang -= 180
-    IF ang GT 90 THEN ang -= 180
-    IF abs(ang) LT 45 THEN BEGIN
-        xfac = major & yfac = minor
-    ENDIF ELSE BEGIN
-        xfac = minor & yfac = major
-    ENDELSE
-    xlo = round(table[i].x_image-xfac) > 0 < (nx-1)
-    xhi = round(table[i].x_image+xfac) > 0 < (nx-1)
-    ylo = round(table[i].y_image-yfac) > 0 < (ny-1)
-    yhi = round(table[i].y_image+yfac) > 0 < (ny-1)
-    dist_ellipse, arr, [xhi-xlo+1, yhi-ylo+1], $
-      table[i].x_image-xlo, table[i].y_image-ylo, $
-      1./(1.-table[i].ellipticity), table[i].theta_image-90
-    idx = where(arr LE (rad[i] > 5))
-    arr = fix(arr) & arr = arr*0 & arr[idx] = 1
-    FOR j=xlo, xhi DO BEGIN
-        FOR k=ylo, yhi DO BEGIN
+   theta = table.theta_image/!radeg
+   rad = table.a_image*table.kron_radius*scale+offset
+   FOR i=0ul, n_elements(table)-1 DO BEGIN
+      xfac = (rad[i]*(abs(sin(theta[i]))+(1-table[i].ellipticity)* $
+                      abs(cos(theta[i])))) > 10
+      yfac = (rad[i]*(abs(cos(theta[i]))+(1-table[i].ellipticity)* $
+                      abs(sin(theta[i])))) > 10
+      major = max([xfac, yfac])
+      minor = min([xfac, yfac])
+
+      ang = table[i].theta_image
+      cirrange, ang
+      IF ang GT 180 THEN ang -= 180
+      IF ang GT 90 THEN ang -= 180
+      IF abs(ang) LT 45 THEN BEGIN
+         xfac = major & yfac = minor
+      ENDIF ELSE BEGIN
+         xfac = minor & yfac = major
+      ENDELSE
+      xlo = round(table[i].x_image-xfac) > 0 < (nx-1)
+      xhi = round(table[i].x_image+xfac) > 0 < (nx-1)
+      ylo = round(table[i].y_image-yfac) > 0 < (ny-1)
+      yhi = round(table[i].y_image+yfac) > 0 < (ny-1)
+      dist_ellipse, arr, [xhi-xlo+1, yhi-ylo+1], $
+                    table[i].x_image-xlo, table[i].y_image-ylo, $
+                    1./(1.-table[i].ellipticity), table[i].theta_image-90
+      idx = where(arr LE (rad[i] > 5))
+      arr = fix(arr) & arr = arr*0 & arr[idx] = 1
+      FOR j=xlo, xhi DO BEGIN
+         FOR k=ylo, yhi DO BEGIN
             IF arr[j-xlo, k-ylo] EQ 1 THEN map[j, k] = map[j, k]+1
-        ENDFOR
-    ENDFOR
-ENDFOR
+         ENDFOR
+      ENDFOR
+   ENDFOR
 
 ;mark as off pixels (blank, no light on pixel) those where the weight
 ;is zero and there is no object in the segmentation map at that
 ;position
-off = where(wht EQ 0, ct)
-IF ct GT 0 THEN map[off] = -1
+   off = where(wht EQ 0, ct)
+   IF ct GT 0 THEN map[off] = -1
 
-writefits, mapfile+'.fits', map, hd
+   writefits, mapfile+'.fits', map, hd,/silent
 
 END
 
@@ -636,54 +693,54 @@ FUNCTION rel_pos_ang, tgt_x, tgt_y, ctr_x, ctr_y, ctr_pa
 ;to a position ctr_x/ctr_y with an intrinsic position angle
 ;ctr_pa. Angles are in radians and counted anticlockwise from x.
 
-alpha = tgt_x*0.
-dist = sqrt((tgt_x-ctr_x)^2.+(tgt_y-ctr_y)^2.)
-j = where(dist GT 0, gt0)
-IF gt0 GT 0 THEN BEGIN
-    alpha[j] = asin((tgt_y[j]-ctr_y[j])/dist[j])
-    i = where(tgt_x[j] LT ctr_x[j] AND tgt_y[j] LT ctr_y[j], ct)
-    IF ct GT 0 THEN alpha[j[i]] = -alpha[j[i]]-!pi
-    i = where(tgt_x[j] LT ctr_x[j] AND tgt_y[j] GE ctr_y[j], ct)
-    IF ct GT 0 THEN alpha[j[i]] = !pi-alpha[j[i]]
-ENDIF
+   alpha = tgt_x*0.
+   dist = sqrt((tgt_x-ctr_x)^2.+(tgt_y-ctr_y)^2.)
+   j = where(dist GT 0, gt0)
+   IF gt0 GT 0 THEN BEGIN
+      alpha[j] = asin((tgt_y[j]-ctr_y[j])/dist[j])
+      i = where(tgt_x[j] LT ctr_x[j] AND tgt_y[j] LT ctr_y[j], ct)
+      IF ct GT 0 THEN alpha[j[i]] = -alpha[j[i]]-!pi
+      i = where(tgt_x[j] LT ctr_x[j] AND tgt_y[j] GE ctr_y[j], ct)
+      IF ct GT 0 THEN alpha[j[i]] = !pi-alpha[j[i]]
+   ENDIF
 
-alpha -= ctr_pa
-i = where(alpha GT 2*!pi, ct)
-IF ct GT 0 THEN alpha[i] -= 2*!pi
+   alpha -= ctr_pa
+   i = where(alpha GT 2*!pi, ct)
+   IF ct GT 0 THEN alpha[i] -= 2*!pi
 
-return, alpha
+   return, alpha
 END
 
 FUNCTION ell_rad, _a, _b, _phi
 ;for an ellipse with semi-major axis a and semi-minor axis b calculate
 ;the radius at an angle phi (radians counter-clockwise from x)
-na = n_elements(_a)
-nb = n_elements(_b)
-nphi = n_elements(_phi)
-IF na EQ 1 THEN a = _a[0] ELSE a = _a
-IF nb EQ 1 THEN b = _b[0] ELSE b = _b
-IF nphi EQ 1 THEN phi = _phi[0] ELSE phi = _phi
+   na = n_elements(_a)
+   nb = n_elements(_b)
+   nphi = n_elements(_phi)
+   IF na EQ 1 THEN a = _a[0] ELSE a = _a
+   IF nb EQ 1 THEN b = _b[0] ELSE b = _b
+   IF nphi EQ 1 THEN phi = _phi[0] ELSE phi = _phi
 ;the input arrays have to fulfill one requirement:
 ;1) all variables with more than 1 element have same number of
 ;   elements OR
 ;2) all variables have 1 element
-i = where((nar = [na, nb, nphi]) GT 1, ct)
+   i = where((nar = [na, nb, nphi]) GT 1, ct)
 
-IF ct GT 1 THEN BEGIN       ;more than 1 array has more than 1 element
-    j = where(nar[i[1:*]] NE nar[i[0]], ct)
-    IF ct GT 0 THEN message, 'input arrays do not fulfill requirements ' + $
-      '(e.g. a=[1,2] & phi=[1,2,3])'
-ENDIF
+   IF ct GT 1 THEN BEGIN        ;more than 1 array has more than 1 element
+      j = where(nar[i[1:*]] NE nar[i[0]], ct)
+      IF ct GT 0 THEN message, 'input arrays do not fulfill requirements ' + $
+                               '(e.g. a=[1,2] & phi=[1,2,3])'
+   ENDIF
 
-i = where(a EQ 0, cta)
-IF i GT 0 THEN a[i] = 1
-j = where(b EQ 0, ctb)
-IF j GT 0 THEN b[j] = 1
-r = 1./sqrt(cos(phi)^2./a^2.+sin(phi)^2./b^2.)
-IF i GT 0 THEN r[i] = 0
-IF j GT 0 THEN r[j] = 0
+   i = where(a EQ 0, cta)
+   IF i GT 0 THEN a[i] = 1
+   j = where(b EQ 0, ctb)
+   IF j GT 0 THEN b[j] = 1
+   r = 1./sqrt(cos(phi)^2./a^2.+sin(phi)^2./b^2.)
+   IF i GT 0 THEN r[i] = 0
+   IF j GT 0 THEN r[j] = 0
 
-return, r
+   return, r
 END
 
 PRO merge_sex_catalogues, incat, inparam, images, neighbours, outcat
@@ -693,149 +750,157 @@ PRO merge_sex_catalogues, incat, inparam, images, neighbours, outcat
 ;neighbours: 2d-array n_neighbours x n_images with neighbouring frames
 ;outcat: filename of the output catalogue
 
-nframes = n_elements(images)
+   nframes = n_elements(images)
 
 ;read main table
-main = read_sex_table(incat[0], inparam[0])
-main_d = calc_dist_to_edge(images[0], main)
-n_main = n_elements(main.number)
-main_file = strarr(n_main)+images[0]
-main_id = intarr(n_main)
+   main = read_sex_table(incat[0], inparam[0])
+   main_d = calc_dist_to_edge(images[0], main)
+   n_main = n_elements(main.number)
+   main_file = strarr(n_main)+images[0]
+   main_id = intarr(n_main)
 
 ;loop over images
-FOR j=1ul, nframes-1 DO BEGIN
-    print, j
-    
+   FOR j=1ul, nframes-1 DO BEGIN
+      print, j
+
 ;read secondary table
-    sec = read_sex_table(incat[j], inparam[j])
-    sec_d = calc_dist_to_edge(images[j], sec)
-    n_sec = n_elements(sec.number)
-    sec_file = strarr(n_sec)+images[j]
-    sec_id = intarr(n_main)+j
-    
+      sec = read_sex_table(incat[j], inparam[j])
+      n_sec = n_elements(sec.number)
+      sec_file = strarr(n_sec)+images[j]
+      sec_id = intarr(n_main)+j
+      
+; ONLY DO ALL THIS IF THERE ARE ACTUALLY DETECTIONS IN THIS FRAME!!
+      if sec[0].number gt 0 then begin
+          sec_d = calc_dist_to_edge(images[j], sec)
+
 ;extract neighbours from main -> primary table (remove primary from
 ;main)
-    
+          
 ;consider only frames from main that are neighbours to sec
-    n_neighbours = n_elements(neighbours[*, 0])
-    nei = 0
-    FOR i=0ul, n_neighbours-1 DO $
-      nei = [nei, where(main_file EQ neighbours[i, j])]
-    nei = nei[1:*]
-    idx = where(nei GT -1, ct)
-    IF ct GT 0 THEN BEGIN
-        nei = nei[idx]
+          n_neighbours = n_elements(neighbours[*, 0])
+          nei = 0
+          FOR i=0ul, n_neighbours-1 DO $
+            nei = [nei, where(main_file EQ neighbours[i, j])]
+          nei = nei[1:*]
+          idx = where(nei GT -1, ct)
+          IF ct GT 0 THEN BEGIN
+              nei = nei[idx]
 ;neighbouring frames will be split from the main catalogue and added
 ;back afterwards
-        pri = main[nei]
-        pri_d = main_d[nei]
-        pri_file = main_file[nei]
-        pri_id = main_id[nei]
-        
-        idx = invert_index(main.number, nei)
-        IF idx[0] EQ -1 THEN BEGIN
-            main = main[0]
-            main_d = -1
-            main_file = ''
-            main_id = -1
-        ENDIF ELSE BEGIN
-            main = main[idx]
-            main_d = main_d[idx]
-            main_file = main_file[idx]
-            main_id = main_id[idx]
-        ENDELSE
-        
+              pri = main[nei]
+              pri_d = main_d[nei]
+              pri_file = main_file[nei]
+              pri_id = main_id[nei]
+              
+; can invert_index be replaced with a_not_b.pro????  inv2=a_not_b(arr1,arr2)
+              hlpind = lindgen(n_elements(main.number))
+              idx = a_not_b(hlpind, nei)
+; old version
+;         idx = invert_index(main.number, nei)
+              IF idx[0] EQ -1 THEN BEGIN
+                  main = main[0]
+                  main_d = -1
+                  main_file = ''
+                  main_id = -1
+              ENDIF ELSE BEGIN
+                  main = main[idx]
+                  main_d = main_d[idx]
+                  main_file = main_file[idx]
+                  main_id = main_id[idx]
+              ENDELSE
+              
 ;combine primary with secondary
-        tot = [pri, sec]
-        tot_d = [pri_d, sec_d]
-        tot_file = [pri_file, sec_file]
-        tot_id = [pri_id, sec_id]
-        
+              tot = [pri, sec]
+              tot_d = [pri_d, sec_d]
+              tot_file = [pri_file, sec_file]
+              tot_id = [pri_id, sec_id]
+              
 ;sort by distance from border
-        ord = reverse(sort(tot_d))
-        tot = tot[ord]
-        tot_d = tot_d[ord]
-        tot_file = tot_file[ord]
-        tot_id = tot_id[ord]
-        tot_dupe = fix(tot_d*0)
-        
+              ord = reverse(sort(tot_d))
+              tot = tot[ord]
+              tot_d = tot_d[ord]
+              tot_file = tot_file[ord]
+              tot_id = tot_id[ord]
+              tot_dupe = fix(tot_d*0)
+              
 ;loop over objects
-        cur = 0L
-        WHILE 1 DO BEGIN
+              cur = 0L
+              WHILE 1 DO BEGIN
 ;find objects in other table within SExtractor ellipse and remove
-            IF tot_id[cur] EQ j THEN rc = where(tot_id NE tot_id[cur]) $
-            ELSE rc = where(tot_id EQ j)
-            
-            adxy, headfits(tot_file[cur]), tot[rc].alpha_j2000, $
-              tot[rc].delta_j2000, x_rc, y_rc
-            x_rc++
-            y_rc++
-            
-            phi_rc = rel_pos_ang(x_rc, y_rc, tot[cur].x_image, $
-                                 tot[cur].y_image, tot[cur].theta_image/!radeg)
-            rp_rc = 1/sqrt((cos(phi_rc)/(tot[cur].a_image* $
-                                         tot[cur].kron_radius))^2+ $
-                           (sin(phi_rc)/(tot[cur].b_image* $
-                                         tot[cur].kron_radius))^2.)
-            r_rc = sqrt((x_rc-tot[cur].x_image)^2.+(y_rc-tot[cur].y_image)^2.)
-            
-            dup = where(r_rc LT rp_rc*1.1+5, ct)
-            IF ct GT 0 THEN BEGIN
-                tot_dupe[rc[dup]] = 1
-                idx = where(tot_dupe EQ 0, ct)
-                tot = tot[idx]
-                tot_d = tot_d[idx]
-                tot_file = tot_file[idx]
-                tot_id = tot_id[idx]
-                tot_dupe = fix(tot_d*0)
-            ENDIF
-            cur++
-            
-            IF cur GT n_elements(tot_d)-1 THEN BREAK
-        ENDWHILE
+                  IF tot_id[cur] EQ j THEN rc = where(tot_id NE tot_id[cur]) $
+                  ELSE rc = where(tot_id EQ j)
+                  
+                  adxy, headfits(tot_file[cur]), tot[rc].alpha_j2000, $
+                    tot[rc].delta_j2000, x_rc, y_rc
+                  x_rc++
+                  y_rc++
+                  
+                  phi_rc = rel_pos_ang(x_rc, y_rc, tot[cur].x_image, $
+                                       tot[cur].y_image, tot[cur].theta_image/!radeg)
+                  rp_rc = 1/sqrt((cos(phi_rc)/(tot[cur].a_image* $
+                                               tot[cur].kron_radius))^2+ $
+                                 (sin(phi_rc)/(tot[cur].b_image* $
+                                               tot[cur].kron_radius))^2.)
+                  r_rc = sqrt((x_rc-tot[cur].x_image)^2.+(y_rc-tot[cur].y_image)^2.)
+                  
+                  dup = where(r_rc LT rp_rc*1.1+5, ct)
+                  IF ct GT 0 THEN BEGIN
+                      tot_dupe[rc[dup]] = 1
+                      idx = where(tot_dupe EQ 0, ct)
+                      tot = tot[idx]
+                      tot_d = tot_d[idx]
+                      tot_file = tot_file[idx]
+                      tot_id = tot_id[idx]
+                      tot_dupe = fix(tot_d*0)
+                  ENDIF
+                  cur++
+                  
+                  IF cur GT n_elements(tot_d)-1 THEN BREAK
+              ENDWHILE
 ;end loop over objects
-        
-    ENDIF ELSE BEGIN
+              
+          ENDIF ELSE BEGIN
 ;the current frame is too far from already processed tiles (none of
-;its neighbours are in the main_file) --> include all objects in main_file
-        tot = sec
-        tot_d = sec_d
-        tot_file = sec_file
-        tot_id = sec_id
-    ENDELSE
-    
+;its neighbousexcomb_multi_wl2rs are in the main_file) --> include all objects in main_file
+              tot = sec
+              tot_d = sec_d
+              tot_file = sec_file
+              tot_id = sec_id
+          ENDELSE
+          
 ;combine main with resulting table
-    main = [main, tot]
-    main_d = [main_d, tot_d]
-    main_file = [main_file, tot_file]
-    main_id = [main_id, tot_id]
-    
-    idx = where(main_d GE 0, ct)
-    IF ct EQ 0 THEN message, 'No objects in combined catalogue' $
-    ELSE BEGIN
-        main = main[idx]
-        main_d = main_d[idx]
-        main_file = main_file[idx]
-        main_id = main_id[idx]
-    ENDELSE
-    
+          main = [main, tot]
+          main_d = [main_d, tot_d]
+          main_file = [main_file, tot_file]
+          main_id = [main_id, tot_id]
+          
+          idx = where(main_d GE 0, ct)
+          IF ct EQ 0 THEN message, 'No objects in combined catalogue' $
+          ELSE BEGIN
+              main = main[idx]
+              main_d = main_d[idx]
+              main_file = main_file[idx]
+              main_id = main_id[idx]
+          ENDELSE
+      ENDIF
+      
 ;end loop over images
-ENDFOR
-
+  ENDFOR
+ 
 ;calculate position angle in WCS for all sources
-frames = main_file[uniq(main_file, sort(main_file))]
-nframes = n_elements(frames)
-FOR i=0ul, nframes-1 DO BEGIN
-    getrot, headfits(frames[i]), rot
-    j = where(main_file EQ frames[i], ct)
-    IF ct GT 0 THEN main[j].theta_world = main[j].theta_image-rot
-ENDFOR
-i = where(main.theta_world GT 90, ct)
-IF ct GT 0 THEN main[i].theta_world -= 180
-i = where(main.theta_world LT -90, ct)
-IF ct GT 0 THEN main[i].theta_world += 180
+   frames = main_file[uniq(main_file, sort(main_file))]
+   nframes = n_elements(frames)
+   FOR i=0ul, nframes-1 DO BEGIN
+      getrot, headfits(frames[i]), rot
+      j = where(main_file EQ frames[i], ct)
+      IF ct GT 0 THEN main[j].theta_world = main[j].theta_image-rot
+   ENDFOR
+   i = where(main.theta_world GT 90, ct)
+   IF ct GT 0 THEN main[i].theta_world -= 180
+   i = where(main.theta_world LT -90, ct)
+   IF ct GT 0 THEN main[i].theta_world += 180
 
-write_sex_table, main, outcat, add_column = main_file
+   write_sex_table, main, outcat, add_column = main_file
 END
 
 FUNCTION sky_contrib, iso_x, iso_y, iso_a, iso_q, iso_pa, phi, $
@@ -866,60 +931,60 @@ FUNCTION sky_contrib, iso_x, iso_y, iso_a, iso_q, iso_pa, phi, $
 ;all angles are measured from x to y
 
 ;compute the semi-major axis of the isophote
-iso_b = iso_a*iso_q
+   iso_b = iso_a*iso_q
 
 ;the current position in the coordinate system of the isophote
-ellrad = ell_rad(iso_a, iso_b, phi-iso_pa)
+   ellrad = ell_rad(iso_a, iso_b, phi-iso_pa)
 
 ;the current position in the normal coordinate system centred on the
 ;isophote
-xp = ellrad*cos(phi)
-yp = ellrad*sin(phi)
+   xp = ellrad*cos(phi)
+   yp = ellrad*sin(phi)
 
 ;the current position in the normal coordinate system centred on the
 ;target
-px = xp+iso_x
-py = yp+iso_y
+   px = xp+iso_x
+   py = yp+iso_y
 
 ;distance from target to current position
-r = sqrt((px-targ_x)^2.+(py-targ_y)^2.)
+   r = sqrt((px-targ_x)^2.+(py-targ_y)^2.)
 
 ;position angle of the current position in the system of the target
-xi = rel_pos_ang(px, py, targ_x, targ_y, targ_pa)
+   xi = rel_pos_ang(px, py, targ_x, targ_y, targ_pa)
 
 ;semi-major axis radius of the current position in the system of the
 ;target
-rr = r*sqrt(cos(xi)^2.+sin(xi)^2./targ_q^2.)
+   rr = r*sqrt(cos(xi)^2.+sin(xi)^2./targ_q^2.)
 
 ;the distance between the centre of the isophote and the position of
 ;the target
-rc = sqrt((targ_x-iso_x)^2.+(targ_y-iso_y)^2.)
+   rc = sqrt((targ_x-iso_x)^2.+(targ_y-iso_y)^2.)
 
 ;the position angle of the centre of the isophote in the coordinate
 ;system of the target
-xic = rel_pos_ang(iso_x, iso_y, targ_x, targ_y, targ_pa)
+   xic = rel_pos_ang(iso_x, iso_y, targ_x, targ_y, targ_pa)
 
 ;the radius at which the flux is to be measured corresponding to the
 ;centre of the isophote
-rrc = rc*sqrt(cos(xic)^2.+sin(xic)^2./targ_q^2.)
+   rrc = rc*sqrt(cos(xic)^2.+sin(xic)^2./targ_q^2.)
 
 ;the total flux of the target
-ftot = 10.^(-0.4*(targ_m-zeropt))*exptime
+   ftot = 10.^(-0.4*(targ_m-zeropt))*exptime
 
-kap = (kappa(targ_n))[0]
-f0 = ftot/(2*!pi*targ_re^2.*exp(kap)*targ_n*kap^(-2.*targ_n)* $
-           gamma(2.*targ_n)*targ_q)
+   kap = (kappa(targ_n))[0]
+   f0 = ftot/(2*!pi*targ_re^2.*exp(kap)*targ_n*kap^(-2.*targ_n)* $
+              gamma(2.*targ_n)*targ_q)
 
 ;the flux at the current position in counts
-f = f0*exp(-kap*((rr/targ_re)^(1./targ_n)-1.))
+   f = f0*exp(-kap*((rr/targ_re)^(1./targ_n)-1.))
 
 ;optional convolution with a psf
-IF keyword_set(psf) THEN f = convolve(f, psf)
+   IF keyword_set(psf) THEN f = convolve(f, psf)
 
 ;the flux at the centre of the isophote in counts
-central_flux = f0*exp(-kap*((rrc/targ_re)^(1./targ_n)-1.))
+   central_flux = f0*exp(-kap*((rrc/targ_re)^(1./targ_n)-1.))
 
-return, f
+   return, f
 END
 
 FUNCTION sersic_flux, _r, _phi, _q, _f0, _re, _n
@@ -931,40 +996,40 @@ FUNCTION sersic_flux, _r, _phi, _q, _f0, _re, _n
 ;1) all variables with more than 1 element have same number of
 ;   elements OR
 ;2) all variables have 1 element
-nr = n_elements(_r)
-nphi = n_elements(_phi)
-nq = n_elements(_q)
-nf0 = n_elements(_f0)
-nre = n_elements(_re)
-nn = n_elements(_n)
+   nr = n_elements(_r)
+   nphi = n_elements(_phi)
+   nq = n_elements(_q)
+   nf0 = n_elements(_f0)
+   nre = n_elements(_re)
+   nn = n_elements(_n)
 
-i = where((nar = [nr, nphi, nq, nf0, nre, nn]) GT 1, ct)
+   i = where((nar = [nr, nphi, nq, nf0, nre, nn]) GT 1, ct)
 
-IF ct GT 1 THEN BEGIN       ;more than 1 array has more than 1 element
-    j = where(nar[i[1:*]] NE nar[i[0]], ct)
-    IF ct GT 0 THEN message, 'input arrays do not fulfill requirements ' + $
-      '(e.g. r=[1,2] & phi=[1,2,3])'
-ENDIF
+   IF ct GT 1 THEN BEGIN        ;more than 1 array has more than 1 element
+      j = where(nar[i[1:*]] NE nar[i[0]], ct)
+      IF ct GT 0 THEN message, 'input arrays do not fulfill requirements ' + $
+                               '(e.g. r=[1,2] & phi=[1,2,3])'
+   ENDIF
 
-IF nphi EQ 1 THEN phi = _phi[0] ELSE phi = _phi
-IF nq EQ 1 THEN q = _q[0] ELSE q = _q
-r = cos(phi)^2.
-phi = sin(temporary(phi))^2./q^2.
-delvarx, q
-phi = sqrt(r+temporary(phi))
-IF nr EQ 1 THEN r = _r[0] ELSE r = _r
-r = temporary(r)*phi
-delvarx, phi
-IF nf0 EQ 1 THEN f0 = _f0[0] ELSE f0 = _f0
-IF nre EQ 1 THEN re = _re[0] ELSE re = _re
-IF nn EQ 1 THEN n = _n[0] ELSE n = _n
-IF n_elements((kap = kappa(n))) EQ 1 THEN kap = kap[0]
+   IF nphi EQ 1 THEN phi = _phi[0] ELSE phi = _phi
+   IF nq EQ 1 THEN q = _q[0] ELSE q = _q
+   r = cos(phi)^2.
+   phi = sin(temporary(phi))^2./q^2.
+   delvarx, q
+   phi = sqrt(r+temporary(phi))
+   IF nr EQ 1 THEN r = _r[0] ELSE r = _r
+   r = temporary(r)*phi
+   delvarx, phi
+   IF nf0 EQ 1 THEN f0 = _f0[0] ELSE f0 = _f0
+   IF nre EQ 1 THEN re = _re[0] ELSE re = _re
+   IF nn EQ 1 THEN n = _n[0] ELSE n = _n
+   IF n_elements((kap = kappa(n))) EQ 1 THEN kap = kap[0]
 
-return, f0*exp(-kap*((r/re)^(1./n)-1.))
+   return, f0*exp(-kap*((r/re)^(1./n)-1.))
 END
 
 PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
-                     nums, frames
+                     nums, frames, fit_table
 ;power: convert flux_radius to proper half-light radius of a spheroid (1.4)
 ;t: sextractor table (ASSUMES THAT ALL IMAGE POSITIONS ARE ON THE SAME WCS
 ;FRAME)
@@ -972,31 +1037,31 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
 ;cut: magnitude cut (4.5)
 ;nums: OUTPUT, numbers of the most contributing objects
 ;frames: OUTPUT, frames of the most contributing objects
-n = t.number*0.+4.
-q = t.b_image/t.a_image
-re = t.flux_radius^power
-mag = t.mag_best
-theta_image = t.theta_world-t[c].theta_world+t[c].theta_image
-IF n_elements(table) GT 0 THEN BEGIN
-    
+  n = t.number*0.+4.
+  q = t.b_image/t.a_image
+  re = t.flux_radius^power
+  mag = t.mag_best
+  theta_image = t.theta_world-t[c].theta_world+t[c].theta_image
+  IF n_elements(fit_table) GT 0 THEN BEGIN
+      
 ; try using 'match'
-    ident1 = strtrim(table.org_image,2)+':'+strtrim(table.number,2)
-    ident2 = strtrim(t.frame[0],2)+':'+strtrim(t.number,2)
-    match, ident1, ident2, id_idx1, id_idx2
-    wh_re_gt0 = where(table[id_idx1].re_galfit GE 0,cntregt0)
-    if cntregt0 gt 0 then begin
-        n[id_idx2[wh_re_gt0]] = table[id_idx1[wh_re_gt0]].n_galfit
-        q[id_idx2[wh_re_gt0]] = table[id_idx1[wh_re_gt0]].q_galfit
-        re[id_idx2[wh_re_gt0]] = table[id_idx1[wh_re_gt0]].re_galfit
-        mag[id_idx2[wh_re_gt0]] = table[id_idx1[wh_re_gt0]].mag_galfit
-        theta_image[id_idx2[wh_re_gt0]] = theta_image[id_idx2[wh_re_gt0]]-t[c].theta_image+ $
-          90+table[id_idx1[wh_re_gt0]].pa_galfit
-    endif
-    wh_theta_gt0 = where(theta_image GT 180, cnt_gt)
-    if cnt_gt gt 0 then theta_image[wh_theta_gt0] -= 180
-    wh_theta_lt0 = where(theta_image LT 180, cnt_lt)
-    if cnt_lt gt 0 then theta_image[wh_theta_lt0] += 180
-    
+      ident1 = strtrim(fit_table.org_image,2)+':'+strtrim(fit_table.number,2)
+      ident2 = strtrim(t.frame[0],2)+':'+strtrim(t.number,2)
+      match, ident1, ident2, id_idx1, id_idx2
+      wh_re_gt0 = where(fit_table[id_idx1].re_galfit GE 0,cntregt0)
+      if cntregt0 gt 0 then begin
+          n[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].n_galfit
+          q[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].q_galfit
+          re[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].re_galfit
+          mag[id_idx2[wh_re_gt0]] = fit_table[id_idx1[wh_re_gt0]].mag_galfit
+          theta_image[id_idx2[wh_re_gt0]] = theta_image[id_idx2[wh_re_gt0]]-t[c].theta_image+ $
+            90+fit_table[id_idx1[wh_re_gt0]].pa_galfit
+      endif
+      wh_theta_gt0 = where(theta_image GT 180, cnt_gt)
+      if cnt_gt gt 0 then theta_image[wh_theta_gt0] -= 180
+      wh_theta_lt0 = where(theta_image LT 180, cnt_lt)
+      if cnt_lt gt 0 then theta_image[wh_theta_lt0] += 180
+      
 ;; Marcos original, loops over all objects and is very slow if tiles
 ;; contain many objects!
 ;      FOR i=0ul, n_elements(n)-1 DO BEGIN
@@ -1016,45 +1081,45 @@ IF n_elements(table) GT 0 THEN BEGIN
 ;              ENDIF
 ;          ENDIF
 ;      ENDFOR
-    
-ENDIF
 
-ftot = 10.^(-0.4*(mag-zeropt))*exptime
-kap = (kappa(n))[0]
-f0 = ftot/(2*!pi*re^2.*exp(kap)*n*kap^(-2.*n)*gamma(2.*n)*q)
+  ENDIF
 
+  ftot = 10.^(-0.4*(mag-zeropt))*exptime
+  kap = (kappa(n))[0]
+  f0 = ftot/(2*!pi*re^2.*exp(kap)*n*kap^(-2.*n)*gamma(2.*n)*q)
+  
 ;distance from the current object c
-d = sqrt((t[c].x_image-t.x_image)^2.+(t[c].y_image-t.y_image)^2.)
+   d = sqrt((t[c].x_image-t.x_image)^2.+(t[c].y_image-t.y_image)^2.)
 ;position angle of the current source in the reference system of all
 ;other galaxies
-pa_all = rel_pos_ang(t[c].x_image, t[c].y_image, t.x_image, t.y_image, $
-                     theta_image/!radeg)
+   pa_all = rel_pos_ang(t[c].x_image, t[c].y_image, t.x_image, t.y_image, $
+                        theta_image/!radeg)
 ;contribution of all galaxies at the position of the current source
-c_all = -2.5*alog10(sersic_flux(d, pa_all, q, f0, re, n))
+   c_all = -2.5*alog10(sersic_flux(d, pa_all, q, f0, re, n))
 ;distance that all objects 'reach' towards the current object
-r_all = ell_rad(t.a_image, t.b_image, pa_all)*t.kron_radius*scale+ $
-  offset
+   r_all = ell_rad(t.a_image, t.b_image, pa_all)*t.kron_radius*scale+ $
+           offset
 
 ;position angle of all other galaxies in the reference system of the
 ;current source
-pa_ctr = rel_pos_ang(t.x_image, t.y_image, t[c].x_image, t[c].y_image, $
-                     theta_image[c]/!radeg)
+   pa_ctr = rel_pos_ang(t.x_image, t.y_image, t[c].x_image, t[c].y_image, $
+                        theta_image[c]/!radeg)
 ;contribution of the current source at the position of all galaxies
-c_ctr = -2.5*alog10(sersic_flux(d, pa_ctr, q[c], f0[c], re[c], n[c]))
+   c_ctr = -2.5*alog10(sersic_flux(d, pa_ctr, q[c], f0[c], re[c], n[c]))
 ;distance that the current object 'reaches' towards all objects
-r_ctr = ell_rad(t[c].a_image, t[c].b_image, pa_ctr)*t[c].kron_radius* $
-  scale+offset
-con = r_ctr+r_all
+   r_ctr = ell_rad(t[c].a_image, t[c].b_image, pa_ctr)*t[c].kron_radius* $
+           scale+offset
+   con = r_ctr+r_all
 
-o = sort(c_all)
-no_fit = where(con[o] LT d[o], ct)
-IF ct EQ 0 THEN BEGIN
-    nums = -1
-    frames = ''
-ENDIF ELSE BEGIN
+   o = sort(c_all)
+   no_fit = where(con[o] LT d[o], ct)
+   IF ct EQ 0 THEN BEGIN
+      nums = -1
+      frames = ''
+   ENDIF ELSE BEGIN
 ;      print, 'cur', 'num', 'x', 'y', 'dist', 'con', 'mag', 'magc', $
 ;             'c_all', 'c_ctr', format = '(2(A5),4(A7),2(A8),2(A6))'
-    nno = n_elements(no_fit)-1
+      nno = n_elements(no_fit)-1
 ;      forprint, t[c].number+fltarr(11 < nno), $
 ;                t[o[no_fit[0:10 < nno]]].number, $
 ;                t[o[no_fit[0:10 < nno]]].x_image, $
@@ -1066,11 +1131,11 @@ ENDIF ELSE BEGIN
 ;                c_all[o[no_fit[0:10 < nno]]], $
 ;                c_ctr[o[no_fit[0:10 < nno]]], $
 ;                format = '(2(I5),4(F7.0),2(F8.2),2(F6.2))'
-    
-    grad = where(c_all[o[no_fit]] LT cut, ct)
-    IF ct GT 0 THEN nums = t[o[no_fit[grad]]].number ELSE nums = -1
-    IF ct GT 0 THEN frames = t[o[no_fit[grad]]].frame[1] ELSE frames = ''
-ENDELSE
+      
+      grad = where(c_all[o[no_fit]] LT cut, ct)
+      IF ct GT 0 THEN nums = t[o[no_fit[grad]]].number ELSE nums = -1
+      IF ct GT 0 THEN frames = t[o[no_fit[grad]]].frame[0] ELSE frames = ''
+   ENDELSE
 ;   print, 'gradient sources:'
 ;   forprint, nums, ' '+frames
 
@@ -1086,32 +1151,32 @@ PRO dist_angle, arr, sz, x, y
 ;similar to dist_circle
 ;estimate an array of size [sz[0],sz[1]] containing the polar angle
 ;wrt a given position x,y
-arr = fltarr(sz[0], sz[1])
-dx = findgen(sz[0])-x
-dy = findgen(sz[1])-y
+   arr = fltarr(sz[0], sz[1])
+   dx = findgen(sz[0])-x
+   dy = findgen(sz[1])-y
 
-xzero = where(dx EQ 0, ct_xzero)
-IF ct_xzero GT 0 THEN dx[xzero] = 1
+   xzero = where(dx EQ 0, ct_xzero)
+   IF ct_xzero GT 0 THEN dx[xzero] = 1
 
-FOR i=0ul, sz[1]-1 DO BEGIN
-    arr[0, i] = atan(dy[i]/dx)
-ENDFOR 
+   FOR i=0ul, sz[1]-1 DO BEGIN
+      arr[0, i] = atan(dy[i]/dx)
+   ENDFOR 
 
-j = where(dx LT 0, ct)
-IF ct GT 0 THEN arr[j, *] += !pi
+   j = where(dx LT 0, ct)
+   IF ct GT 0 THEN arr[j, *] += !pi
 
-k = where(dy EQ 0, ctk)
-IF ct_xzero GT 0 AND ctk GT 0 THEN arr[xzero, k] = 0
+   k = where(dy EQ 0, ctk)
+   IF ct_xzero GT 0 AND ctk GT 0 THEN arr[xzero, k] = 0
 
-j = where(arr GT !pi, ct)
-IF ct GT 0 THEN arr[j] -= 2*!pi
+   j = where(arr GT !pi, ct)
+   IF ct GT 0 THEN arr[j] -= 2*!pi
 END
 
 PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
                  scale, offset, power, cut, files, psf, dstep, wstep, gap, $
                  nslope, sky_file, out_file, out_cat, out_param, out_stamps, $
                  global_sky, global_sigsky, conv_box, nums, frames, galexe, $
-                 b, orgpath_pre, outpath_file, outpath_file_no_band, $
+                 fit_table, b, orgpath_pre, outpath_file, outpath_file_no_band, $
                  nband, xarr, yarr, seed
 ;current_obj: idx of the current object in table
 ;table: sextractor table (frame of current object and surrounding
@@ -1132,8 +1197,8 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;out_file: galfit output file prefix
 ;global_sky, global_sigsky: global sky value plus scatter
 ;conv_box: convolution box size for subtracting sources
-;nums, frames: object numbers and frames of potential contributing sources
-;curb: current band index (deblending only decided in reference band)
+;nums, frames: object numbers and frames of potential contributing sources (for bands other than the primary (b=1) these are actually INPUT parameters!)
+;b: current band index (deblending only decided in reference band)
 ;compute the sky for a single source
 ;nband: numbers of bands in the data
 ;xarr, yarr: arrays needed for skymap, created outside for all bands at once to improve speed
@@ -1148,373 +1213,373 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;    (image too small)
 ;8 - not enough measurements, value from SExtractor taken
 ;16 - value from contributing source taken
-sky_flag = 0
-
+   sky_flag = 0
+   
 ; rename image so im0 isn't changed
-im = im0
+   im = im0
 
 ;get the size of the image
-sz_im = (size(im))[1:2]
+   sz_im = (size(im))[1:2]
 ;make sure that the image is large enough to compute the sky
 ;compute max radius possible in current image
-idx = where(map EQ 0, ct)
-IF ct EQ 0 THEN message, 'NO PIXELS TO CALCULATE SKY'
+   idx = where(map EQ 0, ct)
+   IF ct EQ 0 THEN message, 'NO PIXELS TO CALCULATE SKY'
 
 ; The following line has to be done here, as map (and idx) could be different for each band)
-max_rad = max(sqrt((table[current_obj].x_image-xarr[idx])^2+ $
-                   (table[current_obj].y_image-yarr[idx])^2))
+   max_rad = max(sqrt((table[current_obj].x_image-xarr[idx])^2+ $
+                      (table[current_obj].y_image-yarr[idx])^2))
 ;if the maximum possible radius for the image is exceeded -> start
 ;with 0 and set flag
-IF rad[current_obj] GT max_rad THEN BEGIN
-    rad[current_obj] = 0
-    sky_flag += 1
-ENDIF
-
+   IF rad[current_obj] GT max_rad THEN BEGIN
+       rad[current_obj] = 0
+       sky_flag += 1
+   ENDIF
+   
 ;see if current source has contributors
 ; this is only done in REFERENCE band, for the other bands, num and
 ; frames are input by gala_bridge/galapagos, to which they have been returned in
 ; the run on the reference band.
-if b eq 1 then $
-  contrib_targets, exptime[b], zero_pt[b], scale, offset, power, table, $
-  current_obj, cut, nums, frames
-
-contrib_sky = 1e30
-
-IF nums[0] LT 0 THEN BEGIN
+   if b eq 1 then $
+     contrib_targets, exptime[b], zero_pt[b], scale, offset, power, table, $
+     current_obj, cut, nums, frames, fit_table
+   
+   contrib_sky = 1e30
+   
+   IF nums[0] LT 0 THEN BEGIN
 ;no contributing sources found-------------------------------------------------
 ;starting radius for sky calculation is already defined
 ;nothing to be done
-ENDIF ELSE BEGIN
+   ENDIF ELSE BEGIN
 ;contributing sources FOUND----------------------------------------------------
-    orgim = setup.images
-    outpath = setup.outpath
-    outpre = setup.outpre
-    outpath = set_trailing_slash(outpath)
-    
+       orgim = setup.images
+       outpath = setup.outpath
+       outpre = setup.outpre
+       outpath = set_trailing_slash(outpath)
+       
 ;total number of contributing sources
-    n_contrib = n_elements(nums)
-    
+       n_contrib = n_elements(nums)
+       
 ;array for distance to contributing sources
-    dist = fltarr(n_contrib)
-    
+       dist = fltarr(n_contrib)
+       
 ;flag: if set contributing source was subtracted from the image
-    subtract = intarr(n_contrib)
-    
+       subtract = intarr(n_contrib)
+       
 ;loop over all contributing sources============================================
-    FOR current_contrib=0ul, n_contrib-1 DO BEGIN
-        i_con = where(table.number EQ nums[current_contrib] AND $
-                      table.frame[1] EQ frames[current_contrib])
-        dist[current_contrib] = $
-          sqrt((table[i_con].x_image-table[current_obj].x_image)^2+ $
-               (table[i_con].y_image-table[current_obj].y_image)^2)+ $
-          table[i_con].a_image*table[i_con].kron_radius*scale
-        
+       FOR current_contrib=0ul, n_contrib-1 DO BEGIN
+           i_con = where(table.number EQ nums[current_contrib] AND $
+                         table.frame[0] EQ frames[current_contrib])
+           dist[current_contrib] = $
+             sqrt((table[i_con].x_image-table[current_obj].x_image)^2+ $
+                  (table[i_con].y_image-table[current_obj].y_image)^2)+ $
+             table[i_con].a_image*table[i_con].kron_radius*scale
+           
 ;find the GALFIT output file for the current contributing source
-        idx = where(orgim[*,1] EQ table[i_con].frame[1])
-        
-        objnum = round_digit(table[i_con].number, 0, /str)
-        current_contrib_file = outpath[idx]+outpre[idx,1]+objnum+'_'+setup.galfit_out+'.fits'
-        
-        IF file_test(current_contrib_file) THEN BEGIN
+           idx = where(orgim[*,1] EQ table[i_con].frame[1])
+           
+           objnum = round_digit(table[i_con].number, 0, /str)
+           current_contrib_file = outpath[idx]+outpre[idx,1]+objnum+'_'+setup.galfit_out+'.fits'
+           
+           IF file_test(current_contrib_file) THEN BEGIN
 ;a GALFIT result exists for the current contributing source--------------------
-            
+               
 ;read in the GALFIT image fitting results from current_file
-            forward_function read_sersic_results ; not quite sure why this is needed
-            forward_function read_sersic_results_old_galfit ; not quite sure why this is needed
-            IF setup.version ge 4 then par = read_sersic_results(current_contrib_file,nband)
-            IF setup.version lt 4 then par = read_sersic_results_old_galfit(current_contrib_file)      
-            contrib_sky = [contrib_sky, par.sky_galfit_band[b-1]]
-            
+forward_function read_sersic_results  ; not quite sure why this is needed
+forward_function read_sersic_results_old_galfit  ; not quite sure why this is needed
+               IF setup.version ge 4 then par = read_sersic_results(current_contrib_file,nband)
+               IF setup.version lt 4 then par = read_sersic_results_old_galfit(current_contrib_file)      
+               contrib_sky = [contrib_sky, par.sky_galfit_band[b-1]]
+               
 ;subtract the source from the image               
 ;position is in the original postage stamp frame
-            tb = read_sex_table(outpath_file[idx,0]+out_cat, $
-                                outpath_file[0,0]+out_param)
-            
-            itb = where(tb.number EQ table[i_con].number)
-            
-            stamp_file = outpath_file_no_band[idx,0]+setup.stampfile
+               tb = read_sex_table(outpath_file[idx,0]+out_cat, $
+                                   outpath_file[0,0]+out_param)
+               
+               itb = where(tb.number EQ table[i_con].number)
+               
+               stamp_file = outpath_file_no_band[idx,0]+setup.stampfile
 ; stamp_file = outpath[idx]+outpre[idx]+out_stamps
-            cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
-                             ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
-                             n_lines(stamp_file), /no_execute)
-            fill_struct, cat, stamp_file
-            icat = where(cat.id EQ table[i_con].number)
-            
+               cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
+                                ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
+                                n_lines(stamp_file), /no_execute)
+               fill_struct, cat, stamp_file
+               icat = where(cat.id EQ table[i_con].number)
+               
 ; here, the sersic profiles are subtracted
-            par.x_galfit_band[b-1] = par.x_galfit_band[b-1]+cat[icat].xlo-1-tb[itb].x_image+ $
-              table[i_con].x_image
-            par.y_galfit_band[b-1] = par.y_galfit_band[b-1]+cat[icat].ylo-1-tb[itb].y_image+ $
-              table[i_con].y_image
-            
+               par.x_galfit_band[b-1] = par.x_galfit_band[b-1]+cat[icat].xlo-1-tb[itb].x_image+ $
+                 table[i_con].x_image
+               par.y_galfit_band[b-1] = par.y_galfit_band[b-1]+cat[icat].ylo-1-tb[itb].y_image+ $
+                 table[i_con].y_image
+               
 ;the total flux of the target
-            ftot = 10.^(-0.4*(par.mag_galfit_band[b-1]-zero_pt[b]))*exptime[b]
-            
-            kap = (kappa(par.n_galfit_band[b-1]))[0]
-            f0 = ftot/(2*!pi*par.re_galfit_band[b-1]^2.*exp(kap)*par.n_galfit_band[b-1]* $
-                       kap^(-2.*par.n_galfit_band[b-1])*gamma(2.*par.n_galfit_band[b-1])* $
-                       par.q_galfit_band[b-1])
-            
+               ftot = 10.^(-0.4*(par.mag_galfit_band[b-1]-zero_pt[b]))*exptime[b]
+               
+               kap = (kappa(par.n_galfit_band[b-1]))[0]
+               f0 = ftot/(2*!pi*par.re_galfit_band[b-1]^2.*exp(kap)*par.n_galfit_band[b-1]* $
+                          kap^(-2.*par.n_galfit_band[b-1])*gamma(2.*par.n_galfit_band[b-1])* $
+                          par.q_galfit_band[b-1])
+               
 ;arrays for radius and angle of current contributing source
-            dist_angle, ang_arr, sz_im, par.x_galfit_band[b-1], par.y_galfit_band[b-1]
-            rad_arr = cos(ang_arr)^2.
-            ang_arr = sin(temporary(ang_arr))^2./par.q_galfit_band[b-1]^2.
-            ang_arr = sqrt(rad_arr+temporary(ang_arr))
-            dist_ellipse, rad_arr, sz_im, par.x_galfit_band[b-1], par.y_galfit_band[b-1], $
-              1./par.q_galfit_band[b-1], par.pa_galfit_band[b-1]
-            rad_arr = temporary(rad_arr)*ang_arr
-            obj = f0*exp(-kap*((rad_arr/par.re_galfit_band[b-1])^(1./par.n_galfit_band[b-1])-1.))
+               dist_angle, ang_arr, sz_im, par.x_galfit_band[b-1], par.y_galfit_band[b-1]
+               rad_arr = cos(ang_arr)^2.
+               ang_arr = sin(temporary(ang_arr))^2./par.q_galfit_band[b-1]^2.
+               ang_arr = sqrt(rad_arr+temporary(ang_arr))
+               dist_ellipse, rad_arr, sz_im, par.x_galfit_band[b-1], par.y_galfit_band[b-1], $
+                 1./par.q_galfit_band[b-1], par.pa_galfit_band[b-1]
+               rad_arr = temporary(rad_arr)*ang_arr
+               obj = f0*exp(-kap*((rad_arr/par.re_galfit_band[b-1])^(1./par.n_galfit_band[b-1])-1.))
 ;        obj = sersic_flux(rad_arr, ang_arr, par.q_galfit_band[b-1], f0, par.re_galfit_band[b-1], par.n_galfit_band[b-1])
-            delvarx, rad_arr, ang_arr
-            
+               delvarx, rad_arr, ang_arr
+               
 ;make sure the convolution size is a power of 2
-            cs = 2
-            cb = conv_box/2
-            WHILE cs LT cb DO cs *= 2
-            cs -= 1
-            
+               cs = 2
+               cb = conv_box/2
+               WHILE cs LT cb DO cs *= 2
+               cs -= 1
+               
 ;convolution box must be fully inside the postage stamp
-            x0 = round(par.x_galfit_band[b-1]-1) > (cs+1) < (sz_im[0]-cs-2)
-            y0 = round(par.y_galfit_band[b-1]-1) > (cs+1) < (sz_im[1]-cs-2)
-            
+               x0 = round(par.x_galfit_band[b-1]-1) > (cs+1) < (sz_im[0]-cs-2)
+               y0 = round(par.y_galfit_band[b-1]-1) > (cs+1) < (sz_im[1]-cs-2)
+               
 ;convolve the central region of the source with the PSF
-            conv = convolve(obj[x0-cs:x0+cs+1, y0-cs:y0+cs+1], psf)
-            obj[x0-cs:x0+cs+1, y0-cs:y0+cs+1] = conv
-            
+               conv = convolve(obj[x0-cs:x0+cs+1, y0-cs:y0+cs+1], psf)
+               obj[x0-cs:x0+cs+1, y0-cs:y0+cs+1] = conv
+               
 ;subtract the contributing source
-            im = temporary(im)-obj
-            delvarx, obj
-            
+               im = temporary(im)-obj
+               delvarx, obj
+               
 ;            print, systime(), ' done'
-            
+               
 ;set subtract flag
-            subtract[current_contrib] = 1
-            
+               subtract[current_contrib] = 1
+               
 ;current contributing source was subtracted from image-------------------------
-        ENDIF
-        
-    ENDFOR
+           ENDIF
+           
+       ENDFOR
 ;loop over all contributing sources============================================
 ;define new starting radius for sky calculation
-    notsubtracted = where(subtract EQ 0, ct)
-    IF ct GT 0 THEN BEGIN
-        new_rad = max(dist[notsubtracted])
+       notsubtracted = where(subtract EQ 0, ct)
+       IF ct GT 0 THEN BEGIN
+           new_rad = max(dist[notsubtracted])
 ;if requested starting radius is outside frame, set flag
-        IF new_rad GT max_rad THEN sky_flag += 2 $
-        ELSE rad[current_obj] = new_rad > rad[current_obj]
-    ENDIF
-    
+           IF new_rad GT max_rad THEN sky_flag += 2 $
+           ELSE rad[current_obj] = new_rad > rad[current_obj]
+       ENDIF
+       
 ;contributing sources FOUND----------------------------------------------------
-ENDELSE
+   ENDELSE
 ;array containing radii
-nstep = ulong(max(sz_im)/float(dstep))
-radius = findgen(nstep)*dstep+rad[current_obj]+gap
-
+   nstep = ulong(max(sz_im)/float(dstep))
+   radius = findgen(nstep)*dstep+rad[current_obj]+gap
+   
 ;array containing sky in one ring
-ringsky = radius*0
-ringsigma = radius*0
-
+   ringsky = radius*0
+   ringsigma = radius*0
+   
 ;this is the loop over different radii
 ;  plot, [0, 0], [0, 0], /nodata, xr = [0, max_rad < 6000], xsty = 1, $
 ;        ysty = 1, chars = 2, xtitle = 'radius', ytitle = 'flux', $
 ;        yr = global_sky+[-global_sigsky*0.3, global_sigsky]
-
+   
 ;  loadct, 39, /silent
-
+   
 ;arrays for the radius, sky, scatter of the last nslope 
-sl_sct = (sl_rad = (sl_sky = fltarr(nslope)))
-
+   sl_sct = (sl_rad = (sl_sky = fltarr(nslope)))
+   
 ;   print,'radii loop'
-last_slope = 1
-slope_change = 0
-min_sky = 1e30
-min_sky_rad = 1e30
-min_sky_sig = 999
-min_sky_flag = 0
+   last_slope = 1
+   slope_change = 0
+   min_sky = 1e30
+   min_sky_rad = 1e30
+   min_sky_sig = 999
+   min_sky_flag = 0
 ;loop over radii ==============================================================
-FOR r=0l, nstep-1 DO BEGIN
+   FOR r=0l, nstep-1 DO BEGIN
 ;first calculate ellipses
-    theta = table[current_obj].theta_image/!radeg
-    xfac = ((rad[current_obj]* $
-             (abs(sin(theta))+(1-table[current_obj].ellipticity)* $
-              abs(cos(theta)))) > 10)+dstep*r+wstep
-    yfac = ((rad[current_obj]* $
-             (abs(cos(theta))+(1-table[current_obj].ellipticity)* $
-              abs(sin(theta)))) > 10)+dstep*r+wstep
-    major = max([xfac, yfac])
-    minor = min([xfac, yfac])
-    
-    ang = theta*!radeg
-    cirrange, ang
-    IF ang GT 180 THEN ang -= 180
-    IF ang GT 90 THEN ang -= 180
-    IF abs(ang) LT 45 THEN BEGIN
-        xfac = major & yfac = minor
-    ENDIF ELSE BEGIN
-        xfac = minor & yfac = major
-    ENDELSE
-    xlo = round(table[current_obj].x_image-xfac) > 0 < (sz_im[0]-1)
-    xhi = round(table[current_obj].x_image+xfac) > 0 < (sz_im[0]-1)
-    ylo = round(table[current_obj].y_image-yfac) > 0 < (sz_im[1]-1)
-    yhi = round(table[current_obj].y_image+yfac) > 0 < (sz_im[1]-1)
+       theta = table[current_obj].theta_image/!radeg
+       xfac = ((rad[current_obj]* $
+                (abs(sin(theta))+(1-table[current_obj].ellipticity)* $
+                 abs(cos(theta)))) > 10)+dstep*r+wstep
+       yfac = ((rad[current_obj]* $
+                (abs(cos(theta))+(1-table[current_obj].ellipticity)* $
+                 abs(sin(theta)))) > 10)+dstep*r+wstep
+       major = max([xfac, yfac])
+       minor = min([xfac, yfac])
+       
+       ang = theta*!radeg
+       cirrange, ang
+       IF ang GT 180 THEN ang -= 180
+       IF ang GT 90 THEN ang -= 180
+       IF abs(ang) LT 45 THEN BEGIN
+           xfac = major & yfac = minor
+       ENDIF ELSE BEGIN
+           xfac = minor & yfac = major
+       ENDELSE
+       xlo = round(table[current_obj].x_image-xfac) > 0 < (sz_im[0]-1)
+       xhi = round(table[current_obj].x_image+xfac) > 0 < (sz_im[0]-1)
+       ylo = round(table[current_obj].y_image-yfac) > 0 < (sz_im[1]-1)
+       yhi = round(table[current_obj].y_image+yfac) > 0 < (sz_im[1]-1)
 ;polar coordinates for the current ring
-    dist_ellipse, arr, [xhi-xlo+1, yhi-ylo+1], $
-      table[current_obj].x_image-xlo, $
-      table[current_obj].y_image-ylo, $
-      1./(1.-table[current_obj].ellipticity), $
-      theta*!radeg-90
+       dist_ellipse, arr, [xhi-xlo+1, yhi-ylo+1], $
+         table[current_obj].x_image-xlo, $
+         table[current_obj].y_image-ylo, $
+         1./(1.-table[current_obj].ellipticity), $
+         theta*!radeg-90
 ;    dist_angle, alp, [xhi-xlo+1, yhi-ylo+1], table[current_obj].x_image-xlo, $
 ;                table[current_obj].y_image-ylo
-    
+       
 ;this index contains all pixels that do not contain object flux inside
 ;the current ring
-    ring_empty_idx = where(arr LE rad[current_obj]+dstep*r+wstep AND $
-                           arr GT rad[current_obj]+dstep*r AND $
-                           map[xlo:xhi, ylo:yhi] EQ 0, ct)
-    delvarx, arr
-    
+       ring_empty_idx = where(arr LE rad[current_obj]+dstep*r+wstep AND $
+                              arr GT rad[current_obj]+dstep*r AND $
+                              map[xlo:xhi, ylo:yhi] EQ 0, ct)
+       delvarx, arr
+       
 ;calculate the flux value in the ring as a function of radius
-    IF ct LT 5 THEN BEGIN
+       IF ct LT 5 THEN BEGIN
 ;no pixels to calculate sky
-        ringsky = -1
-        ringsigma = 1e30
-    ENDIF ELSE BEGIN
+           ringsky = -1
+           ringsigma = 1e30
+       ENDIF ELSE BEGIN
 ;define a square image of sky pixels max 250x250 pix^2 in size (to
 ;make procedure faster)
-        skyim = (im[xlo:xhi, ylo:yhi])[ring_empty_idx]
-        n_ring = n_elements(ring_empty_idx)
+           skyim = (im[xlo:xhi, ylo:yhi])[ring_empty_idx]
+           n_ring = n_elements(ring_empty_idx)
 ;clip 3 sigma outliers first
-        resistant_mean, skyim, 3, m, s, nr
-        s *= sqrt(n_ring-1-nr)
-        ring_sig_clip = where(skyim GT m-3*s AND skyim LT m+3*s, nw)
-        IF nw GT 4 THEN BEGIN
-            skyim = skyim[ring_sig_clip]
-            n_ring = n_elements(skyim)
+           resistant_mean, skyim, 3, m, s, nr
+           s *= sqrt(n_ring-1-nr)
+           ring_sig_clip = where(skyim GT m-3*s AND skyim LT m+3*s, nw)
+           IF nw GT 4 THEN BEGIN
+               skyim = skyim[ring_sig_clip]
+               n_ring = n_elements(skyim)
 ;reduce size to 250x250 pixels
-            npix = ulong(sqrt(n_ring)) < 250
-            skyim = reform(skyim[randomu(seed, npix^2)*npix^2], npix, npix)
-            
-            IF n_elements(uniq(skyim)) LT 5 THEN BEGIN
-                ringsky = mean(skyim)
-                ringsigma = 1e30
-            ENDIF ELSE BEGIN
+               npix = ulong(sqrt(n_ring)) < 250
+               skyim = reform(skyim[randomu(seed, npix^2)*npix^2], npix, npix)
+               
+               IF n_elements(uniq(skyim)) LT 5 THEN BEGIN
+                   ringsky = mean(skyim)
+                   ringsigma = 1e30
+               ENDIF ELSE BEGIN
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-                plothist, skyim, x, y, chars = 2, bin = s*3*2/50., /noplot
-                f = gaussfit(x, y, a, sigma=sig, nterms = 3)
+                   plothist, skyim, x, y, chars = 2, bin = s*3*2/50., /noplot
+                   f = gaussfit(x, y, a, sigma=sig, nterms = 3)
 ;oplot, x, f, col = 250
-                resistant_mean, skyim, 3, ringsky, ringsigma
+                   resistant_mean, skyim, 3, ringsky, ringsigma
 ;ver, ringsky
 ;ver, a[1], col = 250
 ;            print, ringsky, a[1]
-                ringsky = a[1]
-                ringsigma = sig[1] ;a[2]/(n_elements(x)^2-1)
+                   ringsky = a[1]
+                   ringsigma = sig[1] ;a[2]/(n_elements(x)^2-1)
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-            ENDELSE
-        ENDIF ELSE BEGIN
-            ringsky = -1
-            ringsigma = 1e30
-        ENDELSE
-        delvarx, skyim, ring_empty_idx
-    ENDELSE
-    plotsym, 0, /fill
+               ENDELSE
+           ENDIF ELSE BEGIN
+               ringsky = -1
+               ringsigma = 1e30
+           ENDELSE
+           delvarx, skyim, ring_empty_idx
+       ENDELSE
+       plotsym, 0, /fill
 ;replace one value in the slope arrays
-    sl_rad[r MOD nslope] = radius[r]
-    sl_sky[r MOD nslope] = ringsky
-    sl_sct[r MOD nslope] = ringsigma
-    
-    fit = [0, 0]
+       sl_rad[r MOD nslope] = radius[r]
+       sl_sky[r MOD nslope] = ringsky
+       sl_sct[r MOD nslope] = ringsigma
+       
+       fit = [0, 0]
 ;if at least nslope sky values are calculated estimate the slope
-    IF r GE nslope-1 THEN BEGIN
-        good = where(sl_sct LT global_sigsky*3, ct)
+       IF r GE nslope-1 THEN BEGIN
+           good = where(sl_sct LT global_sigsky*3, ct)
 ;calculate slope robustly
-        IF ct GT 1 THEN fit = robust_linefit(sl_rad[good], sl_sky[good])
+           IF ct GT 1 THEN fit = robust_linefit(sl_rad[good], sl_sky[good])
 ;         print, r+1, radius[r], fit[1], n_elements(good)
-        
+           
 ;calculate a sky value
-        idx = where(sl_rad GT 0, ct)
+           idx = where(sl_rad GT 0, ct)
 ;check if enough measurements available
-        IF ct GT 3 THEN BEGIN
-            resistant_mean, sl_sky[idx], 3, new_sky
-            new_sky_sig = sqrt(total(sl_sct[idx]^2))/ct
-            IF NOT finite(new_sky_sig) THEN new_sky_sig = 1e30
-            min_sky_flag0 = 0
-        ENDIF ELSE BEGIN
+           IF ct GT 3 THEN BEGIN
+               resistant_mean, sl_sky[idx], 3, new_sky
+               new_sky_sig = sqrt(total(sl_sct[idx]^2))/ct
+               IF NOT finite(new_sky_sig) THEN new_sky_sig = 1e30
+               min_sky_flag0 = 0
+           ENDIF ELSE BEGIN
 ;too few measurements -> take value from SExtractor
 ; why SExtractor and not previous curvefit value?
-            min_sky_flag0 = 8
-            new_sky = table[current_obj].background
-            new_sky_sig = 999
-        ENDELSE
-        IF new_sky LT min_sky and new_sky_sig lt 1e20 THEN BEGIN
-            min_sky_flag = min_sky_flag0
-            min_sky = new_sky
-            IF ct GT 0 THEN min_sky_rad = mean(sl_rad[idx]) $
-            ELSE min_sky_rad = radius[r]
-            min_sky_sig = new_sky_sig
+               min_sky_flag0 = 8
+               new_sky = table[current_obj].background
+               new_sky_sig = 999
+           ENDELSE
+           IF new_sky LT min_sky and new_sky_sig lt 1e20 THEN BEGIN
+               min_sky_flag = min_sky_flag0
+               min_sky = new_sky
+               IF ct GT 0 THEN min_sky_rad = mean(sl_rad[idx]) $
+               ELSE min_sky_rad = radius[r]
+               min_sky_sig = new_sky_sig
 ;        oploterror, min_sky_rad, min_sky, min_sky_sig, $
 ;                    psym = 8, col = 150, errcol = 150
-        ENDIF
-        
+           ENDIF
+           
 ;stop the loop if the slope is positive
-        IF fit[1] GT 0 AND slope_change THEN BREAK
-        IF fit[1] GT 0 AND last_slope LT 0 THEN slope_change++
-        last_slope = fit[1]
-    ENDIF
-    
+           IF fit[1] GT 0 AND slope_change THEN BREAK
+           IF fit[1] GT 0 AND last_slope LT 0 THEN slope_change++
+           last_slope = fit[1]
+       ENDIF
+       
 ;    oploterror, radius[r], ringsky, ringsigma, psym = 8
-    
+       
 ;break criterium not fulfilled, but image boundary reached -> image
 ;too small -> set flag
-    IF radius[r] GT max_rad THEN BEGIN
-        sky_flag += 4
-        BREAK
-    ENDIF
-ENDFOR
+       IF radius[r] GT max_rad THEN BEGIN
+           sky_flag += 4
+           BREAK
+       ENDIF
+   ENDFOR
 ;loop over radii done==========================================================
 ;   print,'radii loop done'
 
 ;get sky from last nslope measurements
-idx = where(sl_rad GT 0 AND sl_sct lt 1e20, ct)
+   idx = where(sl_rad GT 0 AND sl_sct lt 1e20, ct)
 ;check if enough measurements available
-IF ct GT 3 THEN BEGIN
-    resistant_mean, sl_sky[idx], 3, new_sky
-    new_sky_sig = sqrt(total(sl_sct[idx]^2))/ct
-    sky_flag0 = 0
-ENDIF ELSE BEGIN
+   IF ct GT 3 THEN BEGIN
+       resistant_mean, sl_sky[idx], 3, new_sky
+       new_sky_sig = sqrt(total(sl_sct[idx]^2))/ct
+       sky_flag0 = 0
+   ENDIF ELSE BEGIN
 ;too few measurements -> take value from SExtractor
-    sky_flag0 = 8
-    new_sky = table[current_obj].background
-    new_sky_sig = 999
-    fit = [0, 0]
-ENDELSE
-IF ct GT 0 THEN sky_rad = mean(sl_rad[idx]) ELSE sky_rad = radius[(r-1) >0]
-IF new_sky GT min_sky THEN BEGIN
-    sky_flag0 = min_sky_flag
-    new_sky = min_sky
-    sky_rad = min_sky_rad
-    new_sky_sig = min_sky_sig
-ENDIF
-sky_flag += sky_flag0
-
+       sky_flag0 = 8
+       new_sky = table[current_obj].background
+       new_sky_sig = 999
+       fit = [0, 0]
+   ENDELSE
+   IF ct GT 0 THEN sky_rad = mean(sl_rad[idx]) ELSE sky_rad = radius[(r-1) >0]
+   IF new_sky GT min_sky THEN BEGIN
+       sky_flag0 = min_sky_flag
+       new_sky = min_sky
+       sky_rad = min_sky_rad
+       new_sky_sig = min_sky_sig
+   ENDIF
+   sky_flag += sky_flag0
+   
 ;  loadct, 39, /silent
 ;  oplot, [0, max_rad], fit[0]+[0, max_rad]*fit[1], col = 150
-
+   
 ;  hor, new_sky, col = 50
 ;  hor, [-1, 1]*2*new_sky_sig+new_sky, linestyle = 2, col = 50
-
+   
 ;   print, new_sky, new_sky_sig
-contrib_sky = min(contrib_sky)
+   contrib_sky = min(contrib_sky)
 ;   print, contrib_sky
-
-IF contrib_sky LT new_sky THEN BEGIN
-    new_sky = contrib_sky
-    sky_flag += 16
-ENDIF
-
+   
+   IF contrib_sky LT new_sky THEN BEGIN
+       new_sky = contrib_sky
+       sky_flag += 16
+   ENDIF
+   
 ;write output sky file
-openw, 1, sky_file
-printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
-  sky_flag
-close, 1
+   openw, 1, sky_file
+   printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
+     sky_flag
+   close, 1
 END
 
 PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
@@ -1524,493 +1589,495 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
 
 ;in the case of contributing sources, the TABLE is changed, so keep a
 ;backup copy
-table = table0
+   table = table0
 
 ;current is the index of the current object
-nx_big = n_elements(wht[*, 0])
-ny_big = n_elements(wht[0, *])
+   nx_big = n_elements(wht[*, 0])
+   ny_big = n_elements(wht[0, *])
 
 ;   print, systime()
 
-rad = table.a_image*table.kron_radius*scale+offset
+   rad = table.a_image*table.kron_radius*scale+offset
 
-readcol, paramfile, $
-  pnum, px, py, pxlo, pxhi, pylo, pyhi, $
-  comment = '#', format = 'L,F,F,L,L,L,L', /silent
-;            comment = '#', format = 'I,F,F,L,L,L,L', /silent
-;            ; could be the problem for >integer detections on one tile
+   readcol, paramfile, $
+            pnum, px, py, pxlo, pxhi, pylo, pyhi, $
+            comment = '#', format = 'I,F,F,L,L,L,L', /silent
 
-i = where(pnum EQ table[current].number, ct)
-IF ct EQ 0 THEN message, 'no postage stamp definition found ' + $
-  'corresponding to current object'
-pnum = pnum[i]
-px = px[i]
-py = py[i]
-pxlo = (pxlo[i])[0] < (nx_big-1) > 0
-pxhi = (pxhi[i])[0] < (nx_big-1) > 0
-pylo = (pylo[i])[0] < (ny_big-1) > 0
-pyhi = (pyhi[i])[0] < (ny_big-1) > 0
+   i = where(pnum EQ table[current].number, ct)
+   IF ct EQ 0 THEN message, 'no postage stamp definition found ' + $
+                            'corresponding to current object'
+   pnum = pnum[i]
+   px = px[i]
+   py = py[i]
+   pxlo = (pxlo[i])[0] < (nx_big-1) > 0
+   pxhi = (pxhi[i])[0] < (nx_big-1) > 0
+   pylo = (pylo[i])[0] < (ny_big-1) > 0
+   pyhi = (pyhi[i])[0] < (ny_big-1) > 0
 
 ;==============================================================================
 ;create a blank mask image
-mask = wht[pxlo:pxhi, pylo:pyhi]
-segm = seg[pxlo:pxhi, pylo:pyhi]
-badpix = where(mask EQ 0, badpix_ct)
-mask *= 0
+   mask = wht[pxlo:pxhi, pylo:pyhi]
+   segm = seg[pxlo:pxhi, pylo:pyhi]
+   badpix = where(mask EQ 0, badpix_ct)
+   mask *= 0
 
-nx = n_elements(mask[*, 0])
-ny = n_elements(mask[0, *])
+   nx = n_elements(mask[*, 0])
+   ny = n_elements(mask[0, *])
 
 ;objects for the GALFIT start file (primary source must be included)
-objects = current
+   objects = current
 
-ntab = n_elements(table.number)
+   ntab = n_elements(table.number)
 
 ;position angle in radians (this might go across images with different
 ;coordinate systems: so have to use theta_world)
-theta_image = table.theta_world-table[current].theta_world+ $
-  table[current].theta_image
+   theta_image = table.theta_world-table[current].theta_world+ $
+                 table[current].theta_image
 
-theta = theta_image/!radeg
+   theta = theta_image/!radeg
 
 ;calculate the radius array for the primary source
-dist_ellipse, arr_current, [pxhi-pxlo+1, pyhi-pylo+1], $
-  table[current].x_image-pxlo, $
-  table[current].y_image-pylo, $
-  1./(1.-table[current].ellipticity), $
-  theta[current]*!radeg-90
+   dist_ellipse, arr_current, [pxhi-pxlo+1, pyhi-pylo+1], $
+                 table[current].x_image-pxlo, $
+                 table[current].y_image-pylo, $
+                 1./(1.-table[current].ellipticity), $
+                 theta[current]*!radeg-90
 
-con_num = 0
+   con_num = 0
 ;loop over all sources in the table (including neighbouring frames)
-FOR i=0ul, ntab-1 DO BEGIN
-    IF i EQ current THEN CONTINUE
+   FOR i=0ul, ntab-1 DO BEGIN
+      IF i EQ current THEN CONTINUE
 ;calculate the angle between the loop source and the [current] object
-    dy = table[current].y_image-table[i].y_image
-    dx = table[current].x_image-table[i].x_image
-    IF dx EQ 0 THEN angle = 0.5*!pi $
-    ELSE angle = atan(dy/dx)
+      dy = table[current].y_image-table[i].y_image
+      dx = table[current].x_image-table[i].x_image
+      IF dx EQ 0 THEN angle = 0.5*!pi $
+      ELSE angle = atan(dy/dx)
 ;calculate the angle pointing from the loop source to the [current]
 ;object
-    angle1 = angle-theta[i]
+      angle1 = angle-theta[i]
 ;calculate the angle pointing from the [current] object to the loop
 ;source
-    angle2 = angle-theta[current]
-    
+      angle2 = angle-theta[current]
+
 ;calculate the extent of the loop source towards the [current] object
-    r1 = sqrt(1/(sin(angle1)^2/(rad[i]*(1-table[i].ellipticity))^2+ $
-                 cos(angle1)^2/rad[i]^2))
+      r1 = sqrt(1/(sin(angle1)^2/(rad[i]*(1-table[i].ellipticity))^2+ $
+                   cos(angle1)^2/rad[i]^2))
 ;calculate the extent of the [current] source towards the loop object
-    r2 = sqrt(1/(sin(angle2)^2/(rad[current]*( $
-                                               1-table[current].ellipticity))^2+cos(angle2)^2/rad[current]^2))
+      r2 = sqrt(1/(sin(angle2)^2/(rad[current]*( $
+           1-table[current].ellipticity))^2+cos(angle2)^2/rad[current]^2))
 ;calculate the distance between the two objects
-    d = sqrt(dx^2+dy^2)
-    
+      d = sqrt(dx^2+dy^2)
+
 ;dist_ellipse takes long: calculate only necessary parts!
-    xfac = (rad[i]*(abs(sin(theta[i]))+(1-table[i].ellipticity) $
-                    *abs(cos(theta[i])))) > 10
-    yfac = (rad[i]*(abs(cos(theta[i]))+(1-table[i].ellipticity) $
-                    *abs(sin(theta[i])))) > 10
-    major = max([xfac, yfac])
-    minor = min([xfac, yfac])
-    
-    ang = theta[i]*!radeg
-    cirrange, ang
-    IF ang GT 180 THEN ang -= 180
-    IF ang GT 90 THEN ang -= 180
-    IF abs(ang) LT 45 THEN BEGIN
-        xfac = major & yfac = minor
-    ENDIF ELSE BEGIN
-        xfac = minor & yfac = major
-    ENDELSE
-    xlo = round(table[i].x_image-xfac) > 0 < (nx_big-1)
-    xhi = round(table[i].x_image+xfac) > 0 < (nx_big-1)
-    ylo = round(table[i].y_image-yfac) > 0 < (ny_big-1)
-    yhi = round(table[i].y_image+yfac) > 0 < (ny_big-1)
+      xfac = (rad[i]*(abs(sin(theta[i]))+(1-table[i].ellipticity) $
+                      *abs(cos(theta[i])))) > 10
+      yfac = (rad[i]*(abs(cos(theta[i]))+(1-table[i].ellipticity) $
+                      *abs(sin(theta[i])))) > 10
+      major = max([xfac, yfac])
+      minor = min([xfac, yfac])
+
+      ang = theta[i]*!radeg
+      cirrange, ang
+      IF ang GT 180 THEN ang -= 180
+      IF ang GT 90 THEN ang -= 180
+      IF abs(ang) LT 45 THEN BEGIN
+         xfac = major & yfac = minor
+      ENDIF ELSE BEGIN
+         xfac = minor & yfac = major
+      ENDELSE
+      xlo = round(table[i].x_image-xfac) > 0 < (nx_big-1)
+      xhi = round(table[i].x_image+xfac) > 0 < (nx_big-1)
+      ylo = round(table[i].y_image-yfac) > 0 < (ny_big-1)
+      yhi = round(table[i].y_image+yfac) > 0 < (ny_big-1)
 ;xlo,ylo,xhi,yhi are on the system of the input image (and not the
 ;postage stamp)
-    xlo = (xlo-pxlo) > 0 < (nx-1)
-    xhi = (xhi-pxlo) > 0 < (nx-1)
-    ylo = (ylo-pylo) > 0 < (ny-1)
-    yhi = (yhi-pylo) > 0 < (ny-1)
+      xlo = (xlo-pxlo) > 0 < (nx-1)
+      xhi = (xhi-pxlo) > 0 < (nx-1)
+      ylo = (ylo-pylo) > 0 < (ny-1)
+      yhi = (yhi-pylo) > 0 < (ny-1)
 ;now it is on the correct frame
-    
+
 ;calculate the radius array for the loop source
-    IF total([xhi-xlo+1, yhi-ylo+1]) GT 2 THEN $
-      dist_ellipse, arr, [xhi-xlo+1, yhi-ylo+1], table[i].x_image-pxlo-xlo, $
-      table[i].y_image-pylo-ylo, 1./(1.-table[i].ellipticity), $
-      theta[i]*!radeg-90 $
-    ELSE arr = 1e30
-    
+      IF total([xhi-xlo+1, yhi-ylo+1]) GT 2 THEN $
+       dist_ellipse, arr, [xhi-xlo+1, yhi-ylo+1], table[i].x_image-pxlo-xlo, $
+                     table[i].y_image-pylo-ylo, 1./(1.-table[i].ellipticity), $
+                     theta[i]*!radeg-90 $
+      ELSE arr = 1e30
+
 ;status of loop source
-    small_mask = mask[xlo:xhi, ylo:yhi]
+      small_mask = mask[xlo:xhi, ylo:yhi]
 ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    IF table[current].fwhm_image LT $
-      10^(stel_slope*table[current].mag_best+stel_zp) THEN $
-      faintlim = lim_star $
-    ELSE faintlim = lim_gal
-    
-    IF r1+r2 GT d AND $
-      table[i].mag_best LT table[current].mag_best+faintlim THEN BEGIN
+      IF table[current].fwhm_image LT $
+       10^(stel_slope*table[current].mag_best+stel_zp) THEN $
+        faintlim = lim_star $
+      ELSE faintlim = lim_gal
+
+      IF r1+r2 GT d AND $
+       table[i].mag_best LT table[current].mag_best+faintlim THEN BEGIN
 ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ;loop source has overlap with current --> secondary
-        idx = where(arr LE (rad[i])[0] AND (small_mask MOD 2) EQ 0, ct)
-        IF ct GT 0 THEN small_mask[idx] += 1
+         idx = where(arr LE (rad[i])[0] AND (small_mask MOD 2) EQ 0, ct)
+         IF ct GT 0 THEN small_mask[idx] += 1
 ;remember these for the GALFIT start file
-        objects = [objects, i]
-    ENDIF ELSE BEGIN
+         objects = [objects, i]
+      ENDIF ELSE BEGIN
 ;loop source has NO overlap with current --> tertiary
 ;if loop source is contributing source on current frame, make secondary
-        coni = where(table[i].number EQ nums AND table[i].frame[1] EQ frames, $
-                     con)
-        IF con GT 0 THEN BEGIN
+         coni = where(table[i].number EQ nums AND table[i].frame[0] EQ frames, $
+                      con)
+         IF con GT 0 THEN BEGIN
             plus = 1
             con_num = [con_num, nums[coni]]
-        ENDIF ELSE plus = 2
-        idx = where(arr LE (rad[i])[0] AND small_mask LT 2, ct)
-        IF ct GT 0 THEN small_mask[idx] += plus
-    ENDELSE
-    
-    IF r1+r2 GT d AND table[i].mag_best GE $
-      table[current].mag_best+faintlim THEN $
-      BEGIN
+         ENDIF ELSE plus = 2
+         idx = where(arr LE (rad[i])[0] AND small_mask LT 2, ct)
+         IF ct GT 0 THEN small_mask[idx] += plus
+      ENDELSE
+
+      IF r1+r2 GT d AND table[i].mag_best GE $
+       table[current].mag_best+faintlim THEN $
+        BEGIN
 ;loop source has overlap with current --> secondary
-        idx = where(arr LE (rad[i])[0] AND (small_mask MOD 2) EQ 0 $
-                    AND arr_current[xlo:xhi, ylo:yhi] LE (rad[current])[0], $
-                    ct)
-        IF ct GT 0 THEN small_mask[idx] = 0
-    ENDIF
-    
-    mask[xlo:xhi, ylo:yhi] = small_mask
-ENDFOR
-IF n_elements(con_num) GT 1 THEN con_num = con_num[1:*]
+         idx = where(arr LE (rad[i])[0] AND (small_mask MOD 2) EQ 0 $
+                     AND arr_current[xlo:xhi, ylo:yhi] LE (rad[current])[0], $
+                     ct)
+         IF ct GT 0 THEN small_mask[idx] = 0
+      ENDIF
+
+      mask[xlo:xhi, ylo:yhi] = small_mask
+   ENDFOR
+   IF n_elements(con_num) GT 1 THEN con_num = con_num[1:*]
 
 ;bitwise: 0: no object
 ;         1: secondary
 ;         2: tertiary
 ;set secondaries to 0
-idx = where(mask EQ 1 OR mask EQ 3, ct)
-IF ct GT 0 THEN mask[idx] = 0
+   idx = where(mask EQ 1 OR mask EQ 3, ct)
+   IF ct GT 0 THEN mask[idx] = 0
 
 ;*****************************************************************************
 ;clear area of primary
-dist_ellipse, arr, [nx, ny], table[current].x_image-pxlo, $
-  table[current].y_image-pylo, $
-  1./(1.-table[current].ellipticity), theta[current]*!radeg-90
-idx = where(arr LE (rad[current])[0], ct)
-IF ct GT 0 THEN mask[idx] = 0
+   dist_ellipse, arr, [nx, ny], table[current].x_image-pxlo, $
+                 table[current].y_image-pylo, $
+                 1./(1.-table[current].ellipticity), theta[current]*!radeg-90
+   idx = where(arr LE (rad[current])[0], ct)
+   IF ct GT 0 THEN mask[idx] = 0
 ;*****************************************************************************
 
 ;set rest to 1
-mask = mask < 1
+   mask = mask < 1
 
 ;pixels without weight in the wht image will be masked
-IF badpix_ct GT 0 THEN mask[badpix] = 1
+   IF badpix_ct GT 0 THEN mask[badpix] = 1
 
 ;any pixel in the segmentation map not from the primary or secondary
 ;will be masked
-mask1 = segm < 1
-FOR i=0ul, n_elements(objects)-1 DO BEGIN
-    idx = where(segm EQ table[objects[i]].number AND $
-                table[objects[i]].frame[b] EQ image AND segm GT 0, ct)
-    IF ct GT 0 THEN mask1[idx] = 0
-ENDFOR
-FOR i=0ul, n_elements(con_num)-1 DO BEGIN
-    idx = where(segm EQ con_num[i] AND segm GT 0, ct)
-    IF ct GT 0 THEN mask1[idx] = 0
-ENDFOR
-mask = (mask+mask1) < 1
-writefits, mask_file+'.fits', mask, headfits(im_file+'.fits')
+   mask1 = segm < 1
+   FOR i=0ul, n_elements(objects)-1 DO BEGIN
+      idx = where(segm EQ table[objects[i]].number AND $
+                  table[objects[i]].frame[b] EQ image AND segm GT 0, ct)
+      IF ct GT 0 THEN mask1[idx] = 0
+   ENDFOR
+   FOR i=0ul, n_elements(con_num)-1 DO BEGIN
+      idx = where(segm EQ con_num[i] AND segm GT 0, ct)
+      IF ct GT 0 THEN mask1[idx] = 0
+   ENDFOR
+   mask = (mask+mask1) < 1
+   writefits, mask_file+'.fits', mask, headfits(im_file+'.fits')
 
-corner = [pxlo, pylo]
+   corner = [pxlo, pylo]
 END
 
 PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
                     constr_file, mask_file, psf_file, out_file, sky_file, $
                     conv_box, zero_pt, plate_scl, num_contrib, frame_contrib, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
-                    conminm, conmaxm, setup_version, nband, $
-                    outpre, bd_fit = bd_fit
+                    conminm, conmaxm, fit_table, setup_version, nband, $
+                    outpre, n_constrained = n_constrained
 ;   setup_version = 4
 ;objects contains an index of secondary sources
 ;in the case of contributing sources, the TABLE is changed, so keep a
 ;backup copy
-table = table0
+   table = table0
 ;current is the index of the current object
-hdr = headfits(im_file[1]+'.fits')
-xmax = sxpar(hdr, 'NAXIS1')
-ymax = sxpar(hdr, 'NAXIS2')
+   hdr = headfits(im_file[1]+'.fits')
+   xmax = sxpar(hdr, 'NAXIS1')
+   ymax = sxpar(hdr, 'NAXIS2')
 
 ;write constraint file for secondaries
-;if not keyword_set(bd_fit) then begin
-    openw, 1, constr_file
-    printf, 1, '# Component/    parameter   constraint  Comment'
-    printf, 1, '# operation                  values'
-    FOR j=2ul, n_elements(objects)+1 DO BEGIN
-        lo = strtrim(setup.conminn, 2)
-        hi = strtrim(setup.conmaxn, 2)
-        printf, 1, j, ' n '+lo+' to '+hi
-        printf, 1, j, ' re 0.3 to '+strtrim(conmaxre, 2)
-        printf, 1, j, ' q 0.0001  to 1.'
-        printf, 1, j, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
-        printf, 1, j, ' mag 0 to 40'
-        printf, 1, j, ' pa -360 to 360'
-        printf, 1, j, ' x '+strtrim(-xmax)+' '+strtrim(xmax)
-        printf, 1, j, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
-    ENDFOR
-    close, 1
-;ENDIF
+   openw, 1, constr_file
+   printf, 1, '# Component/    parameter   constraint  Comment'
+   printf, 1, '# operation                  values'
+   FOR j=2ul, n_elements(objects)+1 DO BEGIN
+      IF keyword_set(n_constrained) AND j EQ 2 THEN BEGIN
+         lo = strtrim(n_constrained[0], 2)
+         hi = strtrim(n_constrained[1], 2)
+      ENDIF ELSE BEGIN
+         lo = '0.2'
+         hi = '8'
+      ENDELSE
+      printf, 1, j, ' n '+lo+' to '+hi
+      printf, 1, j, ' re 0.3 to '+strtrim(conmaxre, 2)
+      printf, 1, j, ' q 0.0001  to 1.'
+      printf, 1, j, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
+      printf, 1, j, ' mag 0 to 40'
+      printf, 1, j, ' pa -360 to 360'
+      printf, 1, j, ' x '+strtrim(-xmax)+' '+strtrim(xmax)
+      printf, 1, j, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
+   ENDFOR
+   close, 1
 
 ;write obj file header plus sky
-openw, 1, obj_file, width=1000
+   openw, 1, obj_file, width=1000
 ; WRITE FILES & STUFF
-printf, 1, '# IMAGE PARAMETERS'
+   printf, 1, '# IMAGE PARAMETERS'
 ;   printf, 1, 'A) '+im_file+'.fits'
-A_po=''
-FOR b=1,nband DO BEGIN
-    A_po=A_po+strtrim(im_file[b],2)+'.fits'
-    if b lt nband then A_po=A_po+','
-ENDFOR
-printf, 1, 'A) '+a_po+'   #input file'
-if setup.version ge 4 then begin
-    A1_po=''
-    FOR b=1,nband DO BEGIN
-        A1_po=A1_po+strtrim(setup.stamp_pre[b],2)
-        if b lt nband then A1_po=A1_po+','
-    ENDFOR
-    printf, 1, 'A1) '+A1_po+ $
-      '             # Band labels (can be omitted if fitting a single band)'
-    A2_po=''
-    FOR b=1,nband DO BEGIN
-        A2_po=A2_po+strtrim(setup.wavelength[b],2)
-        if b lt nband then A2_po=A2_po+','
-    ENDFOR
-    printf, 1, 'A2) '+A2_po+ $
-      '             # Band wavelengths (choice of wavelength units is arbitrary, as long as consistent)'
-ENDIF
-printf, 1, 'B) '+out_file+'.fits    # output file name'
-printf, 1, 'C) none                # Noise image name ' + $
-  '(made from data if blank or "none")'
+   A_po=''
+   FOR b=1,nband DO BEGIN
+       A_po=A_po+strtrim(im_file[b],2)+'.fits'
+       if b lt nband then A_po=A_po+','
+   ENDFOR
+   printf, 1, 'A) '+a_po+'   #input file'
+   if setup.version ge 4 then begin
+       A1_po=''
+       FOR b=1,nband DO BEGIN
+           A1_po=A1_po+strtrim(setup.stamp_pre[b],2)
+           if b lt nband then A1_po=A1_po+','
+       ENDFOR
+       printf, 1, 'A1) '+A1_po+ $
+         '             # Band labels (can be omitted if fitting a single band)'
+       A2_po=''
+       FOR b=1,nband DO BEGIN
+           A2_po=A2_po+strtrim(setup.wavelength[b],2)
+           if b lt nband then A2_po=A2_po+','
+       ENDFOR
+       printf, 1, 'A2) '+A2_po+ $
+         '             # Band wavelengths (choice of wavelength units is arbitrary, as long as consistent)'
+   ENDIF
+   printf, 1, 'B) '+out_file+'.fits    # output file name'
+   printf, 1, 'C) none                # Noise image name ' + $
+           '(made from data if blank or "none")'
 ;   printf, 1, 'D) '+psf_file+' kernel' + $
 ;           ' # Input PSF image and (optional) diffusion kernel'
-D_po=''
-FOR b=1,nband DO BEGIN
-    D_po=D_po+strtrim(psf_file[b],2)
-    if b lt nband then D_po=D_po+','
-ENDFOR
-printf, 1, 'D) '+D_po+' kernel' + $
-  ' # Input PSF image and (optional) diffusion kernel'
-printf, 1, 'E) 1                   ' + $
-  ' # PSF oversampling factor relative to data'
+   D_po=''
+   FOR b=1,nband DO BEGIN
+       D_po=D_po+strtrim(psf_file[b],2)
+       if b lt nband then D_po=D_po+','
+   ENDFOR
+   printf, 1, 'D) '+D_po+' kernel' + $
+           ' # Input PSF image and (optional) diffusion kernel'
+   printf, 1, 'E) 1                   ' + $
+           ' # PSF oversampling factor relative to data'
 ;   printf, 1, 'F) '+mask_file+'.fits'
-F_po=''
-FOR b=1,nband DO BEGIN
-    F_po=F_po+strtrim(mask_file[b],2)+'.fits'
-    if b lt nband then F_po=F_po+','
-ENDFOR
-printf, 1, 'F) '+F_po
-printf, 1, 'G) '+constr_file
-printf, 1, 'H) 1 '+strtrim(xmax, 2)+' 1 '+strtrim(ymax, 2)+ $
-  '       # Image region to fit (xmin xmax ' + $
-  'ymin ymax)'
-printf, 1, 'I) '+round_digit(conv_box, 0, /str)+'   '+ $
-  round_digit(conv_box, 0, /str)+ $
-  '         # Size of convolution box (x y)'
+   F_po=''
+   FOR b=1,nband DO BEGIN
+       F_po=F_po+strtrim(mask_file[b],2)+'.fits'
+       if b lt nband then F_po=F_po+','
+   ENDFOR
+   printf, 1, 'F) '+F_po
+   printf, 1, 'G) '+constr_file
+   printf, 1, 'H) 1 '+strtrim(xmax, 2)+' 1 '+strtrim(ymax, 2)+ $
+           '       # Image region to fit (xmin xmax ' + $
+           'ymin ymax)'
+   printf, 1, 'I) '+round_digit(conv_box, 0, /str)+'   '+ $
+           round_digit(conv_box, 0, /str)+ $
+           '         # Size of convolution box (x y)'
 ;   printf, 1, 'J) '+round_digit(zero_pt, 4, /str)+ $
 ;           '              # Magnitude photometric zeropoint'
-J_po=''
-FOR b=1,nband DO BEGIN
-    J_po=J_po+strtrim(round_digit(setup.zp[b],4,/str),2)
-    if b lt nband then J_po=J_po+','
-ENDFOR
-printf, 1, 'J) '+J_po+ $
-  '              # Magnitude photometric zeropoint'
-printf, 1, 'K) '+round_digit(plate_scl, 5, /str)+' '+ $
-  round_digit(plate_scl, 5, /str)+'           # Plate scale (dx dy).'
-printf, 1, 'O) regular             # Display type (regular, ' + $
-  'curses, both)'
-printf, 1, 'P) 0                   # Create ouput only? (1=yes; ' + $
-  '0=optimize)'
-printf, 1, 'S) 0                   # Modify/create objects interactively?'
-printf, 1, ''
-printf, 1, ''
-printf, 1, '# sky'
-printf, 1, ''
-printf, 1, ' 0) sky'
+   J_po=''
+   FOR b=1,nband DO BEGIN
+       J_po=J_po+strtrim(round_digit(setup.zp[b],4,/str),2)
+       if b lt nband then J_po=J_po+','
+   ENDFOR
+   printf, 1, 'J) '+J_po+ $
+     '              # Magnitude photometric zeropoint'
+   printf, 1, 'K) '+round_digit(plate_scl, 5, /str)+' '+ $
+           round_digit(plate_scl, 5, /str)+'           # Plate scale (dx dy).'
+   printf, 1, 'O) regular             # Display type (regular, ' + $
+           'curses, both)'
+   printf, 1, 'P) 0                   # Create ouput only? (1=yes; ' + $
+           '0=optimize)'
+   printf, 1, 'S) 0                   # Modify/create objects interactively?'
+   printf, 1, ''
+   printf, 1, ''
+   printf, 1, '# sky'
+   printf, 1, ''
+   printf, 1, ' 0) sky'
 ; WRITE SKY
 ;   printf, 1, ' 1) '+round_digit(sky, 3, /string)+'     0,       ' + $
 ;           '# sky background       [ADU counts]'
-SKY_po=''
-SKY_po2=''
-FOR b=1, nband DO BEGIN
-    IF file_test(sky_file[b]) EQ 0 THEN $
-      message, 'sky file corresponding to current object was not found in band '+strtrim(setup.stamp_pre[b],2)
-    openr, 2, sky_file[b]
-    readf, 2, sky, dsky, minrad, maxrad, flag
-    close, 2
-    SKY_po=SKY_po+strtrim(round_digit(sky,3,/string),2)
-    SKY_po2=SKY_po2+'0'
-    if b lt nband then SKY_po=SKY_po+','
-    if b lt nband then SKY_po2=SKY_po2+','
-ENDFOR
+   SKY_po=''
+   SKY_po2=''
+   FOR b=1, nband DO BEGIN
+       IF file_test(sky_file[b]) EQ 0 THEN $
+         message, 'sky file corresponding to current object was not found in band '+strtrim(setup.stamp_pre[b],2)
+       openr, 2, sky_file[b]
+       readf, 2, sky, dsky, minrad, maxrad, flag
+       close, 2
+       SKY_po=SKY_po+strtrim(round_digit(sky,3,/string),2)
+       SKY_po2=SKY_po2+'0'
+       if b lt nband then SKY_po=SKY_po+','
+       if b lt nband then SKY_po2=SKY_po2+','
+   ENDFOR
 ;print, SKY_po
-band_po=' '
-if setup.version ge 4 and nband gt 1 then band_po='band'
-printf, 1, ' 1) '+SKY_po+'    '+SKY_po2+'  '+band_po+'       # sky background       [ADU counts]'
-SKYG_po=''
-SKYG_po2=''
+   band_po=' '
+   if setup.version ge 4 and nband gt 1 then band_po='band'
+   printf, 1, ' 1) '+SKY_po+'    '+SKY_po2+'  '+band_po+'       # sky background       [ADU counts]'
+   SKYG_po=''
+   SKYG_po2=''
 ;   printf, 1, ' 2) 0.000      0       # dsky/dx (sky gradient in x)'
 ;   printf, 1, ' 3) 0.000      0       # dsky/dy (sky gradient in y)'
-FOR b=1, nband DO BEGIN
-    SKYG_po=SKYG_po+'0.000'
-    SKYG_po2=SKYG_po2+'0'
-    if b lt nband then SKYG_po=SKYG_po+','
-    if b lt nband then SKYG_po2=SKYG_po2+','
-ENDFOR
+   FOR b=1, nband DO BEGIN
+       SKYG_po=SKYG_po+'0.000'
+       SKYG_po2=SKYG_po2+'0'
+       if b lt nband then SKYG_po=SKYG_po+','
+       if b lt nband then SKYG_po2=SKYG_po2+','
+   ENDFOR
 ; add BAND here and there!!!
-printf, 1, ' 2) '+SKYG_po+'    '+SKYG_po2+'  '+band_po+'      # dsky/dx (sky gradient in x)'
-printf, 1, ' 3) '+SKYG_po+'    '+SKYG_po2+'  '+band_po+'      # dsky/dy (sky gradient in y)'
-printf, 1, ' Z) 0                  # output image'
-printf, 1, ''
-printf, 1, ''
-close, 1
+   printf, 1, ' 2) '+SKYG_po+'    '+SKYG_po2+'  '+band_po+'      # dsky/dx (sky gradient in x)'
+   printf, 1, ' 3) '+SKYG_po+'    '+SKYG_po2+'  '+band_po+'      # dsky/dy (sky gradient in y)'
+   printf, 1, ' Z) 0                  # output image'
+   printf, 1, ''
+   printf, 1, ''
+   close, 1
 
 ; define all paths and names again
-orgim = setup.images
-orgwheights = setup.weights
-outpath = set_trailing_slash(setup.outpath)
-outpath_band = set_trailing_slash(setup.outpath_band)
-outpre = setup.outpre
+   orgim = setup.images
+   orgwheights = setup.weights
+   outpath = set_trailing_slash(setup.outpath)
+   outpath_band = set_trailing_slash(setup.outpath_band)
+   outpre = setup.outpre
 
-outpath_galfit = strtrim(outpath[*,0]+setup.galfit_out_path,2)
-outpath_pre = outpath_band+outpre
-outpath_file = outpath
-for q=0,nband do outpath_file[*,q]=outpath_pre[*,q]+strtrim(setup.stamp_pre[q],2)+'.'
-outpath_file_no_band = outpath
-for q=0,nband do outpath_file_no_band[*,q]=outpath[*,q]+outpre[*,q]
+   outpath_galfit = strtrim(outpath[*,0]+setup.galfit_out_path,2)
+   outpath_pre = outpath_band+outpre
+   outpath_file = outpath
+   for q=0,nband do outpath_file[*,q]=outpath_pre[*,q]+strtrim(setup.stamp_pre[q],2)+'.'
+   outpath_file_no_band = outpath
+   for q=0,nband do outpath_file_no_band[*,q]=outpath[*,q]+outpre[*,q]
 
 ;find the GALFIT output file for the current contributing source
-num_current = round_digit(table[current].number, 0, /str)
+   num_current = round_digit(table[current].number, 0, /str)
 
 ;find the faintest source with proper magnitude measurement (non 99) and
 ;correct 99 sources
-nn = where(table[objects].mag_best GT 80, n_nn)
-IF n_nn GT 0 THEN BEGIN
-    good_mag = where(table[objects].mag_best LT 80, ngood_mag)
-    IF ngood_mag EQ 0 THEN table[objects[nn]].mag_best = zero_pt $
-    ELSE $
-      table[objects[nn]].mag_best = max(table[objects[good_mag]].mag_best)+2
-ENDIF
+   nn = where(table[objects].mag_best GT 80, n_nn)
+   IF n_nn GT 0 THEN BEGIN
+       good_mag = where(table[objects].mag_best LT 80, ngood_mag)
+       IF ngood_mag EQ 0 THEN table[objects[nn]].mag_best = zero_pt $
+       ELSE $
+         table[objects[nn]].mag_best = max(table[objects[good_mag]].mag_best)+2
+   ENDIF
 ;loop over all (primary & secondary) sources
-FOR i=0ul, n_elements(objects)-1 DO BEGIN
-    idx = where(orgim[*,0] EQ table[objects[i]].frame[0], ct)
-    secout_file = outpath_galfit[idx]+outpre[idx,1]+ $
-      round_digit(table[objects[i]].number, 0, /str)+'_'+strtrim(setup.galfit_out,2)+'.fits'
-    
-; for some reason this is needed to find read_sersic_results as a
+   FOR i=0ul, n_elements(objects)-1 DO BEGIN
+       idx = where(orgim[*,0] EQ table[objects[i]].frame[0], ct)
+       secout_file = outpath_galfit[idx]+outpre[idx,1]+ $
+         round_digit(table[objects[i]].number, 0, /str)+'_'+strtrim(setup.galfit_out,2)+'.fits'
+
+; for some reason needs this is needed to find read_sersic_results as a
 ; function, not a variable. Worked before and still works fine in the
 ; command line.
-    forward_function read_sersic_results
-    forward_function read_sersic_results_old_galfit
-    IF file_test(secout_file) THEN BEGIN
+forward_function read_sersic_results
+forward_function read_sersic_results_old_galfit
+       IF file_test(secout_file) THEN BEGIN
 ;sources with existing fit will be included as static source
-        IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
-        IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
-        
+           IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
+           IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
+
 ;problem: position from GALFIT is relative to original postage
 ;stamp. Need to compute offset using SExtractor input for that fit
 ;position is in the original postage stamp frame
-        tb = read_sex_table(outpath_file[idx,0]+out_cat, $
-                            outpath_file[idx,0]+out_param)
-        itb = where(tb.number EQ table[objects[i]].number)
-        
-        stamp_file = outpath_file_no_band[idx,0]+setup.stampfile
+           tb = read_sex_table(outpath_file[idx,0]+out_cat, $
+                               outpath_file[idx,0]+out_param)
+           itb = where(tb.number EQ table[objects[i]].number)
+           
+           stamp_file = outpath_file_no_band[idx,0]+setup.stampfile
 ;         stamp_file = outpath[idx]+outpre[idx]+out_stamps
-        cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
-                         ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
-                         n_lines(stamp_file), /no_execute)
-        fill_struct, cat, stamp_file
-        icat = where(cat.id EQ table[objects[i]].number)
-        
-        par.x_galfit = par.x_galfit+cat[icat].xlo-1-tb[itb].x_image+ $
-          table[objects[i]].x_image
-        par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-1-tb[itb].x_image+ $
-          table[objects[i]].x_image
-        par.y_galfit = par.y_galfit+cat[icat].ylo-1-tb[itb].y_image+ $
-          table[objects[i]].y_image
-        par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-1-tb[itb].y_image+ $
-          table[objects[i]].y_image
-        
-        fix = ['0', '0', '0', '0', '0', '0', '0']
-        
-    ENDIF ELSE BEGIN
+           cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
+                            ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
+                            n_lines(stamp_file), /no_execute)
+           fill_struct, cat, stamp_file
+           icat = where(cat.id EQ table[objects[i]].number)
+          
+           par.x_galfit = par.x_galfit+cat[icat].xlo-1-tb[itb].x_image+ $
+             table[objects[i]].x_image
+           par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-1-tb[itb].x_image+ $
+             table[objects[i]].x_image
+           par.y_galfit = par.y_galfit+cat[icat].ylo-1-tb[itb].y_image+ $
+             table[objects[i]].y_image
+           par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-1-tb[itb].y_image+ $
+             table[objects[i]].y_image
+           
+           fix = ['0', '0', '0', '0', '0', '0', '0']
+
+      ENDIF ELSE BEGIN
 ;sources without fit will be included as free fit
-        
+
 ; reading in file works, because it returns the correct FORMAT, but
 ; with useless values in it. As they will be replaced here, that does
 ; not matter
-        forward_function read_sersic_results
-        forward_function read_sersic_results_old_galfit
-        IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
-        IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
-        par.x_galfit = table[objects[i]].x_image
-        par.x_galfit_band = fltarr(nband)+table[objects[i]].x_image
-        par.x_galfit_cheb = fltarr(nband)
-        par.x_galfit_cheb[0] = table[objects[i]].x_image
-        par.y_galfit = table[objects[i]].y_image
-        par.y_galfit_band = fltarr(nband)+table[objects[i]].y_image
-        par.y_galfit_cheb = fltarr(nband)
-        par.y_galfit_cheb[0] = table[objects[i]].y_image
-; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
-        par.mag_galfit = table[objects[i]].mag_best
-        par.mag_galfit_band = fltarr(nband)+table[objects[i]].mag_best+setup.mag_offset[1:nband]
-        par.mag_galfit_cheb = fltarr(nband)
-        par.mag_galfit_cheb[0] = table[objects[i]].mag_best
-        par.re_galfit = 10.^(-0.79)*table[objects[i]].flux_radius^1.87
-        par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[objects[i]].flux_radius^1.87
-        par.re_galfit_cheb = fltarr(nband)
-        par.re_galfit_cheb[0] = 10.^(-0.79)*table[objects[i]].flux_radius^1.87
-        par.n_galfit = 2.5
-        par.n_galfit_band = fltarr(nband)+2.5
-        par.n_galfit_cheb = fltarr(nband)
-        par.n_galfit_cheb[0] = 2.5
-        par.q_galfit = 1-table[objects[i]].ellipticity
-        par.q_galfit_band = fltarr(nband)+1-table[objects[i]].ellipticity
-        par.q_galfit_cheb = fltarr(nband)
-        par.q_galfit_cheb[0] = 1-table[objects[i]].ellipticity
-        par.pa_galfit = table[objects[i]].theta_image-90.
-        par.pa_galfit_band = fltarr(nband)+table[objects[i]].theta_image-90.
-        par.pa_galfit_cheb = fltarr(nband)
-        par.pa_galfit_cheb[0] = table[objects[i]].theta_image-90.
-        
-        fix = ['1', '1', '1', '1', '1', '1', '1']
-    ENDELSE
-    
+forward_function read_sersic_results
+forward_function read_sersic_results_old_galfit
+           IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
+           IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
+           par.x_galfit = table[objects[i]].x_image
+           par.x_galfit_band = fltarr(nband)+table[objects[i]].x_image
+           par.x_galfit_cheb = fltarr(nband)
+           par.x_galfit_cheb[0] = table[objects[i]].x_image
+           par.y_galfit = table[objects[i]].y_image
+           par.y_galfit_band = fltarr(nband)+table[objects[i]].y_image
+           par.y_galfit_cheb = fltarr(nband)
+           par.y_galfit_cheb[0] = table[objects[i]].y_image
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS! DONE using offset
+           par.mag_galfit = table[objects[i]].mag_best
+           par.mag_galfit_band = fltarr(nband)+table[objects[i]].mag_best+setup.mag_offset[1:nband]
+           par.mag_galfit_cheb = fltarr(nband)
+           par.mag_galfit_cheb[0] = table[objects[i]].mag_best
+; THESE VALUES ARE CIRCULATIZED VALUES!! NEED TO BE AR CORRECTED
+; (FROM LEE!)
+           par.re_galfit = 10.^(-0.79)*table[objects[i]].flux_radius^1.87
+           par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[objects[i]].flux_radius^1.87
+           par.re_galfit_cheb = fltarr(nband)
+           par.re_galfit_cheb[0] = 10.^(-0.79)*table[objects[i]].flux_radius^1.87
+           par.n_galfit = 2.5
+           par.n_galfit_band = fltarr(nband)+2.5
+           par.n_galfit_cheb = fltarr(nband)
+           par.n_galfit_cheb[0] = 2.5
+           par.q_galfit = 1-table[objects[i]].ellipticity
+           par.q_galfit_band = fltarr(nband)+1-table[objects[i]].ellipticity
+           par.q_galfit_cheb = fltarr(nband)
+           par.q_galfit_cheb[0] = 1-table[objects[i]].ellipticity
+           par.pa_galfit = table[objects[i]].theta_image-90.
+           par.pa_galfit_band = fltarr(nband)+table[objects[i]].theta_image-90.
+           par.pa_galfit_cheb = fltarr(nband)
+           par.pa_galfit_cheb[0] = table[objects[i]].theta_image-90.
+           
+           fix = ['1', '1', '1', '1', '1', '1', '1']
+       ENDELSE
+       
 ;if the source position is off the frame: fix the position, PA and q
-    IF table[objects[i]].x_image-corner[0] LT 1 OR $
-      table[objects[i]].x_image-corner[0] GT xmax OR $
-      table[objects[i]].y_image-corner[1] LT 1 OR $
-      table[objects[i]].y_image-corner[1] GT ymax THEN BEGIN
-        fix[0] = '0' & fix[1] = '0' & fix[5] = '0' & fix[6] = '0'
-    ENDIF
-    
-;;;;;;;;;;;; CONSTRAINTS
+       IF table[objects[i]].x_image-corner[0] LT 1 OR $
+         table[objects[i]].x_image-corner[0] GT xmax OR $
+         table[objects[i]].y_image-corner[1] LT 1 OR $
+         table[objects[i]].y_image-corner[1] GT ymax THEN BEGIN
+           fix[0] = '0' & fix[1] = '0' & fix[5] = '0' & fix[6] = '0'
+       ENDIF
+       
 ; check some constraints and set starting values accordingly if neccessary
-    IF finite(par.re_galfit) NE 1 THEN begin
-        par.re_galfit = table[objects[i]].flux_radius > 3
-        par.re_galfit_band = fltarr(nband)+(table[objects[i]].flux_radius > 3)
-        par.re_galfit_cheb = fltarr(nband)
-        par.re_galfit_cheb[0] = table[objects[i]].flux_radius > 3
-    ENDIF
-    
-    IF par.re_galfit LT 0 THEN BEGIN
-        par.re_galfit = table[objects[i]].flux_radius > 3
-        par.re_galfit_band = fltarr(nband)+(table[objects[i]].flux_radius > 3)
-        par.re_galfit_cheb = fltarr(nband)
-        par.re_galfit_cheb[0] = table[objects[i]].flux_radius > 3    
-    ENDIF
-    par.re_galfit = par.re_galfit < float(conmaxre) > 0.3
-; hard contraints work on ALL bands if this is used below.
-    par.re_galfit_band = par.re_galfit_band < float(conmaxre) > 0.3
+       IF finite(par.re_galfit) NE 1 THEN begin
+           par.re_galfit = table[objects[i]].flux_radius > 3
+           par.re_galfit_band = fltarr(nband)+(table[objects[i]].flux_radius > 3)
+           par.re_galfit_cheb = fltarr(nband)
+           par.re_galfit_cheb[0] = table[objects[i]].flux_radius > 3
+       ENDIF
+       
+       IF par.re_galfit LT 0 THEN BEGIN
+           par.re_galfit = table[objects[i]].flux_radius > 3
+           par.re_galfit_band = fltarr(nband)+(table[objects[i]].flux_radius > 3)
+           par.re_galfit_cheb = fltarr(nband)
+           par.re_galfit_cheb[0] = table[objects[i]].flux_radius > 3    
+       ENDIF
+       par.re_galfit = par.re_galfit < float(conmaxre) > 0.3
+; hard contraints work on ALL bands if this is used below. USED!
+       par.re_galfit_band = par.re_galfit_band < float(conmaxre) > 0.3
 ; hard contraints work only on principle band if this is used
     par.re_galfit_cheb[0] = par.re_galfit_cheb[0] < float(conmaxre) > 0.3
     par.n_galfit = par.n_galfit < setup.conmaxn > setup.conminn
@@ -2028,296 +2095,300 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
     
 ;     0  1  2    3   4  5  6   7
 ;par=[x, y, mag, re, n, q, pa, sky]
-    openu, 1, obj_file, /append
-    printf, 1, '# Sersic function'
-    printf, 1, ''
-    printf, 1, ' 0) sersic             # Object type'
-    
+       openu, 1, obj_file, /append
+       printf, 1, '# Sersic function'
+       printf, 1, ''
+       printf, 1, ' 0) sersic             # Object type'
+
 ; for different GALFIT versions, fit will work, READOUT of parameters
 ; will NOT work!
-    x_po=''
-    x_po_fit=''
-    y_po=''
-    y_po_fit=''
-    FOR b=1,nband DO BEGIN
-        x_po = x_po+round_digit(par.x_galfit_band[b-1]-corner[0],2,/string)
-        if b lt nband then x_po=x_po+','
-        y_po = y_po+round_digit(par.y_galfit_band[b-1]-corner[1],2,/string)
-        if b lt nband then y_po=y_po+','
-    ENDFOR
-    IF fix[0] eq 1 then x_po_fit = strtrim(setup.cheb[0]+1,2) else x_po_fit = '0'
-    IF fix[1] eq 1 then y_po_fit = strtrim(setup.cheb[1]+1,2) else y_po_fit = '0'
-    
-    if setup.version ge 4 then begin
-        printf, 1, ' 1) '+x_po+'  '+x_po_fit+'  '+band_po+'   # position x     [pixel]'
-        printf, 1, ' 2) '+y_po+'  '+y_po_fit+'  '+band_po+'   # position y     [pixel]'
-    endif else begin
-        printf, 1, ' 1) '+x_po+'  '+y_po+'   '+x_po_fit+' '+y_po_fit+'   # position x, y        [pixel]'
-    endelse
-    mag_po=''
-    mag_po_fit=''
-    FOR b=1,nband DO BEGIN
-        mag_po = mag_po+round_digit(par.mag_galfit_band[b-1],2,/string)
-        if b lt nband then mag_po=mag_po+','
-    ENDFOR
-    IF fix[2] eq 1 then mag_po_fit = strtrim(setup.cheb[2]+1,2) else mag_po_fit = '0'
-    printf, 1, ' 3) '+mag_po+'    '+mag_po_fit+'   '+band_po+'    # total magnitude'
-    
-    re_po=''
-    re_po_fit=''
-    FOR b=1,nband DO BEGIN
-        re_po = re_po+round_digit(par.re_galfit_band[b-1],2,/string)
-        if b lt nband then re_po=re_po+','
-    ENDFOR
-    IF fix[3] eq 1 then re_po_fit = strtrim(setup.cheb[3]+1,2) else re_po_fit = '0'
-    printf, 1, ' 4) '+re_po+'    '+re_po_fit+'   '+band_po+'       #     R_e              [Pixels]'
-    
-    n_po=''
-    n_po_fit=''
-    FOR b=1,nband DO BEGIN
-        n_po = n_po+round_digit(par.n_galfit_band[b-1],2,/string)
-        if b lt nband then n_po=n_po+','
-    ENDFOR
-    IF fix[4] eq 1 then n_po_fit = strtrim(setup.cheb[4]+1,2) else n_po_fit = '0'
-    printf, 1, ' 5) '+n_po+'    '+n_po_fit+'   '+band_po+'       # Sersic exponent (deVauc=4, expdisk=1)'
-    
-    q_po=''
-    q_po_fit=''
-    FOR b=1,nband DO BEGIN
-        q_po = q_po+round_digit(par.q_galfit_band[b-1],4,/string)
-        if b lt nband then q_po=q_po+','
-    ENDFOR
-    IF fix[5] eq 1 then q_po_fit = strtrim(setup.cheb[5]+1,2) else q_po_fit = '0'
-    IF setup.version eq 0 THEN str = ' 8) ' ELSE str = ' 9) '
-    printf, 1, str+q_po+'    '+q_po_fit+'   '+band_po+'       # axis ratio (b/a)'
-    
-    
-    pa_po=''
-    pa_po_fit=''
-    FOR b=1,nband DO BEGIN
-        pa_po = pa_po+round_digit(par.pa_galfit_band[b-1],2,/string)
-        if b lt nband then pa_po=pa_po+','
-    ENDFOR
-    IF fix[6] eq 1 then pa_po_fit = strtrim(setup.cheb[6]+1,2) else pa_po_fit = '0'
-    IF setup_version eq 0 THEN str = '9) ' ELSE str = '10) '
-    printf, 1, str+pa_po+'    '+pa_po_fit+'   '+band_po+'       # position angle (PA) [Degrees: Up=0, Left=90]'
-    
-    printf, 1, ' Z) 0                  # output image (see above)'
-    printf, 1, ''
-    close, 1
-ENDFOR
+       x_po=''
+       x_po_fit=''
+       y_po=''
+       y_po_fit=''
+       FOR b=1,nband DO BEGIN
+           x_po = x_po+round_digit(par.x_galfit_band[b-1]-corner[0],2,/string)
+           if b lt nband then x_po=x_po+','
+           y_po = y_po+round_digit(par.y_galfit_band[b-1]-corner[1],2,/string)
+           if b lt nband then y_po=y_po+','
+       ENDFOR
+       IF fix[0] eq 1 then x_po_fit = strtrim(setup.cheb[0]+1,2) else x_po_fit = '0'
+       IF fix[1] eq 1 then y_po_fit = strtrim(setup.cheb[1]+1,2) else y_po_fit = '0'
+       
+       if setup.version ge 4 then begin
+           printf, 1, ' 1) '+x_po+'  '+x_po_fit+'  '+band_po+'   # position x     [pixel]'
+           printf, 1, ' 2) '+y_po+'  '+y_po_fit+'  '+band_po+'   # position y     [pixel]'
+       endif else begin
+           printf, 1, ' 1) '+x_po+'  '+y_po+'   '+x_po_fit+' '+y_po_fit+'   # position x, y        [pixel]'
+       endelse
+       mag_po=''
+       mag_po_fit=''
+       FOR b=1,nband DO BEGIN
+           mag_po = mag_po+round_digit(par.mag_galfit_band[b-1],2,/string)
+           if b lt nband then mag_po=mag_po+','
+       ENDFOR
+       IF fix[2] eq 1 then mag_po_fit = strtrim(setup.cheb[2]+1,2) else mag_po_fit = '0'
+       printf, 1, ' 3) '+mag_po+'    '+mag_po_fit+'   '+band_po+'    # total magnitude'
 
+       re_po=''
+       re_po_fit=''
+       FOR b=1,nband DO BEGIN
+           re_po = re_po+round_digit(par.re_galfit_band[b-1],2,/string)
+           if b lt nband then re_po=re_po+','
+       ENDFOR
+       IF fix[3] eq 1 then re_po_fit = strtrim(setup.cheb[3]+1,2) else re_po_fit = '0'
+       printf, 1, ' 4) '+re_po+'    '+re_po_fit+'   '+band_po+'       #     R_e              [Pixels]'
+
+       n_po=''
+       n_po_fit=''
+       FOR b=1,nband DO BEGIN
+           n_po = n_po+round_digit(par.n_galfit_band[b-1],2,/string)
+           if b lt nband then n_po=n_po+','
+       ENDFOR
+       IF fix[4] eq 1 then n_po_fit = strtrim(setup.cheb[4]+1,2) else n_po_fit = '0'
+       printf, 1, ' 5) '+n_po+'    '+n_po_fit+'   '+band_po+'       # Sersic exponent (deVauc=4, expdisk=1)'
+
+       q_po=''
+       q_po_fit=''
+       FOR b=1,nband DO BEGIN
+           q_po = q_po+round_digit(par.q_galfit_band[b-1],4,/string)
+           if b lt nband then q_po=q_po+','
+       ENDFOR
+       IF fix[5] eq 1 then q_po_fit = strtrim(setup.cheb[5]+1,2) else q_po_fit = '0'
+       IF setup.version eq 0 THEN str = ' 8) ' ELSE str = ' 9) '
+       printf, 1, str+q_po+'    '+q_po_fit+'   '+band_po+'       # axis ratio (b/a)'
+
+
+       pa_po=''
+       pa_po_fit=''
+       FOR b=1,nband DO BEGIN
+           pa_po = pa_po+round_digit(par.pa_galfit_band[b-1],2,/string)
+           if b lt nband then pa_po=pa_po+','
+       ENDFOR
+       IF fix[6] eq 1 then pa_po_fit = strtrim(setup.cheb[6]+1,2) else pa_po_fit = '0'
+       IF setup_version eq 0 THEN str = '9) ' ELSE str = '10) '
+       printf, 1, str+pa_po+'    '+pa_po_fit+'   '+band_po+'       # position angle (PA) [Degrees: Up=0, Left=90]'
+
+       printf, 1, ' Z) 0                  # output image (see above)'
+       printf, 1, ''
+       close, 1
+   ENDFOR
+   
 ;have to include the contributing sources potentially from other
 ;frames as well.
-n_nums = n_elements(num_contrib)
+   n_nums = n_elements(num_contrib)
 
-IF n_nums EQ 1 AND num_contrib[0] EQ -1 THEN GOTO, finish
-
+   IF n_nums EQ 1 AND num_contrib[0] EQ -1 THEN GOTO, finish
+   
 ;find the GALFIT output file for the current contributing source
-num_current = round_digit(table[current].number, 0, /str)
+   num_current = round_digit(table[current].number, 0, /str)
 
-orgim = setup.images
-outpath = setup.outpath
-outpath = set_trailing_slash(outpath)
+   orgim = setup.images
+   outpath = setup.outpath
+   outpath = set_trailing_slash(outpath)
 
-openr, 1, constr_file
-line = ''
-WHILE NOT eof(1) DO readf, 1, line
-close, 1
-line = strtrim(line, 2)
-line = strmid(line, 0, strpos(line, ' '))
-ctr = fix(line)+1
-
+   openr, 1, constr_file
+   line = ''
+   WHILE NOT eof(1) DO readf, 1, line
+   close, 1
+   line = strtrim(line, 2)
+   line = strmid(line, 0, strpos(line, ' '))
+   ctr = fix(line)+1
+   
 ;loop over all contributing sources
-FOR i=0ul, n_nums-1 DO BEGIN
-    
-    i_con = where(table.number EQ num_contrib[i] AND $
-                  table.frame[0] EQ frame_contrib[i])
-    
-    dum = where(table[objects].number EQ num_contrib[i] AND $
-                table[objects].frame[0] EQ frame_contrib[i], ct)
-    IF ct GT 0 THEN CONTINUE
-    
-    idx = where(orgim[*,0] EQ table[i_con].frame[0])
+   FOR i=0ul, n_nums-1 DO BEGIN
+
+       i_con = where(table.number EQ num_contrib[i] AND $
+                     table.frame[0] EQ frame_contrib[i])
+       
+       dum = where(table[objects].number EQ num_contrib[i] AND $
+                   table[objects].frame[0] EQ frame_contrib[i], ct)
+       IF ct GT 0 THEN CONTINUE
+       
+       idx = where(orgim[*,0] EQ table[i_con].frame[0])
 ;    objnum = integer2string(table[i_con].number, table.number, /array)
-    objnum = round_digit(table[i_con].number, 0, /str)
-    current_contrib_file = outpath_galfit[idx]+outpre[idx,1]+objnum+'_'+strtrim(setup.galfit_out,2)+'.fits'
-    
-    IF file_test(current_contrib_file) THEN BEGIN
+       objnum = round_digit(table[i_con].number, 0, /str)
+       current_contrib_file = outpath_galfit[idx]+outpre[idx,1]+objnum+'_'+strtrim(setup.galfit_out,2)+'.fits'
+       
+       IF file_test(current_contrib_file) THEN BEGIN
 ;sources with existing fit will be included as static source
-        forward_function read_sersic_results
-        forward_function read_sersic_results_old_galfit
-        IF setup.version ge 4 then par = read_sersic_results(current_contrib_file,nband)
-        IF setup.version lt 4 then par = read_sersic_results_old_galfit(current_contrib_file)      
+forward_function read_sersic_results
+forward_function read_sersic_results_old_galfit
+           IF setup.version ge 4 then par = read_sersic_results(current_contrib_file,nband)
+           IF setup.version lt 4 then par = read_sersic_results_old_galfit(current_contrib_file)      
 ;problem: position from GALFIT is relative to original postage
 ;stamp. Need to compute offset using SExtractor input for that fit
-        tb = read_sex_table(outpath_file[idx,0]+out_cat, $
-                            outpath_file[idx,0]+out_param)
-        itb = where(tb.number EQ table[i_con].number)
-        
-        stamp_file = outpath_file_no_band[idx,0]+setup.stampfile
+           tb = read_sex_table(outpath_file[idx,0]+out_cat, $
+                               outpath_file[idx,0]+out_param)
+           itb = where(tb.number EQ table[i_con].number)
+           
+           stamp_file = outpath_file_no_band[idx,0]+setup.stampfile
 ;         stamp_file = outpath[idx]+outpre[idx]+out_stamps
-        cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
-                         ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
-                         n_lines(stamp_file), /no_execute)
-        fill_struct, cat, stamp_file
-        icat = where(cat.id EQ table[i_con].number)
-        
-        par.x_galfit = par.x_galfit+cat[icat].xlo-1-tb[itb].x_image+table[i_con].x_image
-        par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-1-tb[itb].x_image+ $
-          table[i_con].x_image
-        par.y_galfit = par.y_galfit+cat[icat].ylo-1-tb[itb].y_image+table[i_con].y_image
-        par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-1-tb[itb].y_image+ $
-          table[i_con].y_image
-        
-        fix = ['0', '0', '0', '0', '0', '0', '0']
-    ENDIF ELSE BEGIN
+           cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
+                            ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
+                            n_lines(stamp_file), /no_execute)
+           fill_struct, cat, stamp_file
+           icat = where(cat.id EQ table[i_con].number)
+           
+           par.x_galfit = par.x_galfit+cat[icat].xlo-1-tb[itb].x_image+table[i_con].x_image
+           par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-1-tb[itb].x_image+ $
+             table[i_con].x_image
+           par.y_galfit = par.y_galfit+cat[icat].ylo-1-tb[itb].y_image+table[i_con].y_image
+           par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-1-tb[itb].y_image+ $
+             table[i_con].y_image
+           
+           fix = ['0', '0', '0', '0', '0', '0', '0']
+       ENDIF ELSE BEGIN
 ;the source might be in the fit_table
-        i_fit = where(table.number EQ num_contrib[i] AND $
-                      table.org_image EQ frame_contrib[i], ct)
-        IF ct GT 0 THEN BEGIN
-            IF table[i_fit].re_galfit GE 0 THEN BEGIN
-                
+           i_fit = where(fit_table.number EQ num_contrib[i] AND $
+                         fit_table.org_image EQ frame_contrib[i], ct)
+           IF ct GT 0 THEN BEGIN
+               IF fit_table[i_fit].re_galfit GE 0 THEN BEGIN
+                   
 ; reading in file works, because it returns the correct FORMAT, but
 ; with useless values in it. As they will be replaced here, that does
 ; not matter
-                forward_function read_sersic_results
-                forward_function read_sersic_results_old_galfit
-                IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
-                IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
+forward_function read_sersic_results
+forward_function read_sersic_results_old_galfit
+                   IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
+                   IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
 ; replace correctly!
-                par.x_galfit = table[i_con].x_image
-                par.x_galfit_band = fltarr(nband)+table[i_con].x_image
-                par.x_galfit_cheb = fltarr(nband)
-                par.x_galfit_cheb[0] = table[i_con].x_image
-                par.y_galfit = table[i_con].y_image
-                par.y_galfit_band = fltarr(nband)+table[i_con].y_image
-                par.y_galfit_cheb = fltarr(nband)
-                par.y_galfit_cheb[0] = table[i_con].y_image
+                   par.x_galfit = table[i_con].x_image
+                   par.x_galfit_band = fltarr(nband)+table[i_con].x_image
+                   par.x_galfit_cheb = fltarr(nband)
+                   par.x_galfit_cheb[0] = table[i_con].x_image
+                   par.y_galfit = table[i_con].y_image
+                   par.y_galfit_band = fltarr(nband)+table[i_con].y_image
+                   par.y_galfit_cheb = fltarr(nband)
+                   par.y_galfit_cheb[0] = table[i_con].y_image
 ; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
-                par.mag_galfit = table[i_fit].mag_galfit
-                par.mag_galfit_band = table[i_fit].mag_galfit_band
-                par.mag_galfit_cheb = table[i_fit].mag_galfit_cheb
-                par.re_galfit = table[i_fit].re_galfit
-                par.re_galfit_band = table[i_fit].re_galfit_band
-                par.re_galfit_cheb = table[i_fit].re_galfit_cheb
-                par.n_galfit = table[i_fit].n_galfit
-                par.n_galfit_band = table[i_fit].n_galfit_band
-                par.n_galfit_cheb = table[i_fit].n_galfit_cheb
-                par.q_galfit = table[i_fit].q_galfit
-                par.q_galfit_band = table[i_fit].q_galfit_band
-                par.q_galfit_cheb = table[i_fit].q_galfit_cheb
-                par.pa_galfit = table[i_fit].pa_galfit
-                par.pa_galfit_band = table[i_fit].pa_galfit_band
-                par.pa_galfit_cheb = table[i_fit].pa_galfit_cheb
-                
+                   par.mag_galfit = fit_table[i_fit].mag_galfit
+                   par.mag_galfit_band = fit_table[i_fit].mag_galfit_band
+                   par.mag_galfit_cheb = fit_table[i_fit].mag_galfit_cheb
+                   par.re_galfit = fit_table[i_fit].re_galfit
+                   par.re_galfit_band = fit_table[i_fit].re_galfit_band
+                   par.re_galfit_cheb = fit_table[i_fit].re_galfit_cheb
+                   par.n_galfit = fit_table[i_fit].n_galfit
+                   par.n_galfit_band = fit_table[i_fit].n_galfit_band
+                   par.n_galfit_cheb = fit_table[i_fit].n_galfit_cheb
+                   par.q_galfit = fit_table[i_fit].q_galfit
+                   par.q_galfit_band = fit_table[i_fit].q_galfit_band
+                   par.q_galfit_cheb = fit_table[i_fit].q_galfit_cheb
+                   par.pa_galfit = fit_table[i_fit].pa_galfit
+                   par.pa_galfit_band = fit_table[i_fit].pa_galfit_band
+                   par.pa_galfit_cheb = fit_table[i_fit].pa_galfit_cheb
+                   
+;               par = [table[i_con].x_image, table[i_con].y_image, $
+;                      fit_table[i_fit].mag_galfit, $
+;                      fit_table[i_fit].re_galfit, fit_table[i_fit].n_galfit, $
+;                      fit_table[i_fit].q_galfit, fit_table[i_fit].pa_galfit]
 ;if so fixate the fit
-                fix = ['0', '0', '0', '0', '0', '0', '0']
-            ENDIF ELSE BEGIN
+                   fix = ['0', '0', '0', '0', '0', '0', '0']
+               ENDIF ELSE BEGIN
 ;source is in fit_table but no fit exists -> bombed -> free fit
-                forward_function read_sersic_results
-                forward_function read_sersic_results_old_galfit
-                IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
-                IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
-                
-                par.x_galfit = table[i_con].x_image
-                par.x_galfit_band = fltarr(nband)+table[i_con].x_image
-                par.x_galfit_cheb = fltarr(nband)
-                par.x_galfit_cheb[0] = table[i_con].x_image
-                par.y_galfit = table[i_con].y_image
-                par.y_galfit_band = fltarr(nband)+table[i_con].y_image
-                par.y_galfit_cheb = fltarr(nband)
-                par.y_galfit_cheb[0] = table[i_con].y_image
-; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
-                par.mag_galfit = table[i_con].mag_best
-                par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best+setup.mag_offset[1:nband]
-                par.mag_galfit_cheb = fltarr(nband)
-                par.mag_galfit_cheb[0] = table[i_con].mag_best
-                par.re_galfit = 10.^(-0.79)*table[i_con].flux_radius^1.87
-                par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[i_con].flux_radius^1.87
-                par.re_galfit_cheb = fltarr(nband)
-                par.re_galfit_cheb[0] = 10.^(-0.79)*table[i_con].flux_radius^1.87
-                par.n_galfit = 2.5
-                par.n_galfit_band = fltarr(nband)+2.5
-                par.n_galfit_cheb = fltarr(nband)
-                par.n_galfit_cheb[0] = 2.5
-                par.q_galfit = 1-table[i_con].ellipticity
-                par.q_galfit_band = fltarr(nband)+1-table[i_con].ellipticity
-                par.q_galfit_cheb = fltarr(nband)
-                par.q_galfit_cheb[0] = 1-table[i_con].ellipticity
-                par.pa_galfit = table[i_con].theta_image-90.
-                par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
-                par.pa_galfit_cheb = fltarr(nband)
-                par.pa_galfit_cheb[0] = table[i_con].theta_image-90.
-                
+forward_function read_sersic_results
+forward_function read_sersic_results_old_galfit
+                   IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
+                   IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
+                   
+                   par.x_galfit = table[i_con].x_image
+                   par.x_galfit_band = fltarr(nband)+table[i_con].x_image
+                   par.x_galfit_cheb = fltarr(nband)
+                   par.x_galfit_cheb[0] = table[i_con].x_image
+                   par.y_galfit = table[i_con].y_image
+                   par.y_galfit_band = fltarr(nband)+table[i_con].y_image
+                   par.y_galfit_cheb = fltarr(nband)
+                   par.y_galfit_cheb[0] = table[i_con].y_image
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS! DONE using offset
+                   par.mag_galfit = table[i_con].mag_best
+                   par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best+setup.mag_offset[1:nband]
+                   par.mag_galfit_cheb = fltarr(nband)
+                   par.mag_galfit_cheb[0] = table[i_con].mag_best
+                   par.re_galfit = 10.^(-0.79)*table[i_con].flux_radius^1.87
+                   par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[i_con].flux_radius^1.87
+                   par.re_galfit_cheb = fltarr(nband)
+                   par.re_galfit_cheb[0] = 10.^(-0.79)*table[i_con].flux_radius^1.87
+                   par.n_galfit = 2.5
+                   par.n_galfit_band = fltarr(nband)+2.5
+                   par.n_galfit_cheb = fltarr(nband)
+                   par.n_galfit_cheb[0] = 2.5
+                   par.q_galfit = 1-table[i_con].ellipticity
+                   par.q_galfit_band = fltarr(nband)+1-table[i_con].ellipticity
+                   par.q_galfit_cheb = fltarr(nband)
+                   par.q_galfit_cheb[0] = 1-table[i_con].ellipticity
+                   par.pa_galfit = table[i_con].theta_image-90.
+                   par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
+                   par.pa_galfit_cheb = fltarr(nband)
+                   par.pa_galfit_cheb[0] = table[i_con].theta_image-90.
+                   
 ;               par = [table[i_con].x_image, table[i_con].y_image, $
 ;                      table[i_con].mag_best, $
 ;                      10.^(-0.79)*table[i_con].flux_radius^1.87, $
 ;                      2.5, 1-table[i_con].ellipticity, $
 ;                      table[i_con].theta_image-90.]
 ;the source is off the frame so just fit profile and magnitude, position fixed
-                fix = ['0', '0', '1', '1', '1', '0', '0']
-            ENDELSE
-        ENDIF ELSE BEGIN
+                   fix = ['0', '0', '1', '1', '1', '0', '0']
+               ENDELSE
+           ENDIF ELSE BEGIN
 ;source is not in fit_table -> free fit
-            forward_function read_sersic_results
-            forward_function read_sersic_results_old_galfit
-            IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
-            IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
-            
-            par.x_galfit = table[i_con].x_image
-            par.x_galfit_band = fltarr(nband)+table[i_con].x_image
-            par.x_galfit_cheb = fltarr(nband)
-            par.x_galfit_cheb[0] = table[i_con].x_image
-            par.y_galfit = table[i_con].y_image
-            par.y_galfit_band = fltarr(nband)+table[i_con].y_image
-            par.y_galfit_cheb = fltarr(nband)
-            par.y_galfit_cheb[0] = table[i_con].y_image
-; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
-            par.mag_galfit = table[i_con].mag_best
-            par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best+setup.mag_offset[1:nband]
-            par.mag_galfit_cheb = fltarr(nband)
-            par.mag_galfit_cheb[0] = table[i_con].mag_best
-            par.re_galfit = 10.^(-0.79)*table[i_con].flux_radius^1.87
-            par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[i_con].flux_radius^1.87
-            par.re_galfit_cheb = fltarr(nband)
-            par.re_galfit_cheb[0] = 10.^(-0.79)*table[i_con].flux_radius^1.87
-            par.n_galfit = 2.5
-            par.n_galfit_band = fltarr(nband)+2.5
-            par.n_galfit_cheb = fltarr(nband)
-            par.n_galfit_cheb[0] = 2.5
-            par.q_galfit = 1-table[i_con].ellipticity
-            par.q_galfit_band = fltarr(nband)+1-table[i_con].ellipticity
-            par.q_galfit_cheb = fltarr(nband)
-            par.q_galfit_cheb[0] = 1-table[i_con].ellipticity
-            par.pa_galfit = table[i_con].theta_image-90.
-            par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
-            par.pa_galfit_cheb = fltarr(nband)
-            par.pa_galfit_cheb[0] = table[i_con].theta_image-90.
-            
+forward_function read_sersic_results
+forward_function read_sersic_results_old_galfit
+               IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
+               IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
+               
+               par.x_galfit = table[i_con].x_image
+               par.x_galfit_band = fltarr(nband)+table[i_con].x_image
+               par.x_galfit_cheb = fltarr(nband)
+               par.x_galfit_cheb[0] = table[i_con].x_image
+               par.y_galfit = table[i_con].y_image
+               par.y_galfit_band = fltarr(nband)+table[i_con].y_image
+               par.y_galfit_cheb = fltarr(nband)
+               par.y_galfit_cheb[0] = table[i_con].y_image
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS! DONE using offset
+               par.mag_galfit = table[i_con].mag_best
+               par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best+setup.mag_offset[1:nband]
+               par.mag_galfit_cheb = fltarr(nband)
+               par.mag_galfit_cheb[0] = table[i_con].mag_best
+               par.re_galfit = 10.^(-0.79)*table[i_con].flux_radius^1.87
+               par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[i_con].flux_radius^1.87
+               par.re_galfit_cheb = fltarr(nband)
+               par.re_galfit_cheb[0] = 10.^(-0.79)*table[i_con].flux_radius^1.87
+               par.n_galfit = 2.5
+               par.n_galfit_band = fltarr(nband)+2.5
+               par.n_galfit_cheb = fltarr(nband)
+               par.n_galfit_cheb[0] = 2.5
+               par.q_galfit = 1-table[i_con].ellipticity
+               par.q_galfit_band = fltarr(nband)+1-table[i_con].ellipticity
+               par.q_galfit_cheb = fltarr(nband)
+               par.q_galfit_cheb[0] = 1-table[i_con].ellipticity
+               par.pa_galfit = table[i_con].theta_image-90.
+               par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
+               par.pa_galfit_cheb = fltarr(nband)
+               par.pa_galfit_cheb[0] = table[i_con].theta_image-90.
+               
 ;               par = [table[i_con].x_image, table[i_con].y_image, $
 ;                      table[i_con].mag_best, $
 ;                      10.^(-0.79)*table[i_con].flux_radius^1.87, $
 ;                      2.5, 1-table[i_con].ellipticity, $
 ;                      table[i_con].theta_image-90.]
 ;the source is off the frame so just fit profile and magnitude
-            fix = ['0', '0', '1', '1', '1', '0', '0']
-        ENDELSE
+               fix = ['0', '0', '1', '1', '1', '0', '0']
+           ENDELSE
 ;else make it a fully free fit (unless the source is in the fit_table:
 ;then fit only the position, which comes still from SExtractor)
-        IF par.x_galfit GT 1 AND par.x_galfit LT xmax-1 AND $
-          par.y_galfit GT 1 AND par.y_galfit LT ymax-1 THEN BEGIN
-            IF ct GT 0 THEN BEGIN
-                IF table[i_fit].re_galfit GE 0 THEN $
-                  fix = ['1', '1', '0', '0', '0', '0', '0'] $
-                ELSE fix = ['1', '1', '1', '1', '1', '1', '1']
-            ENDIF ELSE fix = ['1', '1', '1', '1', '1', '1', '1']
-        ENDIF
-    ENDELSE
-    
-    par.re_galfit = par.re_galfit < conmaxre > 0.3
+           IF par.x_galfit GT 1 AND par.x_galfit LT xmax-1 AND $
+             par.y_galfit GT 1 AND par.y_galfit LT ymax-1 THEN BEGIN
+               IF ct GT 0 THEN BEGIN
+                   IF fit_table[i_fit].re_galfit GE 0 THEN $
+                     fix = ['1', '1', '0', '0', '0', '0', '0'] $
+                   ELSE fix = ['1', '1', '1', '1', '1', '1', '1']
+               ENDIF ELSE fix = ['1', '1', '1', '1', '1', '1', '1']
+           ENDIF
+       ENDELSE
+       
+       par.re_galfit = par.re_galfit < conmaxre > 0.3
 ; hard contraints work on ALL bands if this is used below. USED!!
-    par.re_galfit_band = par.re_galfit_band < conmaxre > 0.3
+       par.re_galfit_band = par.re_galfit_band < conmaxre > 0.3
 ; hard contraints work only on principle band if this is used
     par.re_galfit_cheb[0] = par.re_galfit_cheb[0] < conmaxre > 0.3
     par.n_galfit = par.n_galfit < setup.conmaxn > setup.conminn
@@ -2335,103 +2406,103 @@ FOR i=0ul, n_nums-1 DO BEGIN
     
 ;     0  1  2    3   4  5  6   7
 ;par=[x, y, mag, re, n, q, pa, sky]
-    openu, 1, obj_file, /append
-    printf, 1, '# Sersic function'
-    printf, 1, ''
-    printf, 1, ' 0) sersic             # Object type'
+      openu, 1, obj_file, /append
+      printf, 1, '# Sersic function'
+      printf, 1, ''
+      printf, 1, ' 0) sersic             # Object type'
 ; for different GALFIT versions, fit will work, READOUT of parameters
 ; will NOT work!
-    band_po=' '
-    if setup.version ge 4 and nband gt 1 then band_po='band'
-    
-    x_po=''
-    x_po_fit=''
-    y_po=''
-    y_po_fit=''
-    FOR b=1,nband DO BEGIN
-        x_po = x_po+round_digit(par.x_galfit_band[b-1]-corner[0],2,/string)
-        if b lt nband then x_po=x_po+','
-        y_po = y_po+round_digit(par.y_galfit_band[b-1]-corner[1],2,/string)
-        if b lt nband then y_po=y_po+','
-    ENDFOR
-    IF fix[0] eq 1 then x_po_fit = strtrim(setup.cheb[0]+1,2) else x_po_fit = '0'
-    IF fix[1] eq 1 then y_po_fit = strtrim(setup.cheb[1]+1,2) else y_po_fit = '0'
-    
-    if setup.version ge 4 then begin
-        printf, 1, ' 1) '+x_po+'  '+x_po_fit+'  '+band_po+'   # position x     [pixel]'
-        printf, 1, ' 2) '+y_po+'  '+y_po_fit+'  '+band_po+'   # position y     [pixel]'
-    endif else begin
-        printf, 1, ' 1) '+x_po+'  '+y_po+'   '+x_po_fit+' '+y_po_fit+'   # position x, y        [pixel]'
-    endelse
-    
-    mag_po=''
-    mag_po_fit=''
-    FOR b=1,nband DO BEGIN
-        mag_po = mag_po+round_digit(par.mag_galfit_band[b-1],2,/string)
-        if b lt nband then mag_po=mag_po+','
-    ENDFOR
-    IF fix[2] eq 1 then mag_po_fit = strtrim(setup.cheb[2]+1,2) else mag_po_fit = '0'
-    printf, 1, ' 3) '+mag_po+'    '+mag_po_fit+'   '+band_po+'    # total magnitude'
-    
-    re_po=''
-    re_po_fit=''
-    FOR b=1,nband DO BEGIN
-        re_po = re_po+round_digit(par.re_galfit_band[b-1],2,/string)
-        if b lt nband then re_po=re_po+','
-    ENDFOR
-    IF fix[3] eq 1 then re_po_fit = strtrim(setup.cheb[3]+1,2) else re_po_fit = '0'
-    printf, 1, ' 4) '+re_po+'    '+re_po_fit+'   '+band_po+'       #     R_e              [Pixels]'
-    
-    n_po=''
-    n_po_fit=''
-    FOR b=1,nband DO BEGIN
-        n_po = n_po+round_digit(par.n_galfit_band[b-1],2,/string)
-        if b lt nband then n_po=n_po+','
-    ENDFOR
-    IF fix[4] eq 1 then n_po_fit = strtrim(setup.cheb[4]+1,2) else n_po_fit = '0'
-    printf, 1, ' 5) '+n_po+'    '+n_po_fit+'   '+band_po+'       # Sersic exponent (deVauc=4, expdisk=1)'
-    
-    q_po=''
-    q_po_fit=''
-    FOR b=1,nband DO BEGIN
-        q_po = q_po+round_digit(par.q_galfit_band[b-1],4,/string)
-        if b lt nband then q_po=q_po+','
-    ENDFOR
-    IF fix[5] eq 1 then q_po_fit = strtrim(setup.cheb[5]+1,2) else q_po_fit = '0'
-    IF setup.version eq 0 THEN str = ' 8) ' ELSE str = ' 9) '
-    printf, 1, str+q_po+'    '+q_po_fit+'   '+band_po+'       # axis ratio (b/a)'
-    
-    
-    pa_po=''
-    pa_po_fit=''
-    FOR b=1,nband DO BEGIN
-        pa_po = pa_po+round_digit(par.pa_galfit_band[b-1],2,/string)
-        if b lt nband then pa_po=pa_po+','
-    ENDFOR
-    IF fix[6] eq 1 then pa_po_fit = strtrim(setup.cheb[6]+1,2) else pa_po_fit = '0'
-    IF setup_version eq 0 THEN str = '9) ' ELSE str = '10) '
-    printf, 1, str+pa_po+'    '+pa_po_fit+'   '+band_po+'       # position angle (PA) [Degrees: Up=0, Left=90]'
-    
-    printf, 1, ' Z) 0                  # output image (see above)'
-    printf, 1, ''
-    close, 1
-    
-    dum = where(fix EQ '1', ct)
-    IF ct GT 0 THEN BEGIN
+       band_po=' '
+       if setup.version ge 4 and nband gt 1 then band_po='band'
+
+       x_po=''
+       x_po_fit=''
+       y_po=''
+       y_po_fit=''
+       FOR b=1,nband DO BEGIN
+           x_po = x_po+round_digit(par.x_galfit_band[b-1]-corner[0],2,/string)
+           if b lt nband then x_po=x_po+','
+           y_po = y_po+round_digit(par.y_galfit_band[b-1]-corner[1],2,/string)
+           if b lt nband then y_po=y_po+','
+       ENDFOR
+       IF fix[0] eq 1 then x_po_fit = strtrim(setup.cheb[0]+1,2) else x_po_fit = '0'
+       IF fix[1] eq 1 then y_po_fit = strtrim(setup.cheb[1]+1,2) else y_po_fit = '0'
+       
+       if setup.version ge 4 then begin
+           printf, 1, ' 1) '+x_po+'  '+x_po_fit+'  '+band_po+'   # position x     [pixel]'
+           printf, 1, ' 2) '+y_po+'  '+y_po_fit+'  '+band_po+'   # position y     [pixel]'
+       endif else begin
+           printf, 1, ' 1) '+x_po+'  '+y_po+'   '+x_po_fit+' '+y_po_fit+'   # position x, y        [pixel]'
+       endelse
+
+       mag_po=''
+       mag_po_fit=''
+       FOR b=1,nband DO BEGIN
+           mag_po = mag_po+round_digit(par.mag_galfit_band[b-1],2,/string)
+           if b lt nband then mag_po=mag_po+','
+       ENDFOR
+       IF fix[2] eq 1 then mag_po_fit = strtrim(setup.cheb[2]+1,2) else mag_po_fit = '0'
+       printf, 1, ' 3) '+mag_po+'    '+mag_po_fit+'   '+band_po+'    # total magnitude'
+
+       re_po=''
+       re_po_fit=''
+       FOR b=1,nband DO BEGIN
+           re_po = re_po+round_digit(par.re_galfit_band[b-1],2,/string)
+           if b lt nband then re_po=re_po+','
+       ENDFOR
+       IF fix[3] eq 1 then re_po_fit = strtrim(setup.cheb[3]+1,2) else re_po_fit = '0'
+       printf, 1, ' 4) '+re_po+'    '+re_po_fit+'   '+band_po+'       #     R_e              [Pixels]'
+
+       n_po=''
+       n_po_fit=''
+       FOR b=1,nband DO BEGIN
+           n_po = n_po+round_digit(par.n_galfit_band[b-1],2,/string)
+           if b lt nband then n_po=n_po+','
+       ENDFOR
+       IF fix[4] eq 1 then n_po_fit = strtrim(setup.cheb[4]+1,2) else n_po_fit = '0'
+       printf, 1, ' 5) '+n_po+'    '+n_po_fit+'   '+band_po+'       # Sersic exponent (deVauc=4, expdisk=1)'
+
+       q_po=''
+       q_po_fit=''
+       FOR b=1,nband DO BEGIN
+           q_po = q_po+round_digit(par.q_galfit_band[b-1],4,/string)
+           if b lt nband then q_po=q_po+','
+       ENDFOR
+       IF fix[5] eq 1 then q_po_fit = strtrim(setup.cheb[5]+1,2) else q_po_fit = '0'
+       IF setup.version eq 0 THEN str = ' 8) ' ELSE str = ' 9) '
+       printf, 1, str+q_po+'    '+q_po_fit+'   '+band_po+'       # axis ratio (b/a)'
+
+
+       pa_po=''
+       pa_po_fit=''
+       FOR b=1,nband DO BEGIN
+           pa_po = pa_po+round_digit(par.pa_galfit_band[b-1],2,/string)
+           if b lt nband then pa_po=pa_po+','
+       ENDFOR
+       IF fix[6] eq 1 then pa_po_fit = strtrim(setup.cheb[6]+1,2) else pa_po_fit = '0'
+       IF setup_version eq 0 THEN str = '9) ' ELSE str = '10) '
+       printf, 1, str+pa_po+'    '+pa_po_fit+'   '+band_po+'       # position angle (PA) [Degrees: Up=0, Left=90]'
+
+       printf, 1, ' Z) 0                  # output image (see above)'
+       printf, 1, ''
+       close, 1
+
+      dum = where(fix EQ '1', ct)
+      IF ct GT 0 THEN BEGIN
 ;write constraint file
-        openu, 1, constr_file, /append
-        printf, 1, ctr, ' n '+lo+' to '+hi
-        printf, 1, ctr, ' re 0.3 to '+strtrim(conmaxre, 2)
-        printf, 1, ctr, ' q 0.0001  to 1.'
-        printf, 1, ctr, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
-        printf, 1, ctr, ' mag 0 to 40'
-        printf, 1, ctr, ' pa -360 to 360'
-        printf, 1, ctr, ' x '+strtrim(-xmax)+' '+strtrim(xmax)
-        printf, 1, ctr, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
-        close, 1
-    ENDIF
-    ctr += 1
-ENDFOR
+         openu, 1, constr_file, /append
+         printf, 1, ctr, ' n '+lo+' to '+hi
+         printf, 1, ctr, ' re 0.3 to '+strtrim(conmaxre, 2)
+         printf, 1, ctr, ' q 0.0001  to 1.'
+         printf, 1, ctr, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
+         printf, 1, ctr, ' mag 0 to 40'
+         printf, 1, ctr, ' pa -360 to 360'
+         printf, 1, ctr, ' x '+strtrim(-xmax)+' '+strtrim(xmax)
+         printf, 1, ctr, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
+         close, 1
+      ENDIF
+      ctr += 1
+   ENDFOR
 finish:
 
 END
@@ -2439,14 +2510,14 @@ END
 PRO read_setup, setup_file, setup
 ;read in the main setup file
 ;example:
-if file_test(setup_file) eq 0 then begin
-    print, 'input file does not exist'
-    stop
-ENDIF
+   if file_test(setup_file) eq 0 then begin
+       print, 'input file does not exist'
+       stop
+   ENDIF
 
-ON_IOERROR, bad_input
+   ON_IOERROR, bad_input
 
-len_num = 4         ;length of the numbering scheme, e.g. 4 for 'A00)'
+   len_num = 4               ;length of the numbering scheme, e.g. 4 for 'A00)'
 
 setup = create_struct('files', '', $
                       'outdir', '', $
@@ -2570,18 +2641,18 @@ WHILE NOT eof(1) DO BEGIN
     readf, 1, line
     
 ;get rid of leading and trailing blanks
-    line = strtrim(line, 2)
-    
+      line = strtrim(line, 2)
+      
 ;comment or empty line encountered?
-    IF strmid(line, 0, 1) EQ '#' OR strlen(line) EQ 0 THEN CONTINUE
-    
+      IF strmid(line, 0, 1) EQ '#' OR strlen(line) EQ 0 THEN CONTINUE
+
 ;comment at end of line?
-    pos = strpos(line, '#')
-    IF pos EQ -1 THEN pos = strlen(line)
-    
-    content = strtrim(strmid(line, len_num, pos-len_num), 2)
-    
-    CASE strupcase(strmid(line, 0, len_num)) OF
+      pos = strpos(line, '#')
+      IF pos EQ -1 THEN pos = strlen(line)
+
+      content = strtrim(strmid(line, len_num, pos-len_num), 2)
+
+      CASE strupcase(strmid(line, 0, len_num)) OF
 ;CHANGE=====have to trigger bad input / proper filenames
         
         'A00)': setup.files = content
@@ -2750,146 +2821,150 @@ IF setup.cheb[0] EQ -1 THEN for n=0,n_elements(setup.cheb)-1 do setup.cheb[n] = 
 return
 
 bad_input:
-message, 'Invalid Entry in '+setup_file
+   message, 'Invalid Entry in '+setup_file
 END
 
 PRO read_image_files, setup, silent=silent
 ; reads in the image file and returns the results to galapagos
 ; count number of columns in file
-lineone = ''
-openr, 1, setup.files
-readf, 1, lineone
-close, 1
-lineone = strtrim(lineone, 2)
-columnsf = strsplit(lineone, ' ', COUNT=ncolf)      
+   lineone = ''
+   openr, 1, setup.files
+   readf, 1, lineone
+   close, 1
+   lineone = strtrim(lineone, 2)
+   columnsf = strsplit(lineone, ' ', COUNT=ncolf)      
 
 ; if number of columns eq 4 then assume 1 band survey and fits files
 ; in the table
-if ncolf eq 4 then begin
-    if not keyword_set(silent) then print, 'assuming one band dataset. Are all files within A00) fits images?'
-    
+   if ncolf eq 4 then begin
+       if not keyword_set(silent) then print, 'assuming one band dataset. Are all files within A00) fits images?'
+       
 ; read the image names and data like zeropoints, mag_offsets,...
 ; stored in setup structure
-    readcol, setup.files, images, weights, outpath, outpre, $
-      format = 'A,A,A,A', comment = '#', /silent
-    
-    nband=1
+       readcol, setup.files, images, weights, outpath, outpre, $
+         format = 'A,A,A,A', comment = '#', /silent
+
+       nband=1
+       images = strtrim(images,2)
 ; create arrays in setup needed to store all the data
-    add_tag, setup, 'images', strarr(n_elements(images),nband+1), setup2
-    setup=setup2
-    add_tag, setup, 'weights', strarr(n_elements(images),nband+1), setup2
-    setup=setup2
-    add_tag, setup, 'outpath', strarr(n_elements(images),nband+1), setup2
-    setup=setup2
-    add_tag, setup, 'outpath_band', strarr(n_elements(images),nband+1), setup2
-    setup=setup2
-    add_tag, setup, 'outpre', strarr(n_elements(images),nband+1), setup2
-    setup=setup2
-    add_tag, setup, 'nband', nband, setup2
-    setup=setup2
-    
+       add_tag, setup, 'images', strarr(n_elements(images),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'weights', strarr(n_elements(images),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'outpath', strarr(n_elements(images),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'outpath_band', strarr(n_elements(images),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'outpre', strarr(n_elements(images),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'nband', nband, setup2
+       setup=setup2
+
 ; doubling the arrays to get [*,0] SExtractor images and [*,1] fitting images
-    setup.images = [[images],[images]]
-    setup.weights = [[weights],[weights]]
-    setup.outpath = [[outpath],[outpath]]
-    setup.outpath_band = setup.outpath
-    setup.outpre = [[outpre],[outpre]]
-    
+       setup.images = [[images],[images]]
+       setup.weights = [[weights],[weights]]
+       setup.outpath = [[outpath],[outpath]]
+       setup.outpath_band = setup.outpath
+       setup.outpre = [[outpre],[outpre]]
+
 ; define additional parameters
-    add_tag, setup, 'wavelength', [0,0], setup2
-    setup=setup2
-    add_tag, setup, 'mag_offset', [0,0], setup2
-    setup=setup2
-    hlppre=setup.stamp_pre
-    setup=remove_tags(setup,'stamp_pre')
-    add_tag, setup, 'stamp_pre', [hlppre, hlppre], setup2
-    setup=setup2
-    hlpzp=setup.zp
-    setup=remove_tags(setup,'zp')
-    add_tag, setup, 'zp', [hlpzp, hlpzp], setup2
-    setup=setup2
-    hlpexp=setup.expt
-    setup=remove_tags(setup,'expt')
-    add_tag, setup, 'expt', [hlpexp, hlpexp], setup2
-    setup=setup2
-    delvarx, setup2
-    nband=1
+       add_tag, setup, 'wavelength', [0,0], setup2
+       setup=setup2
+       add_tag, setup, 'mag_offset', [0,0], setup2
+       setup=setup2
+       hlppre=setup.stamp_pre
+       setup=remove_tags(setup,'stamp_pre')
+       add_tag, setup, 'stamp_pre', [hlppre, hlppre], setup2
+       setup=setup2
+       hlpzp=setup.zp
+       setup=remove_tags(setup,'zp')
+       add_tag, setup, 'zp', [hlpzp, hlpzp], setup2
+       setup=setup2
+       hlpexp=setup.expt
+       setup=remove_tags(setup,'expt')
+       add_tag, setup, 'expt', [hlpexp, hlpexp], setup2
+       setup=setup2
+       delvarx, setup2
+       nband=1
 ; wavelength
 ; band
-endif 
+   endif 
 
 ; if number of columns eq 3 then assume multi band survey and
 ; filesnames pointing to other file lists that contain all the images.
-if ncolf eq 6 then begin
-    if not keyword_set(silent) then print, 'assuming multi-wavelength dataset. Assuming first line to be for SExtractor, rest for fitting!'
-    if setup.version lt 4 then BEGIN
-        print, 'you seem to be using mulit-wavelength data, but the GALFIT version you have specified only supports one-band data'
-        print, 'This version of galapagos needs GALFIT4 in order to be able to read out the fitting parameters (output has to be in a fits table)'
-        stop
-    ENDIF
-    readcol, setup.files, band, wavelength, mag_offset, filelist, zeropoint, exptime, $
-      format = 'A,I,F,A,F,F', comment = '#', /silent      
-    
-    nband=fix(n_elements(band)-1)
+   if ncolf eq 6 then begin
+       if not keyword_set(silent) then print, 'assuming multi-wavelength dataset. Assuming first line to be for SExtractor, rest for fitting!'
+       if setup.version lt 4 then BEGIN
+           print, 'you seem to be using mulit-wavelength data, but the GALFIT version you have specified only supports one-band data'
+           print, 'This version of galapagos needs GALFIT4 in order to be able to read out the fitting parameters (output has to be in a fits table)'
+           stop
+       ENDIF
+       readcol, setup.files, band, wavelength, mag_offset, filelist, zeropoint, exptime, $
+         format = 'A,I,F,A,F,F', comment = '#', /silent      
+
+       nband=fix(n_elements(band)-1)
 ; read first file to get number of images...
-    readcol, filelist[0], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
-      format = 'A,A,A,A', comment = '#', /silent
-    cnt=intarr(nband+1)
-    
+       readcol, filelist[0], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
+         format = 'A,A,A,A', comment = '#', /silent
+       cnt=intarr(nband+1)
+
+       hlpimages = strtrim(hlpimages,2)
 ; create arrays in setup needed to store all the data
-    add_tag, setup, 'images', strarr(n_elements(hlpimages),nband+1), setup2
-    setup=setup2
-    add_tag, setup, 'weights', strarr(n_elements(hlpimages),nband+1), setup2
-    setup=setup2
-    add_tag, setup, 'outpath', strarr(n_elements(hlpimages),nband+1), setup2
-    setup=setup2
-    add_tag, setup, 'outpath_band', strarr(n_elements(hlpimages),nband+1), setup2
-    setup=setup2
-    add_tag, setup, 'outpre', strarr(n_elements(hlpimages),nband+1), setup2
-    setup=setup2
-    add_tag, setup, 'nband', nband, setup2
-    setup=setup2
-    
+       add_tag, setup, 'images', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'weights', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'outpath', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'outpath_band', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'outpre', strarr(n_elements(hlpimages),nband+1), setup2
+       setup=setup2
+       add_tag, setup, 'nband', nband, setup2
+       setup=setup2
+
 ; define additional parameters
-    setup=remove_tags(setup,'stamp_pre')
-    add_tag, setup, 'stamp_pre', band, setup2
-    setup=setup2
-    add_tag, setup, 'wavelength', wavelength, setup2
-    setup=setup2
-    add_tag, setup, 'mag_offset', mag_offset, setup2
-    setup=setup2
-    setup=remove_tags(setup,'zp')
-    add_tag, setup, 'zp', zeropoint, setup2
-    setup=setup2
-    setup=remove_tags(setup,'expt')
-    add_tag, setup, 'expt', exptime, setup2
-    setup=setup2
-    delvarx, setup2
-    for b=0,nband do begin
-        readcol, filelist[b], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
-          format = 'A,A,A,A', comment = '#', /silent
-        cnt[b]=n_elements(hlpimages)
-        if (cnt[b] ne cnt[0]) and not keyword_set(silent) then print, 'input list '+strtrim(band[b])+' contains a wrong number of entries (tiles)'
-        if (cnt[b] ne cnt[0]) and not keyword_set(silent) then stop
-        setup.images[*,b]=hlpimages
-        setup.weights[*,b]=hlpweights
-        setup.outpre[*,b]=hlpoutpre
-        setup.outpath[*,b]=set_trailing_slash(setup.outdir)+set_trailing_slash(strtrim(hlpoutpath,2))
-        setup.outpath_band[*,b]=setup.outpath[*,b]+strtrim(band[b],2)
-    endfor 
-endif
-if ncolf ne 6 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
+       setup=remove_tags(setup,'stamp_pre')
+       add_tag, setup, 'stamp_pre', band, setup2
+       setup=setup2
+       add_tag, setup, 'wavelength', wavelength, setup2
+       setup=setup2
+       add_tag, setup, 'mag_offset', mag_offset, setup2
+       setup=setup2
+       setup=remove_tags(setup,'zp')
+       add_tag, setup, 'zp', zeropoint, setup2
+       setup=setup2
+       setup=remove_tags(setup,'expt')
+       add_tag, setup, 'expt', exptime, setup2
+       setup=setup2
+       delvarx, setup2
+       for b=0,nband do begin
+           readcol, filelist[b], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
+             format = 'A,A,A,A', comment = '#', /silent
+           cnt[b]=n_elements(hlpimages)
+           if (cnt[b] ne cnt[0]) and not keyword_set(silent) then print, 'input list '+strtrim(band[b])+' contains a wrong number of entries (tiles)'
+           if (cnt[b] ne cnt[0]) and not keyword_set(silent) then stop
+           setup.images[*,b]=hlpimages
+           setup.weights[*,b]=hlpweights
+           setup.outpre[*,b]=hlpoutpre
+           setup.outpath[*,b]=set_trailing_slash(setup.outdir)+set_trailing_slash(strtrim(hlpoutpath,2))
+           setup.outpath_band[*,b]=setup.outpath[*,b]+strtrim(band[b],2)
+       endfor 
+   endif
+   if ncolf ne 6 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
 END
 
-FUNCTION read_sersic_results, obj, nband, bd=bd
-IF file_test(obj[0]) THEN BEGIN
-    result = mrdfits(obj[0], 'FINAL_BAND',/silent)
-    res_cheb = mrdfits(obj[0], 'FINAL_CHEB',/silent)
-    fit_info = mrdfits(obj[0], 'FIT_INFO',/silent)
-    band_info = mrdfits(obj[0], 'BAND_INFO',/silent)
+FUNCTION read_sersic_results, obj, nband
+   IF file_test(obj[0]) THEN BEGIN
+       result = mrdfits(obj[0], 'FINAL_BAND',/silent)
+       res_cheb = mrdfits(obj[0], 'FINAL_CHEB',/silent)
+; using newer versions of Galfit, some informations should be read
+; from tables, not header!
+       band_info = mrdfits(obj[0], 'BAND_INFO',/silent)
+       fit_info = mrdfits(obj[0], 'FIT_INFO',/silent)
 ;       hd = headfits(obj[0], exten = nband+1)
-    comp=1
-    repeat comp = comp +1 until tag_exist(result, 'COMP'+strtrim(comp,2)+'_MAG') eq 0
+       comp=1
+       repeat comp = comp +1 until tag_exist(result, 'COMP'+strtrim(comp,2)+'_MAG') eq 0
 ; delete feedback, just in case the format of one is different,
 ; avoiding crash
     delvarx, feedback
@@ -2901,7 +2976,8 @@ IF file_test(obj[0]) THEN BEGIN
                                  'pa_galfit', result[0].COMP2_PA, 'paerr_galfit', result[0].COMP2_PA_ERR, $
                                  'x_galfit', result[0].COMP2_XC, 'xerr_galfit', result[0].COMP2_XC_ERR, $
                                  'y_galfit', result[0].COMP2_YC, 'yerr_galfit', result[0].COMP2_YC_ERR, $
-                                 'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
+                                 'psf_galfit', strtrim(band_info[0].psf), 'sky_galfit', result[0].COMP1_SKY, $
+;                                 'psf_galfit', strtrim(sxpar(hd, 'PSF_A'),2), 'sky_galfit', result[0].COMP1_SKY, $
                                  'mag_galfit_band', result.COMP2_MAG, 'magerr_galfit_band',result.COMP2_MAG_ERR, $
                                  're_galfit_band', result.COMP2_RE, 'reerr_galfit_band', result.COMP2_RE_ERR, $
                                  'n_galfit_band', result.COMP2_N, 'nerr_galfit_band' ,result.COMP2_N_ERR, $
@@ -2917,18 +2993,33 @@ IF file_test(obj[0]) THEN BEGIN
                                  'pa_galfit_cheb', res_cheb.COMP2_PA, 'paerr_galfit_cheb', res_cheb.COMP2_PA_ERR, $
                                  'x_galfit_cheb', res_cheb.COMP2_XC, 'xerr_galfit_cheb', res_cheb.COMP2_XC_ERR, $
                                  'y_galfit_cheb', res_cheb.COMP2_YC, 'yerr_galfit_cheb', res_cheb.COMP2_YC_ERR, $
-                                 'sky_galfit_cheb', res_cheb.COMP1_SKY, $
+                                'sky_galfit_cheb', res_cheb.COMP1_SKY, $
+                                'initfile', strtrim(fit_info.initfile,2), $
+                                'constrnt', strtrim(fit_info.constrnt,2), $
+                                'fitsect', strtrim(fit_info.fitsect,2), $
+                                'convbox', strtrim(fit_info.convbox,2), $
                                  'psf_galfit_band', strtrim(band_info.psf, 2), $
                                  'chisq_galfit', fit_info.chisq, $
                                  'ndof_galfit', fit_info.ndof, $
                                  'nfree_galfit', fit_info.nfree, $
                                  'nfix_galfit', fit_info.nfix, $
+                                'cputime_setup_galfit', fit_info.cputime_setup, $
+                                'cputime_fit_galfit', fit_info.cputime_fit, $
+                                'cputime_total_galfit', fit_info.cputime_total, $
                                  'chi2nu_galfit', fit_info.chi2nu, $
-                                 'iter', fit_info.niter, $
-                                 'neigh_galfit', comp-3, 'flag_galfit', 2)
-; TO BE ADDED:
-; fitting time
-; NEIGH_GALFIT HAS TO BE ADAPTED! WHY??
+                                'niter_galfit', fit_info.niter, $
+                                'version_galfit', fit_info.version, $
+                                'firstcon_galfit', fit_info.firstcon, $
+                                'lastcon_galfit', fit_info.lastcon, $
+                                'neigh_galfit', comp-3, 'flag_galfit', 2)
+;; old version for old GALFIT
+;                                'psf_galfit_band', strtrim(sxpar(hd, 'PSF'), 2), $
+;                                'chisq_galfit', float(strmid(sxpar(hd, 'CHISQ'),2)), $
+;                                'ndof_galfit', float(strmid(sxpar(hd, 'NDOF'),2)), $
+;                                'nfree_galfit', float(strmid(sxpar(hd, 'NFREE'),2)), $
+;                                'nfix_galfit', float(strmid(sxpar(hd, 'NFIX'),2)), $
+;                                'chi2nu_galfit', float(strmid(sxpar(hd, 'CHI2NU'),2)), $
+;                                'neigh_galfit', comp-3, 'flag_galfit', 2)
     ENDIF
     if keyword_set(bd) then begin
         feedback = create_struct('mag_galfit_d', result[0].COMP2_MAG, 'magerr_galfit_d',result[0].COMP2_MAG_ERR, $
@@ -2944,7 +3035,8 @@ IF file_test(obj[0]) THEN BEGIN
                                  'q_galfit_b', result[0].COMP3_AR, 'qerr_galfit_b', result[0].COMP3_AR_ERR, $
                                  'pa_galfit_b', result[0].COMP3_PA, 'paerr_galfit_b', result[0].COMP3_PA_ERR, $
                                  'x_galfit_b', result[0].COMP3_XC, 'xerr_galfit_b', result[0].COMP3_XC_ERR, $
-                                 'y_galfit_b', result[0].COMP3_YC, 'yerr_galfit_b', result[0].COMP3_YC_ERR, $                                    'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
+                                 'y_galfit_b', result[0].COMP3_YC, 'yerr_galfit_b', result[0].COMP3_YC_ERR, $
+                                 'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
                                  'mag_galfit_band_d', result.COMP2_MAG, 'magerr_galfit_band_d',result.COMP2_MAG_ERR, $
                                  're_galfit_band_d', result.COMP2_RE, 'reerr_galfit_band_d', result.COMP2_RE_ERR, $
                                  'n_galfit_band_d', result.COMP2_N, 'nerr_galfit_band_d' ,result.COMP2_N_ERR, $
@@ -2975,17 +3067,25 @@ IF file_test(obj[0]) THEN BEGIN
                                  'x_galfit_cheb_b', res_cheb.COMP3_XC, 'xerr_galfit_cheb_b', res_cheb.COMP3_XC_ERR, $
                                  'y_galfit_cheb_b', res_cheb.COMP3_YC, 'yerr_galfit_cheb_b', res_cheb.COMP3_YC_ERR, $
                                  'sky_galfit_cheb', res_cheb.COMP1_SKY, $
+                                'initfile_bd', strtrim(fit_info.initfile,2), $
                                  'psf_galfit_band', strtrim(band_info.psf, 2), $
+                                'constrnt_bd', strtrim(fit_info.constrnt,2), $
                                  'chisq_galfit_bd', fit_info.chisq, $
                                  'ndof_galfit_bd', fit_info.ndof, $
                                  'nfree_galfit_bd', fit_info.nfree, $
                                  'nfix_galfit_bd', fit_info.nfix, $
+                                'cputime_setup_galfit_bd', fit_info.cputime_setup, $
+                                'cputime_fit_galfit_bd', fit_info.cputime_fit, $
+                                'cputime_total_galfit_bd', fit_info.cputime_total, $
                                  'chi2nu_galfit_bd', fit_info.chi2nu, $
-                                 'iter_bd', fit_info.niter, $
-                                 'neigh_galfit_bd', comp-4, 'flag_galfit_bd', 2)
+                                'niter_galfit_bd', fit_info.niter, $
+                                'version_galfit_bd', fit_info.version, $
+                                'firstcon_galfit_bd', fit_info.firstcon, $
+                                'lastcon_galfit_bd', fit_info.lastcon, $
+                                'neigh_galfit_bd', comp-4, 'flag_galfit_bd', 2)
 ; TO BE ADDED:
 ; fitting time
-; NEIGH_GALFIT HAS TO BE ADAPTED! WHY??
+; NEIGH_GALFIT HAS TO BE ADAPTED! WHY?? To come from the header?
     ENDIF
     
 ENDIF ELSE BEGIN
@@ -3018,16 +3118,25 @@ ENDIF ELSE BEGIN
                                  'y_galfit_cheb', fltarr(nband), 'yerr_galfit_cheb', fltarr(nband)+99999., $
                                  'sky_galfit_cheb', fltarr(nband)-999., $
                                  'psf_galfit_band', psf, $
-                                 'chisq_galfit', -99., $
-                                 'ndof_galfit', -99l, $
-                                 'nfree_galfit', -99l, $
-                                 'nfix_galfit', -99l, $
-                                 'chi2nu_galfit', -99., $
-                                 'iter', -99, $
-                                 'neigh_galfit', -99, 'flag_galfit', 1)
-                                ; TO BE ADDED:
-; fitting time
-; NEIGH_GALFIT HAS TO BE ADAPTED!
+                                'initfile', ' ', $
+                                'constrnt', ' ', $
+                                'fitsect', ' ', $
+                                'convbox', ' ', $
+                                'psf_galfit_band', strarr(nband), $
+                                'chisq_galfit', -99., $
+                                'ndof_galfit', -99l, $
+                                'nfree_galfit', -99l, $
+                                'nfix_galfit', -99l, $
+                                'cputime_setup_galfit', -99., $
+                                'cputime_fit_galfit', -99., $
+                                'cputime_total_galfit', -99., $
+                                'chi2nu_galfit', -99., $
+                                'niter_galfit', -99, $
+                                'version_galfit', 'crash', $
+                                'firstcon_galfit', -99, $
+                                'lastcon_galfit', -99, $
+                                'neigh_galfit', -99, 'flag_galfit', 1)
+
     ENDIF
     
     if keyword_set(bd) then begin
@@ -3077,23 +3186,25 @@ ENDIF ELSE BEGIN
                                  'y_galfit_cheb_b', fltarr(nband), 'yerr_galfit_cheb_b', fltarr(nband)+99999., $
                                  'sky_galfit_cheb', fltarr(nband)-999., $
                                  'psf_galfit_band', psf, $
-                                 'chisq_galfit_bd', -99., $
-                                 'ndof_galfit_bd', -99l, $
-                                 'nfree_galfit_bd', -99l, $
-                                 'nfix_galfit_bd', -99l, $
-                                 'chi2nu_galfit_bd', -99., $
-                                 'iter_bd', -99, $
-                                 'neigh_galfit_bd', -99, 'flag_galfit_bd', 1)
-                                ; TO BE ADDED:
-; fitting time
-; NEIGH_GALFIT HAS TO BE ADAPTED!
+                                'initfile_bd', ' ', $
+                                'constrnt_bd', ' ', $
+                                'chisq_galfit_bd', -99., $
+                                'ndof_galfit_bd', -99l, $
+                                'nfree_galfit_bd', -99l, $
+                                'nfix_galfit_bd', -99l, $
+                                'cputime_setup_galfit_bd', -99., $
+                                'cputime_fit_galfit_bd', -99., $
+                                'cputime_total_galfit_bd', -99., $
+                                'chi2nu_galfit_bd', -99., $
+                                'niter_galfit_bd', -99, $
+                                'version_galfit_bd', 'crash', $
+                                'firstcon_galfit_bd', -99, $
+                                'lastcon_galfit_bd', -99, $
+                                'neigh_galfit_bd', -99, 'flag_galfit', 1)
     ENDIF
     
 ENDELSE
 return, feedback
-;[mag, magerr, re, reerr, n, nerr, q, qerr, pa, paerr, $
-;            x, xerr, y, yerr, sky, neigh_galfit, chisq_galfit, ndof_galfit, $
-;            nfree_galfit, nfix_galfit, chi2nu_galfit]
 END
 
 FUNCTION read_sersic_results_old_galfit, obj, bd=bd
@@ -3294,19 +3405,52 @@ return, feedback
 END
 
 PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = final, bd=bd
- ; HAS TO BE CHANGED FOR POSSIBILITY FOR B/D DECOMPOSITION
+; HAS TO BE CHANGED FOR POSSIBILITY FOR B/D DECOMPOSITION
+if not file_test(out_file) then begin
+; SHORT TERM SOLUTION! CHECK THAT SAV FILE DOESN'T EXIST, EITHER!
+; LONG TERM SOLUTION: MAKE SURE THAT BRIDGE DOESN"T CRASH!! EVER!
+; WHY DO WE SET BACK FLAG_GALFIT IN THE FIRST PLACE??????
+    if not file_test(obj_file) and not file_test(out_file+'.sav') then begin        
+; object has not yet been started. Not strictly speaking true, could
+; be on sky determination.
+        table[i].flag_galfit = 0
+    endif else begin
+; object has been started and crashed
+        table[i].flag_galfit = 1
+; read all sky files
+       for b=1,nband do begin
+; check whether sky file exists first
+           if file_test(sky_file[b]) eq 1 then begin
+               openr, 99, sky_file[b]
+               readf, 99, sky, dsky, minrad, maxrad, flag
+               close, 99
+               fittab[i].sky_galfit_band[b-1] = round_digit(sky,3)
+               if b eq 1 then $
+                   fittab[i].sky_galfit = round_digit(sky,3)
+           endif
+       endfor
+; define standard values!
+   ENDELSE    
+ENDIF
+
+IF file_test(out_file) THEN BEGIN
+    if keyword_set(final) then begin
+        table[i].org_image = table[i].tile
+        table[i].org_image_band = table[i].tile
+    ENDIF
+    if not keyword_set(final) then table[i].org_image = table[i].frame[0]
+    
+    table[i].flag_galfit=2
+    table[i].file_galfit = out_file
 forward_function read_sersic_results
 forward_function read_sersic_results_old_galfit
-; this routine takes care of objects with non-existent output files
-; (e.g. crashed)
-IF setup.version ge 4 then res = read_sersic_results(out_file, nband, bd=bd)
-IF setup.version lt 4 then res = read_sersic_results_old_galfit(out_file, bd=bd)      
-name_table = tag_names(table)
-name_res = tag_names(res)
-
-for j=0,n_elements(name_res)-1 do begin
-    tagidx=where(name_table eq name_res[j], ct)
-    IF ct GT 0 THEN BEGIN
+    IF setup.version ge 4 then res = read_sersic_results(out_file,nband)
+    IF setup.version lt 4 then res = read_sersic_results_old_galfit(out_file)      
+    name_table = tag_names(table)
+    name_res = tag_names(res)
+    
+    for j=0,n_elements(name_res)-1 do begin
+        tagidx=where(name_fittab eq name_res[j], ct)
         type=size(res.(j))
 ; if keyword is INT
         if type[1] eq 2 or type[1] eq 3 then begin
@@ -3330,8 +3474,8 @@ for j=0,n_elements(name_res)-1 do begin
         ENDIF
 ;          if ct gt 0 then print, 'changed'
         table[i].(tagidx) = res.(j)
-    ENDIF
-ENDFOR
+     ENDIF
+ENDFOR  
 
 if not keyword_set(bd) then table[i].flag_galfit = res.flag_galfit    
 if keyword_set(bd) then table[i].flag_galfit_bd = res.flag_galfit_bd    
@@ -3391,21 +3535,21 @@ ENDELSE
 END
 
 PRO update_log, logfile, message
-openw, lun, logfile, /get_lun, /append
-printf, lun, message
-free_lun, lun
+   openw, lun, logfile, /get_lun, /append
+   printf, lun, message
+   free_lun, lun
 END
 
 PRO start_log, logfile, message
-openw, lun, logfile, /get_lun
-printf, lun, message
-free_lun, lun
+   openw, lun, logfile, /get_lun
+   printf, lun, message
+   free_lun, lun
 END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
-start=systime(0)
-print, 'start: '+start
-IF n_params() LE 1 THEN gala_pro = 'galapagos'
+   start=systime(0)
+   print, 'start: '+start
+   IF n_params() LE 1 THEN gala_pro = 'galapagos'
 ;   gala_pro = '/home/boris/IDL/gala/galapagos.pro'
 ;   logfile = '/data/gama/galapagos_multi_wl_galapagos.log'
 ; .run galapagos.pro
@@ -3413,10 +3557,10 @@ IF n_params() LE 1 THEN gala_pro = 'galapagos'
 ;  galapagos,'~/IDL/megamorph/gala_setup/gala.gama_set3.2_test'
 ;==============================================================================
 ;main input: location of the setup file
-IF n_params() LT 1 THEN BEGIN
-    setup_file = ''
-    read, prompt = 'Location of setup file: ', setup_file
-ENDIF
+   IF n_params() LT 1 THEN BEGIN
+      setup_file = ''
+      read, prompt = 'Location of setup file: ', setup_file
+   ENDIF
 ;==============================================================================
 ;read in the setup file
 read_setup, setup_file, setup
@@ -3502,33 +3646,34 @@ IF keyword_set(logfile) THEN $
 define_addcol, addcol, nband, bd_fit = setup.bdcat
 ;==============================================================================
 ;run SExtractor
-IF setup.dosex THEN BEGIN
-    IF file_test(setup.exclude) THEN $
-      readcol, setup.exclude, exclude_files, exclude_x, exclude_y, $
-      format = 'A,F,F', /silent $
-    ELSE exclude_files = ''
-    
-    FOR i=0ul, nframes-1 DO BEGIN
-        j = where(exclude_files EQ images[i,0], ct)
-        IF ct GT 0 THEN $
-          exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] $
-        ELSE exclude = [[-1, -1]]
-        
-        run_sextractor, setup.sexexe, setup.sexout, setup.zp, $
-          images[i,0], weights[i,0], $
-          setup.cold, $
-          outpath_file[i,0]+setup.coldcat, $
-          outpath_file[i,0]+setup.coldseg, $
-          setup.hot, $
-          outpath_file[i,0]+setup.hotcat, $
-          outpath_file[i,0]+setup.hotseg, $
-          setup.enlarge, $
-          outpath_file[i,0]+setup.outcat, $
-          outpath_file[i,0]+setup.outseg, $
-          outpath_file[i,0]+setup.outparam, $
-          outpath_file[i,0]+setup.check, $
-          setup.chktype, exclude, setup.exclude_rad, $
-          outonly = setup.outonly
+   IF setup.dosex THEN BEGIN
+       print, 'starting SExtractor: '+systime(0)
+       IF file_test(setup.exclude) THEN $
+         readcol, setup.exclude, exclude_files, exclude_x, exclude_y, $
+         format = 'A,F,F', /silent $
+       ELSE exclude_files = ''
+       
+       FOR i=0ul, nframes-1 DO BEGIN
+           j = where(strtrim(exclude_files,2) EQ strtrim(images[i,0],2), ct)
+           IF ct GT 0 THEN begin
+               exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] 
+           endif Else exclude = [[-1, -1]]
+           
+           run_sextractor, setup.sexexe, setup.sexout, setup.zp, $
+             images[i,0], weights[i,0], $
+             setup.cold, $
+             outpath_file[i,0]+setup.coldcat, $
+             outpath_file[i,0]+setup.coldseg, $
+             setup.hot, $
+             outpath_file[i,0]+setup.hotcat, $
+             outpath_file[i,0]+setup.hotseg, $
+             setup.enlarge, $
+             outpath_file[i,0]+setup.outcat, $
+             outpath_file[i,0]+setup.outseg, $
+             outpath_file[i,0]+setup.outparam, $
+             outpath_file[i,0]+setup.check, $
+             setup.chktype, exclude, setup.exclude_rad, $
+             outonly = setup.outonly
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ;         sex2ds9reg, outpath_pre[i]+setup.outcat, outpath_pre[i]+ $
 ;                     setup.outparam, outpath_pre[i]+'reg', 0.5, tag = outpre[i]
@@ -3565,52 +3710,149 @@ IF setup.dosex THEN BEGIN
 ;         print, 'Number of green sources: ', ncold
 ;         print, 'Number of  red  sources: ', nhot
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    ENDFOR
-    
+       ENDFOR
+       
 ;combine all SExtractor catalogues
-    merge_sex_catalogues, outpath_file[*,0]+setup.outcat, $
-      outpath_file[*,0]+setup.outparam, images[*,0], neighbours, $
-      setup.outdir+setup.sexcomb
-    sex2ds9reg, setup.outdir+setup.sexcomb, outpath_file[0,0]+setup.outparam, $
-      setup.outdir+'sexcomb.reg', 10, color='green', tag = 'comb'
-    IF keyword_set(logfile) THEN $
-      update_log, logfile, 'SExtraction... done!'
-ENDIF
+       merge_sex_catalogues, outpath_file[*,0]+setup.outcat, $
+         outpath_file[*,0]+setup.outparam, images[*,0], neighbours, $
+         setup.outdir+setup.sexcomb
+       sex2ds9reg, setup.outdir+setup.sexcomb, outpath_file[0,0]+setup.outparam, $
+         setup.outdir+'sexcomb.reg', 10, color='green', tag = 'comb'
+       IF keyword_set(logfile) THEN $
+         update_log, logfile, 'SExtraction... done!'
+       print, 'finished SExtractor: '+systime(0)
+   ENDIF
 ;==============================================================================
 ;create postage stamp description files 
-IF setup.dostamps THEN BEGIN
-    FOR i=0ul, nframes-1 DO BEGIN
-        print, 'cutting postages for image '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
-        create_stamp_file, images[i,0], $
-          outpath_file[i,0]+setup.outcat, $
-          outpath_file[i,0]+setup.outparam, $
-          outpath_file_no_band[i,0]+setup.stampfile, $
-          setup.stampsize
-        FOR b=1,nband do begin
-            print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
-            cut_stamps, images[i,b], $
-              outpath_file_no_band[i,0]+setup.stampfile, $
-              outpath_band[i,b], $
-              outpre[i,b], '_'+setup.stamp_pre[b]
-        ENDFOR
-    ENDFOR
-;create skymap files 
-    FOR i=0ul, nframes-1 DO BEGIN
-        print, 'creating skymap for image '+strtrim(outpath_file_no_band[i,0],2)
-        FOR b=1,nband do begin
-            print, 'creating skymap for '+strtrim(setup.stamp_pre[b],2)+'-band'
-            create_skymap, weights[i,b], $
-              outpath_file[i,0]+setup.outseg, $
-              outpath_file[i,0]+setup.outcat, $
-              outpath_file[i,0]+setup.outparam, $
-              outpath_file_no_band[i,b]+setup.skymap, $
-              setup.skyscl, setup.skyoff
-        ENDFOR
-    ENDFOR
-    IF keyword_set(logfile) THEN $
-      update_log, logfile, 'Postage stamps... done!'
-ENDIF 
+   IF setup.dostamps THEN BEGIN
+; use bridge to speed up process
+;create object array for child processes 
+; create maximum max_proc parallels. Anything more blocks the harddrive,
+; limiting factor seems to be writing speed of disk.
+       max_proc = 4
+       post_bridge_arr = objarr(setup.max_proc <max_proc)
+;allow main to see which process is free
+       post_bridge_use = bytarr(setup.max_proc <max_proc)
+;initialise every bridge (specify output property to allow debugging)
+       FOR i=0, setup.max_proc-1 <max_proc-1 DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+       FOR i=0, setup.max_proc-1 <max_proc-1 DO BEGIN
+           post_bridge_arr[i]->execute, 'astrolib'
+           post_bridge_arr[i]->execute, '.r '+gala_pro
+       ENDFOR
+      
+       done_cnt=0
+       i=0
+       REPEAT BEGIN
+;get status of bridge elements
+           FOR l=0, setup.max_proc-1 <max_proc-1 DO post_bridge_use[l] = post_bridge_arr[l]->status()
+           
+;check for free bridges
+           free = where(post_bridge_use eq 0, ct)
 
+           IF ct GT 0 and done_cnt ne nframes THEN BEGIN
+;at least one bridge is free --> start newobject
+;the available bridge is free[0]
+               print, 'cutting postages for images '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
+               save, i, images, outpath_file, setup, outpath_file_no_band, outpath_band, $
+                 outpre, nband, filename=outpath_file_no_band[i,0]+setup.stampfile+'.sav'
+               IF setup.max_proc <max_proc GT 1 THEN BEGIN
+                   post_bridge_arr[free[0]]->execute, $
+                     'stamp_file_bridge, "'+outpath_file_no_band[i,0]+setup.stampfile+'.sav"', /nowait
+               ENDIF ELSE BEGIN
+                   stamp_file_bridge, outpath_file_no_band[i,0]+setup.stampfile+'.sav'
+               ENDELSE
+               done_cnt = done_cnt+1
+               i=i+1
+               wait, 1
+;switch to next object
+           ENDIF ELSE BEGIN
+;all bridges are busy --> wait
+;wait, 1
+               wait, 1
+           ENDELSE
+;stop when all done and no bridge in use any more
+       ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
+       
+; original instead of bridge mode
+;               create_stamp_file, images[i,0], $
+;                 outpath_file[i,0]+setup.outcat, $
+;                 outpath_file[i,0]+setup.outparam, $
+;                 outpath_file_no_band[i,0]+setup.stampfile, $
+;                 setup.stampsize, setup
+;               FOR b=1,nband do begin
+;;               print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
+;                   cut_stamps, images[i,b], $
+;                     outpath_file_no_band[i,0]+setup.stampfile, $
+;                     outpath_band[i,b], $
+;                     outpre[i,b], '_'+setup.stamp_pre[b]
+;               ENDFOR
+;           ENDIF
+;       ENDFOR
+       
+; kill bridge, make new one!
+       IF n_elements(post_bridge_arr) GT 0 THEN obj_destroy, post_bridge_arr
+
+       post_bridge_arr = objarr(setup.max_proc)
+;allow main to see which process is free
+       post_bridge_use = bytarr(setup.max_proc)
+;initialise every bridge (specify output property to allow debugging)
+       FOR i=0, setup.max_proc-1 DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+       FOR i=0, setup.max_proc-1 DO BEGIN
+           post_bridge_arr[i]->execute, 'astrolib'
+           post_bridge_arr[i]->execute, '.r '+gala_pro
+       ENDFOR
+;create skymap files using bridge
+       done_cnt=0
+       i=0
+       REPEAT BEGIN
+;get status of bridge elements
+           FOR l=0, setup.max_proc-1 DO post_bridge_use[l] = post_bridge_arr[l]->status()
+           
+;check for free bridges
+           free = where(post_bridge_use eq 0, ct)
+           
+           IF ct GT 0 and done_cnt ne nframes THEN BEGIN
+;at least one bridge is free --> start newobject
+;the available bridge is free[0]
+               print, 'creating skymaps for images '+strtrim(outpath_file_no_band[i,0],2)
+               save, i, weights, outpath_file, setup, outpath_file_no_band, nband, filename=outpath_file_no_band[i,0]+'skymap.sav'
+               IF setup.max_proc GT 1 THEN BEGIN
+                   post_bridge_arr[free[0]]->execute, $
+                     'skymap_bridge, "'+outpath_file_no_band[i,0]+'skymap.sav"', /nowait
+               ENDIF ELSE BEGIN
+                   skymap_bridge, outpath_file_no_band[i,0]+'skymap.sav'
+               ENDELSE
+               done_cnt = done_cnt+1
+               i=i+1
+;switch to next object
+           ENDIF ELSE BEGIN
+;all bridges are busy --> wait
+               wait, 1
+           ENDELSE
+;stop when all done and no bridge in use any more
+       ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
+       
+;original version (no bridge used)
+;       FOR i=0ul, nframes-1 DO BEGIN
+;           print, 'creating skymaps for images '+strtrim(outpath_file_no_band[i,0],2)
+;           FOR b=1,nband do begin
+;;               print, 'creating skymap for '+strtrim(setup.stamp_pre[b],2)+'-band'
+;               create_skymap, weights[i,b], $
+;                 outpath_file[i,0]+setup.outseg, $
+;                 outpath_file[i,0]+setup.outcat, $
+;                 outpath_file[i,0]+setup.outparam, $
+;                 outpath_file_no_band[i,b]+setup.stamp_pre[b]+'.'+setup.skymap, $
+;                 setup.skyscl, setup.skyoff
+;           ENDFOR
+;       ENDFOR
+       
+       
+       IF n_elements(post_bridge_arr) GT 0 THEN obj_destroy, post_bridge_arr
+       
+       IF keyword_set(logfile) THEN $
+         update_log, logfile, 'Postage stamps... done!'
+       print, 'finished cutting postage stamps: '+systime(0)
+   ENDIF 
 ;==============================================================================
 IF keyword_set(logfile) THEN $
   update_log, logfile, 'Setting up output catalogue...'
@@ -3815,25 +4057,25 @@ loopstart2:
                       table[blocked[1:n_elements(blocked)-1]].delta_j2000, dist_block
                     if n_elements(blocked) eq 1 then dist_block = 2*setup.min_dist
 ; can be simplified when the plots are taken out!
-                    IF min(dist) LT setup.min_dist or min(dist_block) lt setup.min_dist_block THEN BEGIN
-                        blocked = [[blocked],todo[ob]]
-                    ENDIF
-                    
-                    ob++
-                    if ob eq n_elements(todo) and $
-                      (min(dist) lt setup.min_dist or min(dist_block) lt setup.min_dist_block) then begin
-                        wait, 1
-                        ob=0l
-                        print, 'starting over'
-                        goto, loopstart2
-                    ENDIF
-                    
-                ENDREP UNTIL (min(dist) gt setup.min_dist and min(dist_block) gt setup.min_dist_block) or ob ge n_elements(todo)-1
-                IF min(dist) LT setup.min_dist or min(dist_block) lt setup.min_dist_block THEN CONTINUE
-            ENDIF
-            ob=ob-1>0
-            cur=todo[ob]
-            
+                      IF min(dist) LT setup.min_dist or min(dist_block) lt setup.min_dist_block THEN BEGIN
+                          blocked = [[blocked],todo[ob]]
+                      ENDIF
+                      
+                      ob++
+                      if ob eq n_elements(todo) and $
+                        (min(dist) lt setup.min_dist or min(dist_block) lt setup.min_dist_block) then begin
+                          wait, 1
+                          ob=0l
+;                          print, 'starting over'
+                          goto, loopstart2
+                      ENDIF
+                      
+                  ENDREP UNTIL (min(dist) gt setup.min_dist and min(dist_block) gt setup.min_dist_block) or ob ge n_elements(todo)-1
+                  IF min(dist) LT setup.min_dist or min(dist_block) lt setup.min_dist_block THEN CONTINUE
+              ENDIF
+              ob = ob-1>0
+              cur = todo[ob]
+              
 ; check whether this object has already been done, if so, read in
 ; result
             ct = 0 
@@ -3907,62 +4149,74 @@ loopstart2:
 ;            delvarx, randxxx 
             seed=table[cur].number
 ; create sav file for gala_bridge to read in
-; OLD FILE: FITTAB SAVED, TABLE READ IN IN GALA_BRIDGE! WHY??
-            save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
-              sky_file, stamp_param_file, mask_file, im_file, obj_file, $
-              constr_file, out_file, table, nband, orgpath_pre, outpath_file, $
-              outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
-              orgpath_band, orgpath_file, seed,$
-              filename=out_file+'.sav'
-            
-            IF setup.max_proc GT 1 THEN BEGIN
-                IF keyword_set(logfile) THEN $
-                  update_log, logfile, 'Starting new bridge... ('+out_file+')'
-; print, 'starting new object at '+systime(0)
-;                bridge_arr[free[0]]->execute, 'astrolib'
-;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
-;                bridge_arr[free[0]]->execute, '.r '+gala_pro
-                bridge_arr[free[0]]->execute, $
-                  'gala_bridge, "'+out_file+'.sav"', /nowait
-            ENDIF ELSE BEGIN
-                IF keyword_set(logfile) THEN $
-                  update_log, logfile, 'Starting next object... ('+out_file+')'
-                cd, orgpath[idx,0]
-                gala_bridge, out_file+'.sav'
-                file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
-                  /allow_nonexistent, /noexpand_path
-            ENDELSE
+; writing out the fittab into the sav file is HUGE for big surveys!
+
+; USE 'NEIGHBOURS' TO CUT DOWN TABLE SIZE OF FITTAB!!
+; cutting doen the fit_table doesnt seem to be a problem. No
+; pre-defined indices are used on it in the bridge.
+; but there's still the table that is being read in in the bridge
+; itself!
+
+;select part of table with frames neighbouring the current frame;
+              int_obj = where(table.frame[0] EQ table[cur].frame[0])
+              
+              FOR i=0ul, n_elements(neighbours[*, idx])-1 DO BEGIN
+                  tabi = where(table.frame[0] EQ neighbours[i, idx[0]], ct)
+                  IF ct GT 0 THEN int_obj = [int_obj, tabi]
+              ENDFOR
+              save_table = table[int_obj]
+; find new values of [cur] and 
+; [idx] will stay the same because it's not the object, but the tile it is on!
+              save_cur = where(save_fittab.frame[0] eq table[cur].frame[0] and save_fittab.number eq table[cur].number)
+              save_cur = save_cur[0]
+
+              save, save_cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
+                sky_file, stamp_param_file, mask_file, im_file, obj_file, $
+                constr_file, out_file, save_table, nband, orgpath_pre, outpath_file, $
+                outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
+                orgpath_band, orgpath_file, seed,$
+                filename=out_file+'.sav'
+              
+              IF setup.max_proc GT 1 THEN BEGIN
+                  IF keyword_set(logfile) THEN $
+                    update_log, logfile, 'Starting new bridge... ('+out_file+')'
+                  bridge_arr[free[0]]->execute, $
+                    'gala_bridge, "'+out_file+'.sav"', /nowait
+              ENDIF ELSE BEGIN
+                  IF keyword_set(logfile) THEN $
+                    update_log, logfile, 'Starting next object... ('+out_file+')'
+                  cd, orgpath[idx,0]
+                  gala_bridge, out_file+'.sav'
+                  file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
+                    /allow_nonexistent, /noexpand_path
+              ENDELSE
 ;switch to next object
         ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
-            wait, 1
-            
-; FOR TESTING PURPOSES ONLY!!!
-;; kill all process that have been running for more than 3 hours
-;              countloop=countloop+1
-;              if countloop mod 100 eq 0 then begin
-;                  print, 'trying to kill long running galfits at '+systime(0)
-;                  print, 'ps -uboris -o pid,comm,bsdtime | grep galfit | awk "{split($3, t, ":"); m = int(t[1]); if (t > 60) print $1}" | xargs kill'
-;                                                                               
-;              ENDIF
-            
-        ENDELSE
-        
+              wait, 2
+; kill all processes that have been running longer than a certain
+; time. Not fully automated yet, needs to use input value for
+; time_limit and name of galfit task
+              time_limit = 150
+              kill_galfit, 'galfitm-0.1.2.1', time_limit
+
+          ENDELSE
+          
 loopend:
 ;stop when all done and no bridge in use any more
-    ENDREP UNTIL todo[0] eq -1 AND total(bridge_use) EQ 0
-    
+      ENDREP UNTIL todo[0] eq -1 AND total(bridge_use) EQ 0
+      
 ;have to read in the last batch of objects
-    remain = where(bridge_obj ge 0, ct)
-    IF ct GT 0 THEN BEGIN
-        FOR i=0, ct-1 DO BEGIN
+      remain = where(bridge_obj ge 0, ct)
+      IF ct GT 0 THEN BEGIN
+         FOR i=0, ct-1 DO BEGIN
             idx = where(table[bridge_obj[remain[i]]].frame[0] EQ orgim[*,0])
             objnum = round_digit(table[bridge_obj[remain[i]]].number, 0, /str)
-            obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
-            out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
+            obj_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.obj)[0]
+            out_file = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.galfit_out)[0]
             sky_file = strarr(nband+1)
             for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
-            
+           
             if keyword_set(plot) then begin
                 plots, table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, psym=1, col=135, thick=2, symsize=2
                 tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
@@ -4237,80 +4491,74 @@ loopstart2_bd:
 ;galfit output path
             out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.galfit_out)[0]
 ;sky summary file
-            sky_file = strarr(nband+1)
-            for q=1,nband do sky_file[q] = (outpath_galfit[idx]+outpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
-            
-; choose closest PSF according to RA & DEC and subtract filename from structure 'psf_struct'
-; read in chosen_psf into 'psf', filename in chosen_psf_file   
-            choose_psf, table[cur].alpha_j2000, table[cur].delta_j2000, $
-              psf_struct, table[cur].frame, chosen_psf_file, nband
-            
-; change seed for random in getsky_loop
-;            randxxx=randomu(seed,1)
-;            delvarx, randxxx 
-            seed=table[cur].number
-; create sav file for gala_bridge to read in
-            save, cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
-              sky_file, stamp_param_file, mask_file, im_file, obj_file, $
-              constr_file, out_file, table, nband, orgpath_pre, outpath_file, $
-              outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
-              orgpath_band, orgpath_file, seed,$
-              filename=out_file+'.sav'
-            
-            IF setup.max_proc GT 1 THEN BEGIN
-                IF keyword_set(logfile) THEN $
-                  update_log, logfile, 'Starting new bridge... ('+out_file+')'
-; print, 'starting new object at '+systime(0)
-                bridge_arr[free[0]]->execute, 'astrolib'
-                bridge_arr[free[0]]->execute, '.r '+gala_pro
-                bridge_arr[free[0]]->execute, $
-                  'gala_bridge, "'+out_file+'.sav", /bd_fit', /nowait
-            ENDIF ELSE BEGIN
-                IF keyword_set(logfile) THEN $
-                  update_log, logfile, 'Starting next object... ('+out_file+')'
-                cd, orgpath[idx,0]
-                gala_bridge, out_file+'.bd.sav'
-                file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
-                  /allow_nonexistent, /noexpand_path
-            ENDELSE
-;switch to next object
-        ENDIF ELSE BEGIN
-;all bridges are busy --> wait 
-            wait, 1
-            
-        ENDELSE
-        
-loopend_bd:
-;stop when all done and no bridge in use any more
-    ENDREP UNTIL todo[0] eq -1 AND total(bridge_use) EQ 0
-    
-;have to read in the last batch of objects
-    remain = where(bridge_obj ge 0, ct)
-    IF ct GT 0 THEN BEGIN
-        FOR i=0, ct-1 DO BEGIN
-            idx = where(table[bridge_obj[remain[i]]].frame[0] EQ orgim[*,0])
-            objnum = round_digit(table[bridge_obj[remain[i]]].number, 0, /str)
-            obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.obj)[0]
-            out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.galfit_out)[0]
-            sky_file = strarr(nband+1)
-            for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
-            
-            if keyword_set(plot) then begin
-                plots, table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, psym=1, col=135, thick=2, symsize=2
-                tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
-                  table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, col=0,/data
-            ENDIF
-            bridge_obj[remain[i]] = -1
-            bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
-            
-;check if file was done successfully or bombed
-; if succesfully, fill fitting parameters into fittab
-            update_table, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup, /bd
-;print, 'out file exists -- fittab updated'
-;else output file does not exist --> bombed
-        ENDFOR
-    ENDIF
-ENDIF
+              sky_file = strarr(nband+1)
+              for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,1]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+              
+              IF first THEN BEGIN
+; only to be done for first object on file
+                  first = 0
+                  print, systime(), ' reading image and estimating global sky values for each band'
+; loop over band again as in gala_bridge
+                  global_sky = fltarr(nband+1)
+                  global_sigsky = fltarr(nband+1)
+                  for b=1,nband do begin
+                      
+;read in image and weight (takes 15sec)
+                      im = readfits(table[current_obj].frame[b], hd,/silent)
+;image size
+                      sz_im = (size(im))[1:2]
+                      
+;read the skymap
+                      map = readfits(orgpath_file_no_band[idx,b]+setup.skymap+'.fits', xxhd,/silent)
+                      
+;rad is the minimum starting radius for the sky calculation (outside
+;the aperture of the object)
+                      rad = table.a_image*table.kron_radius*setup.skyscl+setup.skyoff
+                      
+;get first guess for global sky
+; same changes as in gala_bridge.
+                      skypix = where(map EQ 0 and finite(im) eq 1,ct)
+; new scheme takes around 2 second,s the next, old system, about 6
+; moment() would be 3 times faster, but returns a MEAN value!
+;; current version
+                      global_sky=median(im[skypix])
+                      global_sigsky=stddev(im[skypix])
+                      if finite(global_sky) ne 1 or finite(global_sigsky) ne 1 then begin
+;; old version
+;   resistant_mean, im[skypix], 3, sky, sigsky, nrej
+;   sigsky *= sqrt(ct-1-nrej)
+                          global_sky=median(im[skypix],/double)
+                          global_sigsky=stddev(im[skypix],/double)
+                      endif
+;; also belonging to old version
+;   resistant_mean, im[skypix], 3, sky, sigsky, nrej
+;   sigsky *= sqrt(ct-1-nrej)
+;   par = [1, sky, sigsky, sigsky]
+;; second step is a curvefit to the histogram
+;   plothist, im[skypix], x, y, xr = [-1, 1]*5*sigsky+sky, /peak, /noplot
+;   IF n_elements(par) LT n_elements(x) THEN $
+;    yfit = curvefit(x, y, noweight, par, sigma, $
+;                    FUNCTION_name = 'curvefit_gauss2side', $
+;                    /noderivative, status = status, iter = iter)
+;   global_sky = par[1]
+;   global_sigsky = par[2]
+                    
+                      delvarx, skypix
+                      
+;make sure all positions are relative to the current frame
+;(neighbouring frames may have negative positions)
+                      adxy, hd, table.alpha_j2000, table.delta_j2000, x, y
+                      
+                      table.x_image = x+1
+                      table.y_image = y+1
+                  ENDFOR
+              ENDIF
+;does a GALFIT obj file exist (cannot test for _gf.fits -> files might
+;bomb -> endless loop)?
+              IF file_test(obj_file) THEN CONTINUE
+              
+              choose_psf, table[current_obj].alpha_j2000, table[current_obj].delta_j2000, $
+                psf_struct, table[current_obj].frame, chosen_psf_file, nband
 
 jump_over_this:
 ;==============================================================================
