@@ -179,8 +179,8 @@ PRO bd_fit, obj_fitstab_file, no_fit=no_fit
       ENDFOR
    ENDIF
 
-   close, filer
-   close, filew
+   free_lun, filer
+   free_lun, filew
 
 ;maximum allowed positional offset
    pos_offset = ss_mult.RE_GALFIT_BAND[0]
@@ -218,7 +218,57 @@ PRO bd_fit, obj_fitstab_file, no_fit=no_fit
       IF keyword_set(nice) THEN spawn, 'nice '+galfit_exe+' '+obj_file $
       ELSE spawn, galfit_exe+' '+obj_file
    ENDIF
+END
 
-;check output (and rerun)
-stop
+PRO run_bd_fit, data_table_file
+;data_table = '/eg/path/to/GAMA_9_ffvqqff_gama_only.fits
+   data_table = mrdfits(data_table_file)
+
+   FOR i=0l, n_elements(data_table)-1 DO BEGIN
+      obj_fitstab_file = strtrim(data_table[i].file_galfit, 2)
+
+      bd_fit, obj_fitstab_file, /no_fit
+   ENDFOR
+END
+
+PRO create_batches, n_cores, data_table_file, galexe_str, outdir, outfile
+   data_table = mrdfits(data_table_file, 1)
+
+   batch = 0
+   FOR i=0l, n_elements(data_table)-1 DO BEGIN
+      IF i MOD n_cores EQ 0 THEN BEGIN
+         IF batch GT 0 THEN BEGIN
+            printf, lun, 'echo "Finished job now"'
+            free_lun, lun
+         ENDIF
+         batch++
+         openw, lun, outdir+'/'+outfile+strtrim(batch, 2), /get_lun
+
+         printf, lun, '#!/bin/bash'
+         printf, lun, '# This is a submit script for B/D fitting.'
+         printf, lun, '# OPTIONS FOR GRID ENGINE =============================================================='
+         printf, lun, '#$ -l h_rt=10:00:00'
+         printf, lun, '# This specifies the job should run for no longer than 10 hour'
+         printf, lun, '#$ -cwd'
+         printf, lun, '# This sends output into the directory from which you submitted'
+         printf, lun, '#$ -j y'
+         printf, lun, '# This joins up the error and output into one file rather that making two files'
+         printf, lun, '#$ -o '+outfile+'.out'
+         printf, lun, '# This send your output to the file "'+outfile+'.out" rather than a standard grid engine output filename'
+         printf, lun, '# OPTIONS FOR GRID ENGINE================================================================='
+         printf, lun, '# Here we just use Unix command to run our program'
+         printf, lun, 'echo "Running on `hostname`"'
+         printf, lun, 'cd /work/work1/ppzsb1/'
+         printf, lun, '# edit above line to the correct working directory for your job'
+         printf, lun, '# do something here'
+      ENDIF
+
+      obj_file = strtrim(data_table[i].initfile, 2)+'_bd'
+      cmd_str = galexe_str+' '+obj_file
+
+      IF obj_file NE '_bd' THEN printf, lun, cmd_str
+   ENDFOR
+   printf, lun, 'echo "Finished job now"'
+
+   free_lun, lun
 END
