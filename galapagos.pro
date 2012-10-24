@@ -1800,6 +1800,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
    table = table0
 ;current is the index of the current object
    hdr = headfits(im_file[1]+'.fits')
+;;;;;;;;;;;!!! BORIS: I think this should be xmax/2??
    xmax = sxpar(hdr, 'NAXIS1')
    ymax = sxpar(hdr, 'NAXIS2')
 
