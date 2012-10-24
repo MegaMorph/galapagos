@@ -6,6 +6,7 @@
 @/home/boris/mmm/astro-megamorph/galapagos/fxaddpar.pro
 @/home/boris/mmm/astro-megamorph/galapagos/fxposit.pro
 @/home/boris/mmm/astro-megamorph/galapagos/fxmove.pro
+@/home/boris/mmm/astro-megamorph/galapagos/writefits.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
@@ -627,7 +628,7 @@ ENDFOR
 off = where(wht EQ 0, ct)
 IF ct GT 0 THEN map[off] = -1
 
-writefits, mapfile+'.fits', map, hd
+writefits, mapfile+'.fits', map, hd,/silent
 
 END
 
@@ -1069,7 +1070,7 @@ ENDIF ELSE BEGIN
     
     grad = where(c_all[o[no_fit]] LT cut, ct)
     IF ct GT 0 THEN nums = t[o[no_fit[grad]]].number ELSE nums = -1
-    IF ct GT 0 THEN frames = t[o[no_fit[grad]]].frame[1] ELSE frames = ''
+    IF ct GT 0 THEN frames = t[o[no_fit[grad]]].frame[0] ELSE frames = ''
 ENDELSE
 ;   print, 'gradient sources:'
 ;   forprint, nums, ' '+frames
@@ -1132,8 +1133,8 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;out_file: galfit output file prefix
 ;global_sky, global_sigsky: global sky value plus scatter
 ;conv_box: convolution box size for subtracting sources
-;nums, frames: object numbers and frames of potential contributing sources
-;curb: current band index (deblending only decided in reference band)
+;nums, frames: object numbers and frames of potential contributing sources (for bands other than the primary (b=1) these are actually INPUT parameters!)
+;b: current band index (deblending only decided in reference band)
 ;compute the sky for a single source
 ;nband: numbers of bands in the data
 ;xarr, yarr: arrays needed for skymap, created outside for all bands at once to improve speed
@@ -1203,7 +1204,7 @@ ENDIF ELSE BEGIN
 ;loop over all contributing sources============================================
     FOR current_contrib=0ul, n_contrib-1 DO BEGIN
         i_con = where(table.number EQ nums[current_contrib] AND $
-                      table.frame[1] EQ frames[current_contrib])
+                      table.frame[0] EQ frames[current_contrib])
         dist[current_contrib] = $
           sqrt((table[i_con].x_image-table[current_obj].x_image)^2+ $
                (table[i_con].y_image-table[current_obj].y_image)^2)+ $
@@ -1660,7 +1661,7 @@ FOR i=0ul, ntab-1 DO BEGIN
     ENDIF ELSE BEGIN
 ;loop source has NO overlap with current --> tertiary
 ;if loop source is contributing source on current frame, make secondary
-        coni = where(table[i].number EQ nums AND table[i].frame[1] EQ frames, $
+        coni = where(table[i].number EQ nums AND table[i].frame[0] EQ frames, $
                      con)
         IF con GT 0 THEN BEGIN
             plus = 1
@@ -1960,11 +1961,13 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
         par.y_galfit_band = fltarr(nband)+table[objects[i]].y_image
         par.y_galfit_cheb = fltarr(nband)
         par.y_galfit_cheb[0] = table[objects[i]].y_image
-; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS! DONE using offset
         par.mag_galfit = table[objects[i]].mag_best
         par.mag_galfit_band = fltarr(nband)+table[objects[i]].mag_best+setup.mag_offset[1:nband]
         par.mag_galfit_cheb = fltarr(nband)
         par.mag_galfit_cheb[0] = table[objects[i]].mag_best
+; THESE VALUES ARE CIRCULATIZED VALUES!! NEED TO BE AR CORRECTED
+; (FROM LEE!)
         par.re_galfit = 10.^(-0.79)*table[objects[i]].flux_radius^1.87
         par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[objects[i]].flux_radius^1.87
         par.re_galfit_cheb = fltarr(nband)
@@ -2194,7 +2197,7 @@ FOR i=0ul, n_nums-1 DO BEGIN
                 par.y_galfit_band = fltarr(nband)+table[i_con].y_image
                 par.y_galfit_cheb = fltarr(nband)
                 par.y_galfit_cheb[0] = table[i_con].y_image
-; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS! DONE using offset
                 par.mag_galfit = table[i_fit].mag_galfit
                 par.mag_galfit_band = table[i_fit].mag_galfit_band
                 par.mag_galfit_cheb = table[i_fit].mag_galfit_cheb
@@ -2228,7 +2231,7 @@ FOR i=0ul, n_nums-1 DO BEGIN
                 par.y_galfit_band = fltarr(nband)+table[i_con].y_image
                 par.y_galfit_cheb = fltarr(nband)
                 par.y_galfit_cheb[0] = table[i_con].y_image
-; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
+; NEED TO CORRECT MAGNITUDE STARTING PARAMS! DONE using offset
                 par.mag_galfit = table[i_con].mag_best
                 par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best+setup.mag_offset[1:nband]
                 par.mag_galfit_cheb = fltarr(nband)
@@ -2799,6 +2802,7 @@ if ncolf eq 4 then begin
       format = 'A,A,A,A', comment = '#', /silent
     
     nband=1
+    images = strtrim(images,2)
 ; create arrays in setup needed to store all the data
     add_tag, setup, 'images', strarr(n_elements(images),nband+1), setup2
     setup=setup2
@@ -2861,6 +2865,7 @@ if ncolf eq 6 then begin
       format = 'A,A,A,A', comment = '#', /silent
     cnt=intarr(nband+1)
     
+    hlpimages = strtrim(hlpimages,2)
 ; create arrays in setup needed to store all the data
     add_tag, setup, 'images', strarr(n_elements(hlpimages),nband+1), setup2
     setup=setup2
@@ -2926,7 +2931,7 @@ IF file_test(obj[0]) THEN BEGIN
                                  'pa_galfit', result[0].COMP2_PA, 'paerr_galfit', result[0].COMP2_PA_ERR, $
                                  'x_galfit', result[0].COMP2_XC, 'xerr_galfit', result[0].COMP2_XC_ERR, $
                                  'y_galfit', result[0].COMP2_YC, 'yerr_galfit', result[0].COMP2_YC_ERR, $
-                                 'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
+                                 'psf_galfit', strtrim(band_info[0].psf), 'sky_galfit', result[0].COMP1_SKY, $
                                  'mag_galfit_band', result.COMP2_MAG, 'magerr_galfit_band',result.COMP2_MAG_ERR, $
                                  're_galfit_band', result.COMP2_RE, 'reerr_galfit_band', result.COMP2_RE_ERR, $
                                  'n_galfit_band', result.COMP2_N, 'nerr_galfit_band' ,result.COMP2_N_ERR, $
@@ -2943,13 +2948,22 @@ IF file_test(obj[0]) THEN BEGIN
                                  'x_galfit_cheb', res_cheb.COMP2_XC, 'xerr_galfit_cheb', res_cheb.COMP2_XC_ERR, $
                                  'y_galfit_cheb', res_cheb.COMP2_YC, 'yerr_galfit_cheb', res_cheb.COMP2_YC_ERR, $
                                  'sky_galfit_cheb', res_cheb.COMP1_SKY, $
+                                 'initfile', strtrim(fit_info.initfile,2), $
+                                 'constrnt', strtrim(fit_info.constrnt,2), $
+                                 'fitsect', strtrim(fit_info.fitsect,2), $
+                                 'convbox', strtrim(fit_info.convbox,2), $
                                  'psf_galfit_band', strtrim(band_info.psf, 2), $
                                  'chisq_galfit', fit_info.chisq, $
                                  'ndof_galfit', fit_info.ndof, $
                                  'nfree_galfit', fit_info.nfree, $
                                  'nfix_galfit', fit_info.nfix, $
                                  'chi2nu_galfit', fit_info.chi2nu, $
-                                 'iter', fit_info.niter, $
+                                 'niter_galfit', fit_info.niter, $
+                                 'version_galfit', fit_info.version, $
+                                 'firstcon_galfit', fit_info.firstcon, $
+                                 'lastcon_galfit', fit_info.lastcon, $
+; time does not exist yet. Already in GALAPAGOS table, though
+;                                'time_galfit', fit_info.time, $
                                  'neigh_galfit', comp-3, 'flag_galfit', 2)
 ; TO BE ADDED:
 ; fitting time
@@ -2969,7 +2983,8 @@ IF file_test(obj[0]) THEN BEGIN
                                  'q_galfit_b', result[0].COMP3_AR, 'qerr_galfit_b', result[0].COMP3_AR_ERR, $
                                  'pa_galfit_b', result[0].COMP3_PA, 'paerr_galfit_b', result[0].COMP3_PA_ERR, $
                                  'x_galfit_b', result[0].COMP3_XC, 'xerr_galfit_b', result[0].COMP3_XC_ERR, $
-                                 'y_galfit_b', result[0].COMP3_YC, 'yerr_galfit_b', result[0].COMP3_YC_ERR, $                                    'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
+                                 'y_galfit_b', result[0].COMP3_YC, 'yerr_galfit_b', result[0].COMP3_YC_ERR, $
+                                 'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
                                  'mag_galfit_band_d', result.COMP2_MAG, 'magerr_galfit_band_d',result.COMP2_MAG_ERR, $
                                  're_galfit_band_d', result.COMP2_RE, 'reerr_galfit_band_d', result.COMP2_RE_ERR, $
                                  'n_galfit_band_d', result.COMP2_N, 'nerr_galfit_band_d' ,result.COMP2_N_ERR, $
@@ -3000,19 +3015,24 @@ IF file_test(obj[0]) THEN BEGIN
                                  'x_galfit_cheb_b', res_cheb.COMP3_XC, 'xerr_galfit_cheb_b', res_cheb.COMP3_XC_ERR, $
                                  'y_galfit_cheb_b', res_cheb.COMP3_YC, 'yerr_galfit_cheb_b', res_cheb.COMP3_YC_ERR, $
                                  'sky_galfit_cheb', res_cheb.COMP1_SKY, $
+                                 'initfile_bd', strtrim(fit_info.initfile,2), $
+                                 'constrnt_bd', strtrim(fit_info.constrnt,2), $
                                  'psf_galfit_band', strtrim(band_info.psf, 2), $
                                  'chisq_galfit_bd', fit_info.chisq, $
                                  'ndof_galfit_bd', fit_info.ndof, $
                                  'nfree_galfit_bd', fit_info.nfree, $
                                  'nfix_galfit_bd', fit_info.nfix, $
                                  'chi2nu_galfit_bd', fit_info.chi2nu, $
-                                 'iter_bd', fit_info.niter, $
+                                 'niter_galfit_bd', fit_info.niter, $
+                                 'version_galfit_bd', fit_info.version, $
+                                 'firstcon_galfit_bd', fit_info.firstcon, $
+                                 'lastcon_galfit_bd', fit_info.lastcon, $
                                  'neigh_galfit_bd', comp-4, 'flag_galfit_bd', 2)
-; TO BE ADDED:
-; fitting time
-; NEIGH_GALFIT HAS TO BE ADAPTED! WHY??
     ENDIF
-    
+; to include:
+; there is more band_info which is not used yet (band, wl, datain,
+; sigma, MASL, magzpt) Not sure we'll need them!
+
 ENDIF ELSE BEGIN
     psf=strarr(nband)
     for n=0,nband-1 do psf[n]='none'
@@ -3042,19 +3062,23 @@ ENDIF ELSE BEGIN
                                  'x_galfit_cheb', fltarr(nband), 'xerr_galfit_cheb', fltarr(nband)+99999., $
                                  'y_galfit_cheb', fltarr(nband), 'yerr_galfit_cheb', fltarr(nband)+99999., $
                                  'sky_galfit_cheb', fltarr(nband)-999., $
+                                 'initfile_bd', ' ', $
+                                 'constrnt_bd', ' ', $
                                  'psf_galfit_band', psf, $
                                  'chisq_galfit', -99., $
                                  'ndof_galfit', -99l, $
                                  'nfree_galfit', -99l, $
                                  'nfix_galfit', -99l, $
                                  'chi2nu_galfit', -99., $
-                                 'iter', -99, $
+                                 'niter_galfit', -99, $
+                                 'version_galfit', 'crash', $
+                                 'firstcon_galfit', -99, $
+                                 'lastcon_galfit', -99, $
                                  'neigh_galfit', -99, 'flag_galfit', 1)
                                 ; TO BE ADDED:
 ; fitting time
 ; NEIGH_GALFIT HAS TO BE ADAPTED!
     ENDIF
-    
     if keyword_set(bd) then begin
         feedback = create_struct('mag_galfit_d', -999., 'magerr_galfit_d',99999., $
                                  're_galfit_d', -99., 'reerr_galfit_d', 99999., $
@@ -3101,13 +3125,18 @@ ENDIF ELSE BEGIN
                                  'x_galfit_cheb_b', fltarr(nband), 'xerr_galfit_cheb_b', fltarr(nband)+99999., $
                                  'y_galfit_cheb_b', fltarr(nband), 'yerr_galfit_cheb_b', fltarr(nband)+99999., $
                                  'sky_galfit_cheb', fltarr(nband)-999., $
+                                 'initfile_bd', ' ', $
+                                 'constrnt_bd', ' ', $
                                  'psf_galfit_band', psf, $
                                  'chisq_galfit_bd', -99., $
                                  'ndof_galfit_bd', -99l, $
                                  'nfree_galfit_bd', -99l, $
                                  'nfix_galfit_bd', -99l, $
                                  'chi2nu_galfit_bd', -99., $
-                                 'iter_bd', -99, $
+                                 'niter_galfit_bd', -99, $
+                                 'version_galfit_bd', 'crash', $
+                                 'firstcon_galfit_bd', -99, $
+                                 'lastcon_galfit_bd', -99, $
                                  'neigh_galfit_bd', -99, 'flag_galfit_bd', 1)
                                 ; TO BE ADDED:
 ; fitting time
@@ -3528,6 +3557,7 @@ define_addcol, addcol, nband, bd_fit = setup.bdcat
 ;==============================================================================
 ;run SExtractor
 IF setup.dosex THEN BEGIN
+   print, 'starting SExtractor: '+systime(0)
     IF file_test(setup.exclude) THEN $
       readcol, setup.exclude, exclude_files, exclude_x, exclude_y, $
       format = 'A,F,F', /silent $
@@ -3600,40 +3630,42 @@ IF setup.dosex THEN BEGIN
       setup.outdir+'sexcomb.reg', 10, color='green', tag = 'comb'
     IF keyword_set(logfile) THEN $
       update_log, logfile, 'SExtraction... done!'
+    print, 'finished SExtractor: '+systime(0)
 ENDIF
 ;==============================================================================
 ;create postage stamp description files 
 IF setup.dostamps THEN BEGIN
     FOR i=0ul, nframes-1 DO BEGIN
-        print, 'cutting postages for image '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
-        create_stamp_file, images[i,0], $
-          outpath_file[i,0]+setup.outcat, $
-          outpath_file[i,0]+setup.outparam, $
-          outpath_file_no_band[i,0]+setup.stampfile, $
-          setup.stampsize
-        FOR b=1,nband do begin
-            print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
-            cut_stamps, images[i,b], $
-              outpath_file_no_band[i,0]+setup.stampfile, $
-              outpath_band[i,b], $
-              outpre[i,b], '_'+setup.stamp_pre[b]
+       print, 'cutting postages for images '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
+       create_stamp_file, images[i,0], $
+                          outpath_file[i,0]+setup.outcat, $
+                          outpath_file[i,0]+setup.outparam, $
+                          outpath_file_no_band[i,0]+setup.stampfile, $
+                          setup.stampsize
+       FOR b=1,nband do begin
+          print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
+          cut_stamps, images[i,b], $
+                      outpath_file_no_band[i,0]+setup.stampfile, $
+                      outpath_band[i,b], $
+                      outpre[i,b], '_'+setup.stamp_pre[b]
         ENDFOR
     ENDFOR
 ;create skymap files 
     FOR i=0ul, nframes-1 DO BEGIN
-        print, 'creating skymap for image '+strtrim(outpath_file_no_band[i,0],2)
-        FOR b=1,nband do begin
-            print, 'creating skymap for '+strtrim(setup.stamp_pre[b],2)+'-band'
-            create_skymap, weights[i,b], $
-              outpath_file[i,0]+setup.outseg, $
-              outpath_file[i,0]+setup.outcat, $
-              outpath_file[i,0]+setup.outparam, $
-              outpath_file_no_band[i,b]+setup.stamp_pre[b]+'.'+setup.skymap, $
-              setup.skyscl, setup.skyoff
-        ENDFOR
+;       print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
+       FOR b=1,nband do begin
+;          print, 'creating skymap for '+strtrim(setup.stamp_pre[b],2)+'-band'
+          create_skymap, weights[i,b], $
+                         outpath_file[i,0]+setup.outseg, $
+                         outpath_file[i,0]+setup.outcat, $
+                         outpath_file[i,0]+setup.outparam, $
+                         outpath_file_no_band[i,b]+setup.stamp_pre[b]+'.'+setup.skymap, $
+                         setup.skyscl, setup.skyoff
+       ENDFOR
     ENDFOR
     IF keyword_set(logfile) THEN $
-      update_log, logfile, 'Postage stamps... done!'
+       update_log, logfile, 'Postage stamps... done!'
+    print, 'finished cutting postage stamps: '+systime(0)
 ENDIF 
 
 ;==============================================================================
@@ -3663,7 +3695,7 @@ table=remove_tags(table,'frame')
 add_tag, table, 'frame', strarr(nband+1), table2
 table=table2
 
-table.frame = tableim
+table.frame = strtrim(tableim,2)
 add_tag, table, 'flag_galfit', 0, table2
 table=table2
 delvarx, table2
@@ -3763,6 +3795,11 @@ IF setup.dosky THEN BEGIN
     FOR i=0, setup.max_proc-1 DO $
       bridge_arr[i] = obj_new('IDL_IDLBridge')
     
+    FOR i=0, setup.max_proc-1 DO BEGIN
+       bridge_arr[i]->execute, 'astrolib'
+       bridge_arr[i]->execute, '.r '+gala_pro
+    ENDFOR
+    
     if keyword_set(plot) then begin
         loadct,39,/silent
         plot, table.alpha_j2000, table.delta_j2000, psym=3, ystyle=1, xstyle=1
@@ -3849,7 +3886,7 @@ loopstart2:
                       (min(dist) lt setup.min_dist or min(dist_block) lt setup.min_dist_block) then begin
                         wait, 1
                         ob=0l
-                        print, 'starting over'
+;                        print, 'starting over'
                         goto, loopstart2
                     ENDIF
                     
@@ -3944,9 +3981,9 @@ loopstart2:
                 IF keyword_set(logfile) THEN $
                   update_log, logfile, 'Starting new bridge... ('+out_file+')'
 ; print, 'starting new object at '+systime(0)
-                bridge_arr[free[0]]->execute, 'astrolib'
-;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
-                bridge_arr[free[0]]->execute, '.r '+gala_pro
+;                bridge_arr[free[0]]->execute, 'astrolib'
+;;               bridge_arr[free[0]]->execute, 'cd,"/home/gems/gala"';§§§§§§§§§§
+;                bridge_arr[free[0]]->execute, '.r '+gala_pro
                 bridge_arr[free[0]]->execute, $
                   'gala_bridge, "'+out_file+'.sav"', /nowait
             ENDIF ELSE BEGIN

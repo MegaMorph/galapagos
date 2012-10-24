@@ -14,7 +14,7 @@ restore, filein
 
 for b=1,nband do begin
 ;read in image and weight (takes few sec)
-    im=readfits(table[cur].frame[b], hd,/silent)
+    im=readfits(strtrim(table[cur].frame[b],2), hd,/silent)
     wht=readfits(orgwht[idx,b], whd,/silent)
 ;read segmentation map (needed for excluding neighbouring sources)
     seg = readfits(orgpath_file[idx,0]+setup.outseg, seghd,/silent)
@@ -84,28 +84,37 @@ for b=1,nband do begin
      setup.convbox, nums, frames, setup.galexe, b, $
      orgpath_pre, outpath_file, outpath_file_no_band, nband, $
      xarr, yarr, seed
+    if b eq 1 then begin
+        delvarx, save_nums,save_frames
+        save_nums = nums
+        save_frames = frames
+    ENDIF
+
 ;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
    
-   create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
-     im_file[b], table[cur].frame[b], cur, $
-     setup.neiscl, setup.skyoff, nums, frames, $
-     setup.maglim_gal, setup.maglim_star, $
-     setup.stel_slope, setup.stel_zp, objects, corner, $
-     b
-   if b eq 1 then begin
-       delvarx, save_objects, save_corner
-       save_objects = objects
-       save_corner = corner
-   ENDIF       
+    create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
+                 im_file[b], table[cur].frame[b], cur, $
+                 setup.neiscl, setup.skyoff, save_nums, save_frames, $
+                 setup.maglim_gal, setup.maglim_star, $
+                 setup.stel_slope, setup.stel_zp, objects, corner, $
+                 b 
+    if b eq 1 then begin
+        delvarx, save_objects, save_corner
+        save_objects = objects
+        save_corner = corner
+    ENDIF       
+
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§tile10_5/t10_5.3416_obj§§§§§§
 endfor
 
 ;if not keyword_set(bd_fit) then $
-  prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, im_file, $
-  constr_file, mask_file, chosen_psf_file, out_file, sky_file, $
-  setup.convbox, setup.zp, setup.platescl, nums, frames, $
-  cur, setup.outcat, setup.outparam, setup.stampfile, setup.conmaxre, $
-  setup.conminm, setup.conmaxm, setup.version, nband, orgpre
+prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
+                im_file, constr_file, mask_file, chosen_psf_file, $
+                out_file, sky_file, setup.convbox, setup.zp, $
+                setup.platescl, save_nums, save_frames, cur, $
+                setup.outcat, setup.outparam, setup.stampfile, $
+                setup.conmaxre, setup.conminm, setup.conmaxm, $
+                setup.version, nband, orgpre ;, n_constrained = n_constrained
 
 ;if keyword_set(bd_fit) then $
 ;  prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
@@ -114,7 +123,7 @@ endfor
 ;  setup.platescl, nums, frames, cur, $
 ;  setup.outcat, setup.outparam, setup.stampfile, $
 ;  setup.conmaxre, setup.conminm, setup.conmaxm, $
-;  fittab, setup.version, nband, orgpre, bd_fit = bd_fit
+;  setup.version, nband, orgpre, bd_fit = bd_fit
 ;spawn, 'touch '+filein+'.preparegalfit';§§§§§§§§§§§§§§§§§§§§§§
 
 ;spawn the script
