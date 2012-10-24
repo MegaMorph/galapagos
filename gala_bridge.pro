@@ -99,23 +99,22 @@ for b=1,nband do begin
    ENDIF       
 ;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§tile10_5/t10_5.3416_obj§§§§§§
 endfor
-stop
 
-if not keyword_set(bd_fit) then prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
-  im_file, constr_file, mask_file, chosen_psf_file, $
-  out_file, sky_file, setup.convbox, setup.zp, $
-  setup.platescl, nums, frames, cur, $
-  setup.outcat, setup.outparam, setup.stampfile, $
-  setup.conmaxre, setup.conminm, setup.conmaxm, $
-  fittab, setup.version, nband, orgpre
+;if not keyword_set(bd_fit) then $
+  prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, im_file, $
+  constr_file, mask_file, chosen_psf_file, out_file, sky_file, $
+  setup.convbox, setup.zp, setup.platescl, nums, frames, $
+  cur, setup.outcat, setup.outparam, setup.stampfile, setup.conmaxre, $
+  setup.conminm, setup.conmaxm, setup.version, nband, orgpre
 
-if keyword_set(bd_fit) then prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
-  im_file, constr_file, mask_file, chosen_psf_file, $
-  out_file, sky_file, setup.convbox, setup.zp, $
-  setup.platescl, nums, frames, cur, $
-  setup.outcat, setup.outparam, setup.stampfile, $
-  setup.conmaxre, setup.conminm, setup.conmaxm, $
-  fittab, setup.version, nband, orgpre, bd_fit = bd_fit
+;if keyword_set(bd_fit) then $
+;  prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
+;  im_file, constr_file, mask_file, chosen_psf_file, $
+;  out_file, sky_file, setup.convbox, setup.zp, $
+;  setup.platescl, nums, frames, cur, $
+;  setup.outcat, setup.outparam, setup.stampfile, $
+;  setup.conmaxre, setup.conminm, setup.conmaxm, $
+;  fittab, setup.version, nband, orgpre, bd_fit = bd_fit
 ;spawn, 'touch '+filein+'.preparegalfit';§§§§§§§§§§§§§§§§§§§§§§
 
 ;spawn the script

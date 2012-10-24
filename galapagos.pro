@@ -1,11 +1,11 @@
-@/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
-@/home/boris/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
-@/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_hread.pro
-@/home/boris/megamorph_dev/astro-megamorph/galapagos/valid_num.pro
-@/home/boris/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
-@/home/boris/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
-@/home/boris/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
-@/home/boris/megamorph_dev/astro-megamorph/galapagos/fxmove.pro
+@/home/boris/mmm/astro-megamorph/galapagos/mrd_struct.pro
+@/home/boris/mmm/astro-megamorph/galapagos/mrdfits.pro
+@/home/boris/mmm/astro-megamorph/galapagos/mrd_hread.pro
+@/home/boris/mmm/astro-megamorph/galapagos/valid_num.pro
+@/home/boris/mmm/astro-megamorph/galapagos/mwrfits.pro
+@/home/boris/mmm/astro-megamorph/galapagos/fxaddpar.pro
+@/home/boris/mmm/astro-megamorph/galapagos/fxposit.pro
+@/home/boris/mmm/astro-megamorph/galapagos/fxmove.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
@@ -2521,6 +2521,9 @@ setup = create_struct('files', '', $
                       'bdcat', 0, $
                       'dobd', 0, $
                       'bd_maglim', -1., $
+                      'cheb_b', intarr(7)-1, $
+                      'cheb_d', intarr(7)-1, $
+                      'galfit_bd_out_path',' ', $
                       'docombine', 0, $
                       'cat', '')
 
@@ -2721,6 +2724,26 @@ WHILE NOT eof(1) DO BEGIN
             if block_bd eq 1 then setup.bd_maglim = content $
             else setup.cat = content
         END
+        'F02)': BEGIN
+            for n=0,5 do begin
+                pos=strpos(content, ',')
+                setup.cheb_b[n]=strmid(content,0,pos)
+                content=strmid(content,pos+1)
+            ENDFOR
+            setup.cheb_b[6]=content
+        END
+        'F03)': BEGIN
+            for n=0,5 do begin
+                pos=strpos(content, ',')
+                setup.cheb_d[n]=strmid(content,0,pos)
+                content=strmid(content,pos+1)
+            ENDFOR
+            setup.cheb_d[6]=content
+        END
+        'F04)': BEGIN
+            if content eq '' then setup.galfit_bd_out_path = content
+            if content ne '' then setup.galfit_bd_out_path = set_trailing_slash(content)
+        END
         
         'G00)': setup.docombine = (content EQ 'execute') ? 1 : 0
         'G01)': setup.cat = content
@@ -2747,6 +2770,8 @@ IF setup.maglim_gal EQ -1 THEN setup.maglim_gal = 5
 IF setup.maglim_star EQ -1 THEN setup.maglim_star = 2
 IF setup.min_dist_block EQ -1 THEN setup.min_dist_block = setup.min_dist/3.
 IF setup.cheb[0] EQ -1 THEN for n=0,n_elements(setup.cheb)-1 do setup.cheb[n] = 0
+;IF setup.cheb_b[0] EQ -1 THEN for n=0,n_elements(setup.cheb_b)-1 do setup.cheb_b[n] = 0
+;IF setup.cheb_d[0] EQ -1 THEN for n=0,n_elements(setup.cheb_d)-1 do setup.cheb_d[n] = 0
 return
 
 bad_input:
@@ -3603,7 +3628,7 @@ IF setup.dostamps THEN BEGIN
               outpath_file[i,0]+setup.outseg, $
               outpath_file[i,0]+setup.outcat, $
               outpath_file[i,0]+setup.outparam, $
-              outpath_file_no_band[i,b]+setup.skymap, $
+              outpath_file_no_band[i,b]+setup.stamp_pre[b]+'.'+setup.skymap, $
               setup.skyscl, setup.skyoff
         ENDFOR
     ENDFOR
