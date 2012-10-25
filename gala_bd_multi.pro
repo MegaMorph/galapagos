@@ -23,6 +23,12 @@ PRO bd_fit, obj_fitstab_file, no_fit=no_fit
 ;extract info from SS-fit
    forward_function read_sersic_results
    ss_mult = read_sersic_results(obj_fitstab_file, nband)
+   
+;change path from boris on dator to ppzsb1 on dator or supercomputer
+   obj_file = strrep(obj_file, 'boris', 'ppzsb1')
+   constr_file = strrep(constr_file, 'boris', 'ppzsb1')
+   ;obj_file = strrep(obj_file, '/home/boris', '/work/work1/ppzsb1')
+   ;constr_file = strrep(constr_file, '/home/boris', '/work/work1/ppzsb1')
 
    openw, filew, obj_file+'_bd', /get_lun
    openr, filer, obj_file, /get_lun
