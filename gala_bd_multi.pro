@@ -3,6 +3,8 @@ PRO bd_fit, obj_fitstab_file, no_fit=no_fit
 ;   num = '21_17.346'
 ;   obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
 
+   print, obj_fitstab_file
+
    fit_info = mrdfits(obj_fitstab_file, 'FIT_INFO', /silent)
 
    tab = mrdfits(obj_fitstab_file, 'FINAL_BAND')
@@ -230,14 +232,19 @@ PRO run_bd_fit, data_table_file
 ;data_table = '/eg/path/to/GAMA_9_ffvqqff_gama_only.fits
    data_table = mrdfits(data_table_file)
 
+   openw, filew, 'bd_files', /get_lun
+
    FOR i=0l, n_elements(data_table)-1 DO BEGIN
       obj_fitstab_file = strtrim(data_table[i].file_galfit, 2)
       ;change path from boris on dator to ppzsb1 on dator or supercomputer
       obj_fitstab_file = strrep(obj_fitstab_file, 'boris', 'ppzsb1')
       ;obj_fitstab_file = strrep(obj_fitstab_file, '/home/boris', '/work/work1/ppzsb1')
-
-      bd_fit, obj_fitstab_file, /no_fit
+      IF file_test(obj_fitstab_file) THEN BEGIN
+          bd_fit, obj_fitstab_file, /no_fit
+          printf, filew, obj_fitstab_file
+      ENDIF
    ENDFOR
+   free_lun, filew
 END
 
 PRO create_batches, n_cores, data_table_file, galexe_str, outdir, outfile
