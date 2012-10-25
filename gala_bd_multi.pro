@@ -233,6 +233,9 @@ PRO run_bd_fit, data_table_file
 
    FOR i=0l, n_elements(data_table)-1 DO BEGIN
       obj_fitstab_file = strtrim(data_table[i].file_galfit, 2)
+      ;change path from boris on dator to ppzsb1 on dator or supercomputer
+      obj_fitstab_file = strrep(obj_fitstab_file, 'boris', 'ppzsb1')
+      ;obj_fitstab_file = strrep(obj_fitstab_file, '/home/boris', '/work/work1/ppzsb1')
 
       bd_fit, obj_fitstab_file, /no_fit
    ENDFOR
