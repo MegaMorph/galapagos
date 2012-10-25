@@ -67,7 +67,7 @@ PRO bd_fit, obj_fitstab_file, no_fit=no_fit
                 format = '('+string(nband)+'(A,","))')
    re = strtrim(strcompress(re, /remove_all), 2)
    re = ' 4) '+strmid(re, 0, strlen(re)-1)+ $
-        '    3   band       #     R_e              [Pixels]'
+        '    1   band       #     R_e              [Pixels]'
    printf, filew, re
    n = string(1+fltarr(nband), $
                 format = '('+string(nband)+'(A,","))')
@@ -101,13 +101,13 @@ PRO bd_fit, obj_fitstab_file, no_fit=no_fit
                 format = '('+string(nband)+'(A,","))')
    re = strtrim(strcompress(re, /remove_all), 2)
    re = ' 4) '+strmid(re, 0, strlen(re)-1)+ $
-        '    3   band       #     R_e              [Pixels]'
+        '    1   band       #     R_e              [Pixels]'
    printf, filew, re
    n = string((ss_mult.N_GALFIT_BAND >1.5), $
                 format = '('+string(nband)+'(A,","))')
    n = strtrim(strcompress(n, /remove_all), 2)
    n = ' 5) '+strmid(n, 0, strlen(n)-1)+ $
-        '   3   band       # Sersic exponent (deVauc=4, expdisk=1)'
+        '   1   band       # Sersic exponent (deVauc=4, expdisk=1)'
    printf, filew, n
    q = string(ss_mult.Q_GALFIT_BAND >0.6, $
                 format = '('+string(nband)+'(A,","))')
