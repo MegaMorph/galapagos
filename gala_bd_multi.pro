@@ -1,13 +1,13 @@
-PRO bd_fit, obj_fitstab_file, no_fit=no_fit
+FUNCTION bd_fit, obj_fitstab_file, no_fit=no_fit
 
 ;   num = '21_17.346'
 ;   obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
 
-   print, obj_fitstab_file
+   select = 0
 
    fit_info = mrdfits(obj_fitstab_file, 'FIT_INFO', /silent)
 
-   tab = mrdfits(obj_fitstab_file, 'FINAL_BAND')
+   tab = mrdfits(obj_fitstab_file, 'FINAL_BAND', /silent)
 
 ;   fit_info.initfile = '/home/barden/Desktop/multi/BD_objects/t'+num+'_obj'
 ;   fit_info.constrnt = '/home/barden/Desktop/multi/BD_objects/t'+num+'_constr'
@@ -20,30 +20,33 @@ PRO bd_fit, obj_fitstab_file, no_fit=no_fit
    band_str = strupcase(strtrim(band_info.band,2))
    nband = n_elements(band_str)
 
-   tmp = mrdfits(obj_fitstab_file, 'MODEL_'+band_str[0], model)
+   tmp = mrdfits(obj_fitstab_file, 'MODEL_'+band_str[0], model, /silent)
 
 ;extract info from SS-fit
+   forward_function read_sersic_results
    ss_mult = read_sersic_results(obj_fitstab_file, nband)
-   
-;change path from boris on dator to ppzsb1 on dator or supercomputer
-   obj_file = strrep(obj_file, 'boris', 'ppzsb1')
-   constr_file = strrep(constr_file, 'boris', 'ppzsb1')
-   ;obj_file = strrep(obj_file, '/home/boris', '/work/work1/ppzsb1')
-   ;constr_file = strrep(constr_file, '/home/boris', '/work/work1/ppzsb1')
 
+;only do B/D for bright objects
+   IF ((ss_mult.MAG_GALFIT_BAND[0] GT 16.0) && (ss_mult.MAG_GALFIT_BAND[0] LT 17.0)) THEN BEGIN
+   print, obj_fitstab_file, ss_mult.MAG_GALFIT_BAND[0]
+   
+   obj_file = strrep(obj_file, '/home/boris/', '')
    openw, filew, obj_file+'_bd', /get_lun
    openr, filer, obj_file, /get_lun
    line = ''
    REPEAT BEGIN
       readf, filer, line
+
       IF strpos(strtrim(line, 2), 'B) ') EQ 0 THEN BEGIN
          line = 'B) '+strrep(obj_fitstab_file, '.fits', $
                              '_bd.fits    # output file name')
       ENDIF
       IF strpos(strtrim(line, 2), 'G) ') EQ 0 THEN BEGIN
          line = 'G) '+constr_file+'_bd'
-      ENDIF
-      printf, filew, line
+     ENDIF
+     ;change path from boris on dator to general location
+     line = strrep(line, '/home/boris/', '')
+     printf, filew, line
    ENDREP UNTIL strpos(strtrim(line, 2), '# Sersic function') EQ 0
 
    printf, filew
@@ -194,6 +197,7 @@ PRO bd_fit, obj_fitstab_file, no_fit=no_fit
    pos_offset = ss_mult.RE_GALFIT_BAND[0]
 
 ;constraint file
+   constr_file = strrep(constr_file, '/home/boris/', '')
    openw, ut, constr_file+'_bd', /get_lun
 
    printf, ut, '# Component/    parameter   constraint  Comment'
@@ -222,36 +226,53 @@ PRO bd_fit, obj_fitstab_file, no_fit=no_fit
 
 
 ;run galfit
-   IF NOT keyword_set(nofit) THEN BEGIN
-      IF keyword_set(nice) THEN spawn, 'nice '+galfit_exe+' '+obj_file $
-      ELSE spawn, galfit_exe+' '+obj_file
+   IF NOT keyword_set(no_fit) THEN BEGIN
+      IF keyword_set(nice) THEN spawn, 'nice '+galfit_exe+' '+obj_file+'_bd' $
+      ELSE spawn, galfit_exe+' '+obj_file+'_bd'
    ENDIF
+   select = 1
+ENDIF
+return, select
 END
 
-PRO run_bd_fit, data_table_file
-;data_table = '/eg/path/to/GAMA_9_ffvqqff_gama_only.fits
-   data_table = mrdfits(data_table_file)
-
-   openw, filew, 'bd_files', /get_lun
-
-   FOR i=0l, n_elements(data_table)-1 DO BEGIN
-      obj_fitstab_file = strtrim(data_table[i].file_galfit, 2)
-      ;change path from boris on dator to ppzsb1 on dator or supercomputer
-      obj_fitstab_file = strrep(obj_fitstab_file, 'boris', 'ppzsb1')
-      ;obj_fitstab_file = strrep(obj_fitstab_file, '/home/boris', '/work/work1/ppzsb1')
-      IF file_test(obj_fitstab_file) THEN BEGIN
-          bd_fit, obj_fitstab_file, /no_fit
-          printf, filew, obj_fitstab_file
-      ENDIF
-   ENDFOR
-   free_lun, filew
-END
-
-PRO create_batches, n_cores, data_table_file, galexe_str, outdir, outfile
+PRO run_bd_fit, data_table_file, batch_filename, rsync_filename
+   ;run_bd_fit, 'gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/GAMA_9_ffvqqff_gama_only.fits', 'bd_batch_files', 'bd_rsync_includes'
+   ;this must be run from the root of the gama/galapagos/... tree
+   ;in order to get the paths right
+   ;data_table = 'relative/path/to/GAMA_9_ffvqqff_gama_only.fits
    data_table = mrdfits(data_table_file, 1)
 
-   batch = 0
+   openw, batch_file, batch_filename, /get_lun
+   openw, rsync_file, rsync_filename, /get_lun
+
+   printf, rsync_file, '+ **/'
    FOR i=0l, n_elements(data_table)-1 DO BEGIN
+      obj_fitstab_file = strtrim(data_table[i].file_galfit, 2)
+      ;change path from boris on dator to general location
+      obj_fitstab_file = strrep(obj_fitstab_file, '/home/boris/', '')
+      IF file_test(obj_fitstab_file) THEN BEGIN
+          select = bd_fit(obj_fitstab_file, /no_fit)
+          IF select EQ 1 THEN BEGIN
+              printf, batch_file, strrep(obj_fitstab_file, '_gf.fits', '_bd')
+              
+              obj_id = STRSPLIT(obj_fitstab_file, '/', /EXTRACT)
+              obj_id = strrep(obj_id(N_ELEMENTS(obj_id)-1), '_gf.fits', '')
+              printf, rsync_file, '+ *'+obj_id+'*'
+          ENDIF
+      ENDIF
+  ENDFOR
+  printf, rsync_file, '- *' 
+  print, "Necessary files can now be transferred using the command:"
+  print, "rsync -av --prune-empty-dirs --include-from="+rsync_filename+" ./ jupiter:/path/to/gama/galapagos/galapagos_run/"
+  free_lun, batch_file
+  free_lun, rsync_file
+END
+
+PRO create_batches, n_cores, bd_files_file, galexe_str, outdir, outfile
+   READCOL,bd_files_file,F='A', bd_files
+
+   batch = 0
+   FOR i=0l, n_elements(bd_files)-1 DO BEGIN
       IF i MOD n_cores EQ 0 THEN BEGIN
          IF batch GT 0 THEN BEGIN
             printf, lun, 'echo "Finished job now"'
@@ -274,41 +295,41 @@ PRO create_batches, n_cores, data_table_file, galexe_str, outdir, outfile
          printf, lun, '# OPTIONS FOR GRID ENGINE================================================================='
          printf, lun, '# Here we just use Unix command to run our program'
          printf, lun, 'echo "Running on `hostname`"'
-         printf, lun, 'cd /work/work1/ppzsb1/'
+         printf, lun, 'cd /work/work1/ppzsb1/megamorph'
          printf, lun, '# edit above line to the correct working directory for your job'
          printf, lun, '# do something here'
-      ENDIF
+     ENDIF
 
-      obj_file = strtrim(data_table[i].initfile, 2)+'_bd'
-      cmd_str = galexe_str+' '+obj_file
-
-      IF obj_file NE '_bd' THEN printf, lun, cmd_str
+     obj_fitstab_file = strrep(bd_files[i], '_bd', '_gf_bd.fits')
+     cmd_str = '[ ! -f '+obj_fitstab_file+' ] && '+galexe_str+' '+bd_files[i]
+     printf, lun, cmd_str
    ENDFOR
    printf, lun, 'echo "Finished job now"'
 
    free_lun, lun
 END
 
-PRO extract_bd_info, data_table_file, band_str, out_fits_table, version_num
-;bands in band_str have to be in the proper order!
+; PRO extract_bd_info, data_table_file, band_str, out_fits_table, version_num
+; ;bands in band_str have to be in the proper order!
 
-   setup = {version:0}
-   setup.version = version_num
+;    setup = {version:0}
+;    setup.version = version_num
 
-   nband = n_elements(band_str)
+;    nband = n_elements(band_str)
 
-   data_table = mrdfits(data_table_file, 1)
+;    data_table = mrdfits(data_table_file, 1)
 
-   FOR i=0l, n_elements(data_table) DO BEGIN
-      obj_file = strtrim(data_table[i].initfile, 2)+'_bd'
-      IF obj_file EQ '_bd' THEN CONTINUE
+;    FOR i=0l, n_elements(data_table) DO BEGIN
+;       obj_file = strtrim(data_table[i].initfile, 2)+'_bd'
+;       IF obj_file EQ '_bd' THEN CONTINUE
 
-      bd_table = read_sersic_results(obj_file, nband, /bd)
+;       forward_function read_sersic_results
+;       bd_table = read_sersic_results(obj_file, nband, /bd)
 
-      str = strtrim(data_table[i].initfile, 2)
-      sky_file = strmid(str, 0, strpos(str, '_obj')+'_'+['', band_str]
+;       str = strtrim(data_table[i].initfile, 2)
+;       sky_file = strmid(str, 0, strpos(str, '_obj')+'_'+['', band_str]
 
-      update_table, bd_table, i, out_fits_table, obj_file, sky_file, nband, setup, /final, /bd
-   ENDFOR
+;       update_table, bd_table, i, out_fits_table, obj_file, sky_file, nband, setup, /final, /bd
+;    ENDFOR
 
-END
+; END
