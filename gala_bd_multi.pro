@@ -268,8 +268,8 @@ PRO run_bd_fit, data_table_file, batch_filename, rsync_filename
   free_lun, rsync_file
 END
 
-PRO create_batches, n_cores, bd_files_file, galexe_str, outdir, outfile
-   READCOL,bd_files_file,F='A', bd_files
+PRO create_batches, n_cores, bd_batch_file, galexe_str, outdir, outfile
+   READCOL,bd_batch_file,F='A', bd_files
 
    batch = 0
    FOR i=0l, n_elements(bd_files)-1 DO BEGIN
