@@ -25,7 +25,7 @@ PRO bd_fit, obj_fitstab_file, label, no_fit=no_fit
    forward_function read_sersic_results
    ss_mult = read_sersic_results(obj_fitstab_file, nband)
 
-   print, obj_fitstab_file, ss_mult.MAG_GALFIT_BAND[0]
+   ;print, obj_fitstab_file, ss_mult.MAG_GALFIT_BAND[0]
    
    obj_file = strrep(obj_file, '/home/boris/', '')
    openw, filew, obj_file+'_bd'+label, /get_lun
