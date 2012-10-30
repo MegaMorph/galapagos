@@ -22,12 +22,12 @@ FUNCTION bd_fit, obj_fitstab_file, no_fit=no_fit
 
    tmp = mrdfits(obj_fitstab_file, 'MODEL_'+band_str[0], model, /silent)
 
-;extract info from SS-fit
+   ;extract info from SS-fit
    forward_function read_sersic_results
    ss_mult = read_sersic_results(obj_fitstab_file, nband)
 
-;only do B/D for bright objects
-   IF ((ss_mult.MAG_GALFIT_BAND[0] GT 16.0) && (ss_mult.MAG_GALFIT_BAND[0] LT 17.0)) THEN BEGIN
+   ;only do B/D for bright objects
+   IF ((ss_mult.MAG_GALFIT_BAND[0] GE 17.0) && (ss_mult.MAG_GALFIT_BAND[0] LT 18.0)) THEN BEGIN
    print, obj_fitstab_file, ss_mult.MAG_GALFIT_BAND[0]
    
    obj_file = strrep(obj_file, '/home/boris/', '')
@@ -127,7 +127,7 @@ FUNCTION bd_fit, obj_fitstab_file, no_fit=no_fit
       a = where(strpos(model,strtrim(maxcomp, 2)+'_PA_R') eq 0, ct)
    ENDREP UNTIL ct LE 0
    maxcomp--
-;maxcomp=2 means primary only
+   ;maxcomp=2 means primary only
 
    IF maxcomp GT 2 THEN BEGIN
       FOR comp=0, maxcomp-3 DO BEGIN
@@ -193,10 +193,10 @@ FUNCTION bd_fit, obj_fitstab_file, no_fit=no_fit
    free_lun, filer
    free_lun, filew
 
-;maximum allowed positional offset
+   ;maximum allowed positional offset
    pos_offset = ss_mult.RE_GALFIT_BAND[0]
 
-;constraint file
+   ;constraint file
    constr_file = strrep(constr_file, '/home/boris/', '')
    openw, ut, constr_file+'_bd', /get_lun
 
@@ -225,7 +225,7 @@ FUNCTION bd_fit, obj_fitstab_file, no_fit=no_fit
    free_lun, ut
 
 
-;run galfit
+   ;run galfit
    IF NOT keyword_set(no_fit) THEN BEGIN
       IF keyword_set(nice) THEN spawn, 'nice '+galfit_exe+' '+obj_file+'_bd' $
       ELSE spawn, galfit_exe+' '+obj_file+'_bd'
@@ -253,7 +253,7 @@ PRO run_bd_fit, data_table_file, batch_filename, rsync_filename
       IF file_test(obj_fitstab_file) THEN BEGIN
           select = bd_fit(obj_fitstab_file, /no_fit)
           IF select EQ 1 THEN BEGIN
-              printf, batch_file, strrep(obj_fitstab_file, '_gf.fits', '_bd')
+              printf, batch_file, strrep(obj_fitstab_file, '_gf.fits', '_obj_bd')
               
               obj_id = STRSPLIT(obj_fitstab_file, '/', /EXTRACT)
               obj_id = strrep(obj_id(N_ELEMENTS(obj_id)-1), '_gf.fits', '')
@@ -269,39 +269,39 @@ PRO run_bd_fit, data_table_file, batch_filename, rsync_filename
 END
 
 PRO create_batches, n_cores, bd_batch_file, galexe_str, outdir, outfile
+   ;create_batches, 64, '/home/ppzsb1/bd_batch_file', 'galfitm-0.1.2.1', 'gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/batches', 'gala_gama_bd1_'
    READCOL,bd_batch_file,F='A', bd_files
-
+   nfiles = n_elements(bd_files)
+   n_per_batch = ceil(nfiles / float(n_cores))
    batch = 0
-   FOR i=0l, n_elements(bd_files)-1 DO BEGIN
-      IF i MOD n_cores EQ 0 THEN BEGIN
+   FOR i=0l, nfiles-1 DO BEGIN
+      IF i MOD n_per_batch EQ 0 THEN BEGIN
          IF batch GT 0 THEN BEGIN
             printf, lun, 'echo "Finished job now"'
             free_lun, lun
          ENDIF
          batch++
-         openw, lun, outdir+'/'+outfile+strtrim(batch, 2), /get_lun
+         outfilenum = outfile+string(strtrim(batch, 2), format='(I3.3)')
+         openw, lun, outdir+'/'+outfilenum, /get_lun
 
          printf, lun, '#!/bin/bash'
          printf, lun, '# This is a submit script for B/D fitting.'
-         printf, lun, '# OPTIONS FOR GRID ENGINE =============================================================='
-         printf, lun, '#$ -l h_rt=10:00:00'
-         printf, lun, '# This specifies the job should run for no longer than 10 hour'
+         printf, lun, '# OPTIONS FOR GRID ENGINE ==================================================='
+         printf, lun, '# Job should run for no longer than 4 hours'
+         printf, lun, '#$ -l h_rt=4:00:00'
+         printf, lun, '# Standard output and standard error will both be saved to'
+         printf, lun, '# "'+outfilenum+'.out" in the directory qsub was run from'
          printf, lun, '#$ -cwd'
-         printf, lun, '# This sends output into the directory from which you submitted'
          printf, lun, '#$ -j y'
-         printf, lun, '# This joins up the error and output into one file rather that making two files'
-         printf, lun, '#$ -o '+outfile+'.out'
-         printf, lun, '# This send your output to the file "'+outfile+'.out" rather than a standard grid engine output filename'
-         printf, lun, '# OPTIONS FOR GRID ENGINE================================================================='
-         printf, lun, '# Here we just use Unix command to run our program'
+         printf, lun, '#$ -o '+outfilenum+'.out'
+         printf, lun, '# OPTIONS FOR GRID ENGINE===================================================='
          printf, lun, 'echo "Running on `hostname`"'
          printf, lun, 'cd /work/work1/ppzsb1/megamorph'
-         printf, lun, '# edit above line to the correct working directory for your job'
-         printf, lun, '# do something here'
+         printf, lun, 'GALFIT="./'+galexe_str+'"'
      ENDIF
-
-     obj_fitstab_file = strrep(bd_files[i], '_bd', '_gf_bd.fits')
-     cmd_str = '[ ! -f '+obj_fitstab_file+' ] && '+galexe_str+' '+bd_files[i]
+     
+     obj_fitstab_file = strrep(bd_files[i], '_obj_bd', '_gf_bd.fits')
+     cmd_str = '[ ! -f '+obj_fitstab_file+' ] && $GALFIT '+bd_files[i]
      printf, lun, cmd_str
    ENDFOR
    printf, lun, 'echo "Finished job now"'
@@ -318,18 +318,20 @@ END
 ;    nband = n_elements(band_str)
 
 ;    data_table = mrdfits(data_table_file, 1)
+;    forward_function read_sersic_results
 
 ;    FOR i=0l, n_elements(data_table) DO BEGIN
 ;       obj_file = strtrim(data_table[i].initfile, 2)+'_bd'
-;       IF obj_file EQ '_bd' THEN CONTINUE
+;       obj_fitstab_file = strrep(obj_file, '_obj_bd', '_gf_bd.fits')
+;       IF file_test(obj_fitstab_file) THEN BEGIN
+;          bd_table = read_sersic_results(obj_file, nband, /bd)
 
-;       forward_function read_sersic_results
-;       bd_table = read_sersic_results(obj_file, nband, /bd)
+;          str = strtrim(data_table[i].initfile, 2)
+;          sky_file = strmid(str, 0, strpos(str, '_obj')+'_'+['', band_str]
 
-;       str = strtrim(data_table[i].initfile, 2)
-;       sky_file = strmid(str, 0, strpos(str, '_obj')+'_'+['', band_str]
-
-;       update_table, bd_table, i, out_fits_table, obj_file, sky_file, nband, setup, /final, /bd
+;          update_table, bd_table, i, out_fits_table, obj_file,
+;          sky_file, nband, setup, /final, /bd
+;       ENDIF
 ;    ENDFOR
 
 ; END
