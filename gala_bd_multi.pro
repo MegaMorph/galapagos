@@ -1,9 +1,8 @@
-FUNCTION bd_fit, obj_fitstab_file, label, no_fit=no_fit
+PRO bd_fit, obj_fitstab_file, label, no_fit=no_fit
 
 ;   num = '21_17.346'
 ;   obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
 
-   select = 0
 
    fit_info = mrdfits(obj_fitstab_file, 'FIT_INFO', /silent)
 
@@ -26,8 +25,6 @@ FUNCTION bd_fit, obj_fitstab_file, label, no_fit=no_fit
    forward_function read_sersic_results
    ss_mult = read_sersic_results(obj_fitstab_file, nband)
 
-   ;only do B/D for bright objects
-   IF ((ss_mult.MAG_GALFIT_BAND[0] GE 17.0) && (ss_mult.MAG_GALFIT_BAND[0] LT 18.0)) THEN BEGIN
    print, obj_fitstab_file, ss_mult.MAG_GALFIT_BAND[0]
    
    obj_file = strrep(obj_file, '/home/boris/', '')
@@ -230,9 +227,6 @@ FUNCTION bd_fit, obj_fitstab_file, label, no_fit=no_fit
       IF keyword_set(nice) THEN spawn, 'nice '+galfit_exe+' '+obj_file+'_bd'+label $
       ELSE spawn, galfit_exe+' '+obj_file+'_bd'+label
    ENDIF
-   select = 1
-ENDIF
-return, select
 END
 
 PRO run_bd_fit, data_table_file, label
@@ -242,24 +236,24 @@ PRO run_bd_fit, data_table_file, label
    ;data_table = 'relative/path/to/GAMA_9_ffvqqff_gama_only.fits
    data_table = mrdfits(data_table_file, 1)
 
-   openw, batch_file, 'bd_batch_file'+label, /get_lun
-   openw, rsync_file, 'bd_rsync_includes'+label, /get_lun
+   openw, batch_file, 'bd'+label+'_batch_file', /get_lun
+   openw, rsync_file, 'bd'+label+'_rsync_includes', /get_lun
 
    printf, rsync_file, '+ **/'
    FOR i=0l, n_elements(data_table)-1 DO BEGIN
-      obj_fitstab_file = strtrim(data_table[i].file_galfit, 2)
-      ;change path from boris on dator to general location
-      obj_fitstab_file = strrep(obj_fitstab_file, '/home/boris/', '')
-      IF file_test(obj_fitstab_file) THEN BEGIN
-          select = bd_fit(obj_fitstab_file, label, /no_fit)
-          IF select EQ 1 THEN BEGIN
-              printf, batch_file, strrep(obj_fitstab_file, '_gf.fits', '_obj_bd'+label)
-              
-              obj_id = STRSPLIT(obj_fitstab_file, '/', /EXTRACT)
-              obj_id = strrep(obj_id(N_ELEMENTS(obj_id)-1), '_gf.fits', '')
-              printf, rsync_file, '+ *'+obj_id+'*'
-          ENDIF
-      ENDIF
+       ;only do B/D for bright objects
+       IF ((data_table[i].MAG_GALFIT_BAND[0] GE 17.0) && (data_table[i].MAG_GALFIT_BAND[0] LT 18.0)) THEN BEGIN
+           obj_fitstab_file = strtrim(data_table[i].file_galfit, 2)
+           ;change path from boris on dator to general location
+           obj_fitstab_file = strrep(obj_fitstab_file, '/home/boris/', '')
+           IF file_test(obj_fitstab_file) THEN BEGIN
+               bd_fit, obj_fitstab_file, label, /no_fit
+               printf, batch_file, strrep(obj_fitstab_file, '_gf.fits', '_obj_bd'+label)
+               obj_id = STRSPLIT(obj_fitstab_file, '/', /EXTRACT)
+               obj_id = strrep(obj_id(N_ELEMENTS(obj_id)-1), '_gf.fits', '')
+               printf, rsync_file, '+ *'+obj_id+'*'
+           ENDIF
+       ENDIF
   ENDFOR
   printf, rsync_file, '- *' 
   print, "Necessary files can now be transferred using the command:"
