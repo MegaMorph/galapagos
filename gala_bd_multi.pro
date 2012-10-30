@@ -1,4 +1,4 @@
-FUNCTION bd_fit, obj_fitstab_file, no_fit=no_fit
+FUNCTION bd_fit, obj_fitstab_file, label, no_fit=no_fit
 
 ;   num = '21_17.346'
 ;   obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
@@ -31,7 +31,7 @@ FUNCTION bd_fit, obj_fitstab_file, no_fit=no_fit
    print, obj_fitstab_file, ss_mult.MAG_GALFIT_BAND[0]
    
    obj_file = strrep(obj_file, '/home/boris/', '')
-   openw, filew, obj_file+'_bd', /get_lun
+   openw, filew, obj_file+'_bd'+label, /get_lun
    openr, filer, obj_file, /get_lun
    line = ''
    REPEAT BEGIN
@@ -39,10 +39,10 @@ FUNCTION bd_fit, obj_fitstab_file, no_fit=no_fit
 
       IF strpos(strtrim(line, 2), 'B) ') EQ 0 THEN BEGIN
          line = 'B) '+strrep(obj_fitstab_file, '.fits', $
-                             '_bd.fits    # output file name')
+                             '_bd'+label+'.fits    # output file name')
       ENDIF
       IF strpos(strtrim(line, 2), 'G) ') EQ 0 THEN BEGIN
-         line = 'G) '+constr_file+'_bd'
+         line = 'G) '+constr_file+'_bd'+label
      ENDIF
      ;change path from boris on dator to general location
      line = strrep(line, '/home/boris/', '')
@@ -198,7 +198,7 @@ FUNCTION bd_fit, obj_fitstab_file, no_fit=no_fit
 
    ;constraint file
    constr_file = strrep(constr_file, '/home/boris/', '')
-   openw, ut, constr_file+'_bd', /get_lun
+   openw, ut, constr_file+'_bd'+label, /get_lun
 
    printf, ut, '# Component/    parameter   constraint  Comment'
    printf, ut, '# operation                  values'
@@ -227,23 +227,23 @@ FUNCTION bd_fit, obj_fitstab_file, no_fit=no_fit
 
    ;run galfit
    IF NOT keyword_set(no_fit) THEN BEGIN
-      IF keyword_set(nice) THEN spawn, 'nice '+galfit_exe+' '+obj_file+'_bd' $
-      ELSE spawn, galfit_exe+' '+obj_file+'_bd'
+      IF keyword_set(nice) THEN spawn, 'nice '+galfit_exe+' '+obj_file+'_bd'+label $
+      ELSE spawn, galfit_exe+' '+obj_file+'_bd'+label
    ENDIF
    select = 1
 ENDIF
 return, select
 END
 
-PRO run_bd_fit, data_table_file, batch_filename, rsync_filename
-   ;run_bd_fit, 'gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/GAMA_9_ffvqqff_gama_only.fits', 'bd_batch_files', 'bd_rsync_includes'
+PRO run_bd_fit, data_table_file, label
+   ;run_bd_fit, 'gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/GAMA_9_ffvqqff_gama_only.fits', '1'
    ;this must be run from the root of the gama/galapagos/... tree
    ;in order to get the paths right
    ;data_table = 'relative/path/to/GAMA_9_ffvqqff_gama_only.fits
    data_table = mrdfits(data_table_file, 1)
 
-   openw, batch_file, batch_filename, /get_lun
-   openw, rsync_file, rsync_filename, /get_lun
+   openw, batch_file, 'bd_batch_file'+label, /get_lun
+   openw, rsync_file, 'bd_rsync_includes'+label, /get_lun
 
    printf, rsync_file, '+ **/'
    FOR i=0l, n_elements(data_table)-1 DO BEGIN
@@ -251,9 +251,9 @@ PRO run_bd_fit, data_table_file, batch_filename, rsync_filename
       ;change path from boris on dator to general location
       obj_fitstab_file = strrep(obj_fitstab_file, '/home/boris/', '')
       IF file_test(obj_fitstab_file) THEN BEGIN
-          select = bd_fit(obj_fitstab_file, /no_fit)
+          select = bd_fit(obj_fitstab_file, label, /no_fit)
           IF select EQ 1 THEN BEGIN
-              printf, batch_file, strrep(obj_fitstab_file, '_gf.fits', '_obj_bd')
+              printf, batch_file, strrep(obj_fitstab_file, '_gf.fits', '_obj_bd'+label)
               
               obj_id = STRSPLIT(obj_fitstab_file, '/', /EXTRACT)
               obj_id = strrep(obj_id(N_ELEMENTS(obj_id)-1), '_gf.fits', '')
@@ -300,7 +300,7 @@ PRO create_batches, n_cores, bd_batch_file, galexe_str, outdir, outfile
          printf, lun, 'GALFIT="./'+galexe_str+'"'
      ENDIF
      
-     obj_fitstab_file = strrep(bd_files[i], '_obj_bd', '_gf_bd.fits')
+     obj_fitstab_file = strrep(bd_files[i], '_obj_bd', '_gf_bd')+'.fits'
      cmd_str = '[ ! -f '+obj_fitstab_file+' ] && $GALFIT '+bd_files[i]
      printf, lun, cmd_str
    ENDFOR
@@ -309,7 +309,7 @@ PRO create_batches, n_cores, bd_batch_file, galexe_str, outdir, outfile
    free_lun, lun
 END
 
-; PRO extract_bd_info, data_table_file, band_str, out_fits_table, version_num
+; PRO extract_bd_info, data_table_file, band_str, out_fits_table, version_num, label
 ; ;bands in band_str have to be in the proper order!
 
 ;    setup = {version:0}
@@ -321,8 +321,8 @@ END
 ;    forward_function read_sersic_results
 
 ;    FOR i=0l, n_elements(data_table) DO BEGIN
-;       obj_file = strtrim(data_table[i].initfile, 2)+'_bd'
-;       obj_fitstab_file = strrep(obj_file, '_obj_bd', '_gf_bd.fits')
+;       obj_file = strtrim(data_table[i].initfile, 2)+'_bd'+label
+;       obj_fitstab_file = strrep(obj_file, '_obj_bd', '_gf_bd')+'.fits'
 ;       IF file_test(obj_fitstab_file) THEN BEGIN
 ;          bd_table = read_sersic_results(obj_file, nband, /bd)
 
