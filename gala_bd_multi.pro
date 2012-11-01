@@ -51,7 +51,7 @@
 ;
 ; These batch files need to be transferred to the supercomputer:
 ; rsync -av gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/batches
-        jupiter /work/work1/ppzsb1/megamorph/gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/
+;        jupiter /work/work1/ppzsb1/megamorph/gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/
 ;
 ; Finally, one can ssh into a supercomputer head node, navigate to the
 ; batches path, and submit the jobs:
