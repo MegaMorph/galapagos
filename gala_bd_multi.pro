@@ -237,7 +237,8 @@ PRO run_bd_fit, data_table_file, label
    data_table = mrdfits(data_table_file, 1)
 
    openw, batch_file, 'bd'+label+'_batch_file', /get_lun
-   openw, rsync_file, 'bd'+label+'_rsync_includes', /get_lun
+   rsync_filename = 'bd'+label+'_rsync_includes'
+   openw, rsync_file, rsync_filename, /get_lun
 
    printf, rsync_file, '+ **/'
    FOR i=0l, n_elements(data_table)-1 DO BEGIN
