@@ -11,6 +11,9 @@ restore, filein
 ; a .ttmp file
 ;if not keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
 ;if keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.bd.ttmp', 1)
+cur = save_cur
+fittab = save_table
+table = fittab
 
 for b=1,nband do begin
 ;read in image and weight (takes few sec)
@@ -40,20 +43,23 @@ for b=1,nband do begin
 ; new scheme takes around 2 second,s the next, old system, about 6
 ; moment() would be 3 times faster, but returns a MEAN value!
 ;; current version
-   global_sky=median(im[skypix])
-   global_sigsky=stddev(im[skypix])
-   if finite(global_sky) ne 1 or finite(global_sigsky) ne 1 then begin
+; DAMN! HAVE TO CATCH THE CASE WHEN NO PIXELS ARE SKYPIXELS!!!! Was
+; that what backup=backup was supposed to do in getsky_loop?
+    if ct gt 0 then begin
+       global_sky=median(im[skypix])
+       global_sigsky=stddev(im[skypix])
+       if finite(global_sky) ne 1 or finite(global_sigsky) ne 1 then begin
 ;; old version
 ;   resistant_mean, im[skypix], 3, sky, sigsky, nrej
 ;   sigsky *= sqrt(ct-1-nrej)
-       global_sky=median(im[skypix],/double)
-       global_sigsky=stddev(im[skypix],/double)
-   endif
+          global_sky=median(im[skypix],/double)
+          global_sigsky=stddev(im[skypix],/double)
+       endif
 ;; also belonging to old version
 ;   resistant_mean, im[skypix], 3, sky, sigsky, nrej
 ;   sigsky *= sqrt(ct-1-nrej)
 ;   par = [1, sky, sigsky, sigsky]
-;; second step is a curvefit to the histogram
+;; second step in old scheme is a curvefit to the histogram
 ;   plothist, im[skypix], x, y, xr = [-1, 1]*5*sigsky+sky, /peak, /noplot
 ;   IF n_elements(par) LT n_elements(x) THEN $
 ;    yfit = curvefit(x, y, noweight, par, sigma, $
@@ -61,7 +67,12 @@ for b=1,nband do begin
 ;                    /noderivative, status = status, iter = iter)
 ;   global_sky = par[1]
 ;   global_sigsky = par[2]
-
+    ENDIF
+    IF ct eq 0 then begin
+       global_sky=median(im)
+       global_sigsky=stddev(im)
+    ENDIF
+    
    delvarx, skypix
 
 ;make sure all positions are relative to the current frame
@@ -132,7 +143,7 @@ prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, 
    ELSE spawn, setup.galexe+' '+obj_file
    spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
 
-;   file_delete, filein
+   file_delete, filein
    wait, 1
 END
 

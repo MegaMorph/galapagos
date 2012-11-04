@@ -21,7 +21,7 @@ if n_elements(file) ne nband+1 then print, 'wrong number of PSFs given in setup 
 if n_elements(file) ne nband+1 then stop
 
 ;create array, then go through individual bands and fill the structure
-; GET MAXIUMUM NUMBERS OF ENRIES FIRST!!!
+; GET MAXIUMUM NUMBERS OF ENTRIES FIRST!!!
 maxdimen=0
 FOR b=1,nband DO BEGIN
     ncol=0
@@ -29,7 +29,7 @@ FOR b=1,nband DO BEGIN
         maxdimen=1
     ENDIF ELSE BEGIN
 ; check how many input columns
-        openr, 1, file[b]
+        openr, 1, strtrim(file[b],2)
         ncol=0
         line=''
 ; look for first valid line and count number of columns
@@ -46,9 +46,9 @@ try_again1:
         columns = strsplit(line, ' ', COUNT=ncol)      
         close,1
         
-        if ncol eq 2 then readcol, file[b], tile, psf, format='A,A', comment='#',/silent
-        if ncol eq 3 then readcol, file[b], ra, dec, psf, comment='#', format='D,D,A',/silent
-        if ncol eq 5 then readcol, file[b], ra_min, ra_max, dec_min, dec_max, psf, format='D,D,D,D,A', comment='#',/silent   
+        if ncol eq 2 then readcol, strtrim(file[b],2), tile, psf, format='A,A', comment='#',/silent
+        if ncol eq 3 then readcol, strtrim(file[b],2), ra, dec, psf, comment='#', format='D,D,A',/silent
+        if ncol eq 5 then readcol, strtrim(file[b],2), ra_min, ra_max, dec_min, dec_max, psf, format='D,D,D,D,A', comment='#',/silent   
         if n_elements(psf) gt maxdimen then maxdimen=n_elements(psf)
     ENDELSE
 ENDFOR
@@ -65,7 +65,7 @@ for b=1,nband do begin
         print, 'PSF: One single PSF was given, this will be used for the entire survey in this band'
 ;        create_struct, psf_struct, 'single', ['type','psffile'],'A,A',dimen=1
         psf_struct[0].type[b] = 'single'
-        psf_struct[0].psffile[b] = file[b]
+        psf_struct[0].psffile[b] = strtrim(file[b],2)
     endif else begin
 
 ; check how many input columns
@@ -89,7 +89,7 @@ try_again:
 ; if 2 columns, choose PSF tile-wise
      if ncol eq 2 then begin
          print, 'You have chosen to use one PSF per input tile, now checking whether all PSFs are defined'
-         readcol, file[b], tile, psf, format='A,A', comment='#',/silent
+         readcol, strtrim(file[b],2), tile, psf, format='A,A', comment='#',/silent
 ;        create_struct, psf_struct, 'tile', ['type','tile', 'psffile'],'A,A,A',dimen=n_elements(psf)
          psf_struct[0:n_elements(tile)-1].type[b] = 'tile'
          psf_struct[0:n_elements(tile)-1].tile[b] = tile
@@ -115,7 +115,7 @@ try_again:
 ; if 3 columns, choose closest PSF
      if ncol eq 3 then begin
          print, 'You have chosen to use a series of PSFs and the closest PSF to an object is chosen'
-         readcol, file[b], ra, dec, psf, comment='#', format='D,D,A',/silent
+         readcol, strtrim(file[b],2), ra, dec, psf, comment='#', format='D,D,A',/silent
 ;        create_struct, psf_struct, 'closest', ['type','ra', 'dec', 'psffile'],'A,D,D,A',dimen=n_elements(psf)
          psf_struct[0:n_elements(ra)-1].type[b] = 'closest'
          psf_struct[0:n_elements(ra)-1].ra[b] = ra
@@ -127,7 +127,7 @@ try_again:
 ; if 4 columns, choose PSF box-wise
      if ncol eq 5 then begin
          print, 'You have chosen to use a PSF per defined box. Now checking whether all areas are covered'
-         readcol, file[b], ra_min, ra_max, dec_min, dec_max, psf, format='D,D,D,D,A', comment='#',/silent
+         readcol, strtrim(file[b],2), ra_min, ra_max, dec_min, dec_max, psf, format='D,D,D,D,A', comment='#',/silent
 ;        create_struct, psf_struct, 'box', ['type','ra_min', 'ra_max', 'dec_min', 'dec_max', 'psffile'],'A,D,D,D,D,A',dimen=n_elements(psf)
          psf_struct[0:n_elements(ra)-1].type = 'box'
          psf_struct[0:n_elements(ra)-1].ra_min[b] = ra_min

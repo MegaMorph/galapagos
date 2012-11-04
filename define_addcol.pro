@@ -21,12 +21,14 @@ PRO define_addcol, addcol, nband, bd_fit = bd_fit
   bandfloat = 'fltarr('+strtrim(nband,2)+')'
   addcol = [['FLAG_GALFIT', '0'], ['NITER_GALFIT', '0'], $
             ['NEIGH_GALFIT', '0'], ['CHISQ_GALFIT','0.'], $
-            ['TIME_GALFIT', '0.'], ['VERSION_GALFIT', '" "'], $
+            ['VERSION_GALFIT', '" "'], $
             ['FIRSTCON_GALFIT','0'], ['LASTCON_GALFIT','0'], $
             ['NDOF_GALFIT','0l'], ['NFREE_GALFIT','0l'], $
             ['NFIX_GALFIT','0l'], ['CHI2NU_GALFIT','0.'], $
             ['INITFILE', '" "'], ['CONSTRNT', '" "'], $
             ['FITSECT', '" "'], ['CONVBOX', '" "'], $
+            ['CPUTIME_SETUP_GALFIT', '0.'], ['CPUTIME_FIT_GALFIT', '0.'], $
+            ['CPUTIME_TOTAL_GALFIT', '0.'], $
             ['ORG_IMAGE', '" "'], ['FILE_GALFIT', '" "'], $
             ['X_GALFIT', '0.'], ['XERR_GALFIT', '0.'], $
             ['X_GALFIT_CHEB', hlpcheb0], ['XERR_GALFIT_CHEB', hlpcheb0], $
@@ -56,12 +58,14 @@ PRO define_addcol, addcol, nband, bd_fit = bd_fit
   if keyword_set(bd_fit) then addcol=[[addcol], $
                                       ['FLAG_GALFIT_BD', '0'], ['NITER_GALFIT_BD', '0'], $
                                       ['NEIGH_GALFIT_BD', '0'], ['CHISQ_GALFIT_BD','0.'], $
-                                      ['TIME_GALFIT_BD', '0.'], ['VERSION_GALFIT_BD', '" "'], $
+                                      ['VERSION_GALFIT_BD', '" "'], $
                                       ['FIRSTCON_GALFIT_BD','0'], ['LASTCON_GALFIT_BD','0'], $
                                       ['NDOF_GALFIT_BD','0l'], ['NFREE_GALFIT_BD','0l'], $
                                       ['NFIX_GALFIT_BD','0l'], ['CHI2NU_GALFIT_BD','0.'], $
                                       ['INITFILE_BD', '" "'], ['CONSTRNT_BD', '" "'], $
                                       ['FILE_GALFIT_BD', '" "'],$
+                                      ['CPUTIME_SETUP_GALFIT_BD', '0.'], ['CPUTIME_FIT_GALFIT_BD', '0.'], $
+                                      ['CPUTIME_TOTAL_GALFIT_BD', '0.'], $
                                       ['X_GALFIT_D', '0.'], ['XERR_GALFIT_D', '0.'], $
                                       ['X_GALFIT_B', '0.'], ['XERR_GALFIT_B', '0.'], $
                                       ['X_GALFIT_CHEB_D', hlpcheb0], ['XERR_GALFIT_CHEB_D', hlpcheb0], $
