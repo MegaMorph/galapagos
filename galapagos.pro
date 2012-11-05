@@ -2626,7 +2626,6 @@ WHILE NOT eof(1) DO BEGIN
     IF pos EQ -1 THEN pos = strlen(line)
     content = strtrim(strmid(line, len_num, pos-len_num), 2)
     IF strupcase(strmid(line, 0, len_num)) eq 'G00)' then block_bd = 1
-    IF strupcase(strmid(line, 0, len_num)) eq 'G00)' then setup.bdcat = 1
     IF strupcase(strmid(line, 0, len_num)) eq 'E19)' then limitn = 1
 ENDWHILE
 close, 1
@@ -3460,7 +3459,6 @@ ENDFOR
 
 if not keyword_set(bd) then table[i].flag_galfit = res.flag_galfit    
 if keyword_set(bd) then table[i].flag_galfit_bd = res.flag_galfit_bd    
-
 if not file_test(out_file+'.fits') then begin
 ; SHORT TERM SOLUTION! CHECK THAT SAV FILE DOESN'T EXIST, EITHER!
 ; LONG TERM SOLUTION: MAKE SURE THAT BRIDGE DOESN"T CRASH!! EVER!
@@ -3499,7 +3497,6 @@ if not file_test(out_file+'.fits') then begin
       ENDIF
    ENDELSE
 ENDIF ELSE BEGIN
-   
 ; IN B/D THIS BIT WILL BE DONE IN EACH READIN, BUT RESULT IS EQUIVALENT
    if keyword_set(final) then begin
       table[i].org_image = table[i].tile
@@ -3627,7 +3624,7 @@ IF keyword_set(logfile) THEN $
 ; to get output catalogue
 ; This already defines ALL parameters, even the B/D ones if later
 ; needed. Nothing is done to those until starting the BD-block!
-define_addcol, addcol, nband, bd_fit = setup.bdcat
+define_addcol, addcol, nband, bd_fit = setup.dobd
 ;==============================================================================
 ;run SExtractor
 IF setup.dosex THEN BEGIN
@@ -3899,7 +3896,6 @@ for i = 0, n_elements(images[*,0])-1 do begin
     whtableim = where(table.frame eq images[i,0], ct)
     if ct gt 0 then for b=0,nband do tableim[b,whtableim] = images[i,b]
 ENDFOR 
-
 table=remove_tags(table,'frame')
 add_tag, table, 'frame', strarr(nband+1), table2
 table=table2
@@ -3922,7 +3918,6 @@ delvarx, fittab2
 
 ; fill in sextractor values
 struct_assign, table, fittab
-delvarx, table
 
 ; rename table in order to work in the rest of the code
 table = fittab
@@ -3954,16 +3949,20 @@ IF setup.dosky or setup.dobd  THEN BEGIN
    add_tag, table, 'do_list', 0, table_new
    table = table_new
    delvarx, table_new
-   
+
+
+; I think the code could be fastened up here, this has been done
+; before.
    IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
       table.do_list = 1
    ENDIF ELSE BEGIN
-      readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
-      
-      srccor, do_ra/15., do_dec, table.alpha_j2000/15., table.delta_j2000, $
-              setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
-      
-      table[sex_i].do_list = 1
+       print, 'correlating to primary object list'
+       readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
+       
+       srccor, do_ra/15., do_dec, table.alpha_j2000/15., table.delta_j2000, $
+         setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
+       
+       table[sex_i].do_list = 1
    ENDELSE
 ENDIF
 
@@ -4062,7 +4061,7 @@ loopstart2:
                 for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
                 
 ;check if file was done successfully or bombed
-                update_table, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup
+                update_table, table, bridge_obj[free[0]], out_file, obj_file, sky_file, nband, setup
 ;else table is automatically filled with standard values
                 
 ;clear object
@@ -4121,7 +4120,7 @@ loopstart2:
                 IF file_test(obj_file) THEN BEGIN
 ;                      print, obj_file+' found.'
                     print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
-                    update_table, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup
+                    update_table, table, cur, out_file, obj_file, sky_file, nband, setup
                     IF n_elements(todo) ne 1 then goto, loopstart
                     IF n_elements(todo) eq 1 then goto, loopend
                 ENDIF
@@ -4131,7 +4130,7 @@ loopstart2:
             bridge_obj[free[0]] = cur
             bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
             table[cur].flag_galfit = 1
-            if n_elements(where(table.flag_galfit)) mod 10 eq 0 then print, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(where(fittab.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
+            if n_elements(where(table.flag_galfit)) mod 10 eq 0 then print, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(where(table.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
 ;              print, obj_file
             if keyword_set(plot) then begin
                plot, table.alpha_J2000,table.delta_J2000, psym=3, ystyle=1, xstyle=1
@@ -4254,7 +4253,7 @@ loopend:
             
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
-            update_table, table, bridge_obj[remain[i]], out_file+'.fits', obj_file, sky_file, nband, setup
+            update_table, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
         ENDFOR
@@ -4295,7 +4294,7 @@ IF setup.dobd THEN BEGIN
         for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
         
 ; read in single sersic again
-        update_table, table, i, out_fil+'.fits'e, obj_file, sky_file, nband, setup
+        update_table, table, i, out_file, obj_file, sky_file, nband, setup
         table[i].org_image_band = orgim[idx[0],1:nband]
         
     ENDFOR
@@ -4407,7 +4406,7 @@ loopstart2_bd:
                 
 ;check if file was done successfully or bombed (done in update_table)
 ;else table is automatically filled with standard values                
-                update_table, table, bridge_obj[free[0]], out_file+'.fits', obj_file, sky_file, nband, setup, /bd
+                update_table, table, bridge_obj[free[0]], out_file, obj_file, sky_file, nband, setup, /bd
 
 ;clear object
                 bridge_obj[free[0]] = -1
@@ -4473,7 +4472,7 @@ loopstart2_bd:
                 IF file_test(obj_file) THEN BEGIN
                     print, obj_file+' found.'
                     print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
-                    update_table, table, cur, out_file+'.fits', obj_file, sky_file, nband, setup, /bd
+                    update_table, table, cur, out_file, obj_file, sky_file, nband, setup, /bd
                     IF n_elements(todo) ne 1 then goto, loopstart_bd
                     IF n_elements(todo) eq 1 then goto, loopend_bd
                 ENDIF
@@ -4483,7 +4482,7 @@ loopstart2_bd:
             bridge_obj[free[0]] = cur
             bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
             table[cur].flag_galfit_bd = 1
-            if n_elements(where(table.flag_galfit_bd)) mod 10 eq 0 then print, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit_bd ge 1)),2)+' of '+strtrim(n_elements(where(fittab.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
+            if n_elements(where(table.flag_galfit_bd)) mod 10 eq 0 then print, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit_bd ge 1)),2)+' of '+strtrim(n_elements(where(table.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
             if keyword_set(plot) then begin
                 plot, table.alpha_J2000,table.delta_J2000, psym=3, ystyle=1, xstyle=1
                 if n_elements(blocked) gt 1 then begin
@@ -4540,12 +4539,12 @@ loopstart2_bd:
                tabi = where(table.frame[0] EQ neighbours[i, idx[0]], ct)
                IF ct GT 0 THEN int_obj = [int_obj, tabi]
             ENDFOR
-;              save_table = table[int_obj]
-            save_fittab = fittab[int_obj]
+              save_table = table[int_obj]
+;            save_fittab = fittab[int_obj]
             
 ; find new values of [cur] and 
 ; [idx] will stay the same because it's not the object, but the tile it is on!
-            save_cur = where(save_fittab.frame[0] eq table[cur].frame[0] and save_fittab.number eq table[cur].number)
+            save_cur = where(save_table.frame[0] eq table[cur].frame[0] and save_table.number eq table[cur].number)
             save_cur = save_cur[0]
             
             save, save_cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
@@ -4601,7 +4600,7 @@ loopend_bd:
             
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
-            update_table, table, bridge_obj[remain[i]], out_file+'.fits', obj_file, sky_file, nband, setup, /bd
+            update_table, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup, /bd
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
         ENDFOR
@@ -4622,7 +4621,9 @@ IF setup.docombine THEN BEGIN
    
    out = read_sex_param(outpath_file[0,0]+setup.outparam, ntab, $
                         add_column = [[addcol],['TILE', '" "']])
-   
+
+   struct_assign, tab, out
+
 ;find the image files for the sources
    orgim = setup.images
    orgwht = setup.weights
@@ -4639,22 +4640,22 @@ IF setup.docombine THEN BEGIN
    
    print,' '
    FOR i=0ul, ntab-1 DO BEGIN
-      statusline, ' reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
+      statusline, 'reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
       objnum = round_digit(tab[i].number, 0, /str)
       
       idx = where(tab[i].tile EQ orgim[*,0])
-      out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]+'.fits'
+      out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
       
       obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
       sky_file = strarr(nband+1)
       for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
       
 ; read in single sersic again
-      update_table, out, i, out_file+'.fits', obj_file, sky_file, nband, setup, /final
+      update_table, out, i, out_file, obj_file, sky_file, nband, setup, /final
 ; read in B/D again
-      if setup.bdcat then begin
-         out_file_bd = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.galfit_out)[0]+'.fits'
-         update_table, out, i, out_file_bd+'.fits', obj_file, sky_file, nband, setup, /bd, /final
+      if setup.dobd then begin
+         out_file_bd = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.galfit_out)[0]
+         update_table, out, i, out_file_bd, obj_file, sky_file, nband, setup, /bd, /final
          out[i].org_image_band = orgim[idx[0],1:nband]
       ENDIF
       
@@ -4684,8 +4685,7 @@ IF setup.docombine THEN BEGIN
       good = where(flag EQ 0, ct)
       IF ct EQ 0 THEN message, 'No objects in output catalogue left' $
       ELSE out = out[good]
-   ENDIF
-stop    
+   ENDIF 
    mwrfits, out, setup.outdir+setup.cat, /silent, /create
 ENDIF
 d = check_math()
