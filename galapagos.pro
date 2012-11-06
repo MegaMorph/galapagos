@@ -1039,20 +1039,20 @@ q = t.b_image/t.a_image
 re = t.flux_radius^power
 mag = t.mag_best
 theta_image = t.theta_world-t[c].theta_world+t[c].theta_image
-IF n_elements(table) GT 0 THEN BEGIN
+IF n_elements(t) GT 0 THEN BEGIN
     
 ; try using 'match'
-    ident1 = strtrim(table.org_image,2)+':'+strtrim(table.number,2)
+    ident1 = strtrim(t.org_image,2)+':'+strtrim(t.number,2)
     ident2 = strtrim(t.frame[0],2)+':'+strtrim(t.number,2)
     match, ident1, ident2, id_idx1, id_idx2
-    wh_re_gt0 = where(table[id_idx1].re_galfit GE 0,cntregt0)
+    wh_re_gt0 = where(t[id_idx1].re_galfit GE 0,cntregt0)
     if cntregt0 gt 0 then begin
-        n[id_idx2[wh_re_gt0]] = table[id_idx1[wh_re_gt0]].n_galfit
-        q[id_idx2[wh_re_gt0]] = table[id_idx1[wh_re_gt0]].q_galfit
-        re[id_idx2[wh_re_gt0]] = table[id_idx1[wh_re_gt0]].re_galfit
-        mag[id_idx2[wh_re_gt0]] = table[id_idx1[wh_re_gt0]].mag_galfit
+        n[id_idx2[wh_re_gt0]] = t[id_idx1[wh_re_gt0]].n_galfit
+        q[id_idx2[wh_re_gt0]] = t[id_idx1[wh_re_gt0]].q_galfit
+        re[id_idx2[wh_re_gt0]] = t[id_idx1[wh_re_gt0]].re_galfit
+        mag[id_idx2[wh_re_gt0]] = t[id_idx1[wh_re_gt0]].mag_galfit
         theta_image[id_idx2[wh_re_gt0]] = theta_image[id_idx2[wh_re_gt0]]-t[c].theta_image+ $
-          90+table[id_idx1[wh_re_gt0]].pa_galfit
+          90+t[id_idx1[wh_re_gt0]].pa_galfit
     endif
     wh_theta_gt0 = where(theta_image GT 180, cnt_gt)
     if cnt_gt gt 0 then theta_image[wh_theta_gt0] -= 180
@@ -3847,41 +3847,6 @@ sexcat = read_sex_table(setup.outdir+setup.sexcomb, $
                         outpath_file[0,0]+setup.outparam, $
                         add_col = ['frame', '" "'])
 
-;==============================================================================
-add_tag, sexcat, 'do_list', 0, sexcat_new
-sexcat = sexcat_new
-delvarx, sexcat_new
-
-; get sourcelist of intereting (primary) sources and correlate to catalogue
-IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
-   sexcat.do_list = 1
-ENDIF ELSE BEGIN
-; only do this when the sav file does not exist or is older than the
-; sextractor table!
-   sav_file_test = file_info(setup.outdir+'primary_list.sav')
-   sex_file_test = file_info(setup.outdir+setup.sexcomb)
-   
-   IF sav_file_test.exists EQ 0 OR (sav_file_test.exists EQ 1 AND sav_file_test.mtime LT sex_file_test.mtime) THEN BEGIN
-      print, 'correlating SExtractor catalogue to source list. Might take some time'
-      readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT   
-      
-      srccor, do_ra/15., do_dec, sexcat.alpha_j2000/15., sexcat.delta_j2000, $
-              setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
-
-; print indices in to file to be read in next time (much faster)
-; This has to be done here and not when cutting the postage stamps,
-; because the order of objects is different, so indices would be wrong
-      save, sex_i, filename=setup.outdir+'primary_list.sav'
-   ENDIF ELSE BEGIN
-      print, 'source correlation has already been done, simply reading result!'
-      restore, setup.outdir+'primary_list.sav'
-   ENDELSE
-   
-; if sav file exists and is newer than sextractor table, simply read
-; in the indices from there!
-   sexcat[sex_i].do_list = 1
-ENDELSE
-
 ;sort the total catalogue by magnitude and select the brightest BRIGHT percent
 print, 'setting up table'
 br = sort(sexcat.mag_best)
@@ -3908,7 +3873,7 @@ delvarx, table2
 ; this line only created an empty structure, no values in yet!
 ; fittab read in because for now this seems to be easier. Will be renamed to 'table' below.
 ; could and should be cleaned up at some point !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-print, 'setting up second table, needed only for a short time, deleted afterwards0'
+print, 'setting up second table, needed only for a short time, deleted afterwards'
 fittab = read_sex_param(outpath_file[0,0]+setup.outparam, n_elements(sexcat.mag_best), $
                         add_column = addcol)
 
@@ -3950,19 +3915,34 @@ IF setup.dosky or setup.dobd  THEN BEGIN
    table = table_new
    delvarx, table_new
 
-
-; I think the code could be fastened up here, this has been done
-; before.
+; get sourcelist of intereting (primary) sources and correlate to catalogue
    IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
-      table.do_list = 1
+       table.do_list = 1
    ENDIF ELSE BEGIN
-       print, 'correlating to primary object list'
-       readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT
+; only do this when the sav file does not exist or is older than the
+; sextractor table!
+       sav_file_test = file_info(setup.outdir+'primary_list.sav')
+       sex_file_test = file_info(setup.outdir+setup.sexcomb)
+   
+       IF sav_file_test.exists EQ 0 OR (sav_file_test.exists EQ 1 AND sav_file_test.mtime LT sex_file_test.mtime) THEN BEGIN
+           print, 'correlating SExtractor catalogue to source list. Might take some time'
+           readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT   
+           
+           srccor, do_ra/15., do_dec, table.alpha_j2000/15., table.delta_j2000, $
+             setup.srclistrad, do_i, tab_i, OPTION=1, /SPHERICAL, /SILENT
+           
+; print indices in to file to be read in next time (much faster)
+; This has to be done here and not when cutting the postage stamps,
+; because the order of objects is different, so indices would be wrong
+           save, tab_i, filename=setup.outdir+'primary_list.sav'
+       ENDIF ELSE BEGIN
+           print, 'source correlation has already been done, simply reading result!'
+           restore, setup.outdir+'primary_list.sav'
+       ENDELSE
        
-       srccor, do_ra/15., do_dec, table.alpha_j2000/15., table.delta_j2000, $
-         setup.srclistrad, do_i, sex_i, OPTION=1, /SPHERICAL, /SILENT
-       
-       table[sex_i].do_list = 1
+; if sav file exists and is newer than sextractor table, simply read
+; in the indices from there!
+       table[tab_i].do_list = 1
    ENDELSE
 ENDIF
 

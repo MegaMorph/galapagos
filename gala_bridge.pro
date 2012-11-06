@@ -84,7 +84,7 @@ for b=1,nband do begin
 
 ; read in psf to be passed onto procedure
    psf = readfits(chosen_psf_file[b], psfhead,/silent)
-   
+
 ; fix contrib_targets
    getsky_loop, setup, cur, table, rad, im, hd, map, setup.expt, $
      setup.zp, setup.neiscl, setup.skyoff, setup.power, $
@@ -143,7 +143,7 @@ prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, 
    ELSE spawn, setup.galexe+' '+obj_file
    spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
 
-   file_delete, filein
+;   file_delete, filein
    wait, 1
 END
 
