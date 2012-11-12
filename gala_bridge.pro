@@ -12,8 +12,7 @@ restore, filein
 ;if not keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
 ;if keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.bd.ttmp', 1)
 cur = save_cur
-fittab = save_table
-table = fittab
+table = save_table
 
 for b=1,nband do begin
 ;read in image and weight (takes few sec)
@@ -146,4 +145,3 @@ prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, 
 ;   file_delete, filein
    wait, 1
 END
-

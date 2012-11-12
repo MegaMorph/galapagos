@@ -2080,9 +2080,6 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
     par.n_galfit = par.n_galfit < setup.conmaxn > setup.conminn
     par.n_galfit_band = par.n_galfit_band < setup.conmaxn > setup.conminn
     par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < setup.conmaxn > setup.conminn
-;       par.n_galfit = par.n_galfit < 8 > 0.2
-;       par.n_galfit_band = par.n_galfit_band < 8 > 0.2
-;       par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < 8 > 0.2
     par.q_galfit = par.q_galfit > 0.0001 < 1
     par.q_galfit_band = par.q_galfit_band > 0.0001 < 1
     par.q_galfit_cheb[0] = par.q_galfit_cheb[0] > 0.0001 < 1
@@ -2387,9 +2384,6 @@ FOR i=0ul, n_nums-1 DO BEGIN
     par.n_galfit = par.n_galfit < setup.conmaxn > setup.conminn
     par.n_galfit_band = par.n_galfit_band < setup.conmaxn > setup.conminn
     par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < setup.conmaxn > setup.conminn
-;       par.n_galfit = par.n_galfit < 8 > 0.2
-;       par.n_galfit_band = par.n_galfit_band < 8 > 0.2
-;       par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < 8 > 0.2
     par.q_galfit = par.q_galfit > 0.0001 < 1
     par.q_galfit_band = par.q_galfit_band > 0.0001 < 1
     par.q_galfit_cheb[0] = par.q_galfit_cheb[0] > 0.0001 < 1
@@ -2582,7 +2576,6 @@ setup = create_struct('files', '', $
                       'version', 0,$
                       'cheb', intarr(7)-1, $
                       'galfit_out_path',' ', $
-                      'bdcat', 0, $
                       'dobd', 0, $
                       'bd_maglim', -1., $
                       'cheb_b', intarr(7)-1, $
@@ -3960,12 +3953,12 @@ IF setup.dosky THEN BEGIN
 ; set standard values
    table.mag_galfit = 999.
    table.mag_galfit_band = fltarr(nband)+999.
-   table.re_galfit = -99.
-   table.re_galfit_band = fltarr(nband)-99.
-   table.n_galfit = -99.
-   table.n_galfit_band = fltarr(nband)-99.
-   table.q_galfit = -99.
-   table.q_galfit_band = fltarr(nband)-99.
+   table.re_galfit = -1.
+   table.re_galfit_band = fltarr(nband)-1.
+   table.n_galfit = -1.
+   table.n_galfit_band = fltarr(nband)-1.
+   table.q_galfit = -1.
+   table.q_galfit_band = fltarr(nband)-1.
    
 ;calculate sky for the brightest objects
 ;******************************************************************************
@@ -4169,7 +4162,6 @@ loopstart2:
                IF ct GT 0 THEN int_obj = [int_obj, tabi]
             ENDFOR
             save_table = table[int_obj]
-;            save_fittab = fittab[int_obj]
             
 ; find new values of [cur] and 
 ; [idx] will stay the same because it's not the object, but the tile it is on!
@@ -4289,20 +4281,20 @@ IF setup.dobd THEN BEGIN
 ; fill with standard values
     table.mag_galfit_d = 999.
     table.mag_galfit_band_d = fltarr(nband)+999
-    table.re_galfit_d = -99.
-    table.re_galfit_band_d = fltarr(nband)-99.
-    table.n_galfit_d = -99.
-    table.n_galfit_band_d = fltarr(nband)-99.
-    table.q_galfit_d = -99.
-    table.q_galfit_band_d = fltarr(nband)-99.
+    table.re_galfit_d = -1.
+    table.re_galfit_band_d = fltarr(nband)-1.
+    table.n_galfit_d = -1.
+    table.n_galfit_band_d = fltarr(nband)-1.
+    table.q_galfit_d = -1.
+    table.q_galfit_band_d = fltarr(nband)-1.
     table.mag_galfit_b = 999.
     table.mag_galfit_band_b = fltarr(nband)+999.
-    table.re_galfit_b = -99.
-    table.re_galfit_band_b = fltarr(nband)-99.
-    table.n_galfit_b = -99.
-    table.n_galfit_band_b = fltarr(nband)-99.
-    table.q_galfit_b = -99.
-    table.q_galfit_band_b = fltarr(nband)-99.
+    table.re_galfit_b = -1.
+    table.re_galfit_band_b = fltarr(nband)-1.
+    table.n_galfit_b = -1.
+    table.n_galfit_band_b = fltarr(nband)-1.
+    table.q_galfit_b = -1.
+    table.q_galfit_band_b = fltarr(nband)-1.
 
 ;************************ DEBUGGING ONLY!!!!!
 stop
@@ -4520,7 +4512,6 @@ loopstart2_bd:
                IF ct GT 0 THEN int_obj = [int_obj, tabi]
             ENDFOR
               save_table = table[int_obj]
-;            save_fittab = fittab[int_obj]
             
 ; find new values of [cur] and 
 ; [idx] will stay the same because it's not the object, but the tile it is on!
