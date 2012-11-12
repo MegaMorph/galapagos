@@ -132,7 +132,7 @@ IF label[0] EQ '' THEN label = label[1:*]
 value = label
 FOR i=0ul, n_elements(label)-1 DO BEGIN
     CASE label[i] OF
-        'number':        value[i] = '0'
+        'number':        value[i] = '0L'
         'flags':         value[i] = '0'
         'imaflags_iso':  value[i] = '0'
         'nimaflags_iso': value[i] = '0'
