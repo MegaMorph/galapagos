@@ -1,13 +1,14 @@
-@/home/boris/mmm/astro-megamorph/galapagos/mrd_struct.pro
-@/home/boris/mmm/astro-megamorph/galapagos/mrdfits.pro
-@/home/boris/mmm/astro-megamorph/galapagos/mrd_hread.pro
-@/home/boris/mmm/astro-megamorph/galapagos/valid_num.pro
-@/home/boris/mmm/astro-megamorph/galapagos/mwrfits.pro
-@/home/boris/mmm/astro-megamorph/galapagos/fxaddpar.pro
-@/home/boris/mmm/astro-megamorph/galapagos/fxposit.pro
-@/home/boris/mmm/astro-megamorph/galapagos/fxmove.pro
-@/home/boris/mmm/astro-megamorph/galapagos/writefits.pro
-@/home/boris/mmm/astro-megamorph/galapagos/kill_galfit.pro
+;@/home/boris/mmm/astro-megamorph/galapagos/mrd_struct.pro
+;@/home/boris/mmm/astro-megamorph/galapagos/mrdfits.pro
+;@/home/boris/mmm/astro-megamorph/galapagos/mrd_hread.pro
+;@/home/boris/mmm/astro-megamorph/galapagos/valid_num.pro
+;@/home/boris/mmm/astro-megamorph/galapagos/mwrfits.pro
+;@/home/boris/mmm/astro-megamorph/galapagos/fxaddpar.pro
+;@/home/boris/mmm/astro-megamorph/galapagos/fxposit.pro
+;@/home/boris/mmm/astro-megamorph/galapagos/fxmove.pro
+;@/home/boris/mmm/astro-megamorph/galapagos/writefits.pro
+;@/home/boris/mmm/astro-megamorph/galapagos/kill_galfit.pro
+
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
@@ -1172,7 +1173,7 @@ END
 PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt, $
                  scale, offset, power, cut, files, psf, dstep, wstep, gap, $
                  nslope, sky_file, out_file, out_cat, out_param, out_stamps, $
-                 global_sky, global_sigsky, conv_box, nums, frames, galexe, $
+                 global_sky, global_sigsky, conv_box, nums, frames, $
                  b, orgpath_pre, outpath_file, outpath_file_no_band, $
                  nband, xarr, yarr, seed
 ;current_obj: idx of the current object in table
@@ -2016,35 +2017,21 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
         IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
         par.x_galfit = table[objects[i]].x_image
         par.x_galfit_band = fltarr(nband)+table[objects[i]].x_image
-        par.x_galfit_cheb = fltarr(nband)
-        par.x_galfit_cheb[0] = table[objects[i]].x_image
         par.y_galfit = table[objects[i]].y_image
         par.y_galfit_band = fltarr(nband)+table[objects[i]].y_image
-        par.y_galfit_cheb = fltarr(nband)
-        par.y_galfit_cheb[0] = table[objects[i]].y_image
 ; NEED TO CORRECT MAGNITUDE STARTING PARAMS! DONE using offset
         par.mag_galfit = table[objects[i]].mag_best
         par.mag_galfit_band = fltarr(nband)+table[objects[i]].mag_best+setup.mag_offset[1:nband]
-        par.mag_galfit_cheb = fltarr(nband)
-        par.mag_galfit_cheb[0] = table[objects[i]].mag_best
 ; THESE VALUES ARE CIRCULATIZED VALUES!! NEED TO BE AR CORRECTED
 ; (FROM LEE!)
         par.re_galfit = 10.^(-0.79)*table[objects[i]].flux_radius^1.87
         par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[objects[i]].flux_radius^1.87
-        par.re_galfit_cheb = fltarr(nband)
-        par.re_galfit_cheb[0] = 10.^(-0.79)*table[objects[i]].flux_radius^1.87
         par.n_galfit = 2.5
         par.n_galfit_band = fltarr(nband)+2.5
-        par.n_galfit_cheb = fltarr(nband)
-        par.n_galfit_cheb[0] = 2.5
         par.q_galfit = 1-table[objects[i]].ellipticity
         par.q_galfit_band = fltarr(nband)+1-table[objects[i]].ellipticity
-        par.q_galfit_cheb = fltarr(nband)
-        par.q_galfit_cheb[0] = 1-table[objects[i]].ellipticity
         par.pa_galfit = table[objects[i]].theta_image-90.
         par.pa_galfit_band = fltarr(nband)+table[objects[i]].theta_image-90.
-        par.pa_galfit_cheb = fltarr(nband)
-        par.pa_galfit_cheb[0] = table[objects[i]].theta_image-90.
         
         fix = ['1', '1', '1', '1', '1', '1', '1']
     ENDELSE
@@ -2062,33 +2049,23 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
     IF finite(par.re_galfit) NE 1 THEN begin
         par.re_galfit = table[objects[i]].flux_radius > 3
         par.re_galfit_band = fltarr(nband)+(table[objects[i]].flux_radius > 3)
-        par.re_galfit_cheb = fltarr(nband)
-        par.re_galfit_cheb[0] = table[objects[i]].flux_radius > 3
     ENDIF
     
     IF par.re_galfit LT 0 THEN BEGIN
         par.re_galfit = table[objects[i]].flux_radius > 3
         par.re_galfit_band = fltarr(nband)+(table[objects[i]].flux_radius > 3)
-        par.re_galfit_cheb = fltarr(nband)
-        par.re_galfit_cheb[0] = table[objects[i]].flux_radius > 3    
     ENDIF
     par.re_galfit = par.re_galfit < float(conmaxre) > 0.3
 ; hard contraints work on ALL bands if this is used below.
     par.re_galfit_band = par.re_galfit_band < float(conmaxre) > 0.3
 ; hard contraints work only on principle band if this is used
-    par.re_galfit_cheb[0] = par.re_galfit_cheb[0] < float(conmaxre) > 0.3
     par.n_galfit = par.n_galfit < setup.conmaxn > setup.conminn
     par.n_galfit_band = par.n_galfit_band < setup.conmaxn > setup.conminn
-    par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < setup.conmaxn > setup.conminn
     par.q_galfit = par.q_galfit > 0.0001 < 1
     par.q_galfit_band = par.q_galfit_band > 0.0001 < 1
-    par.q_galfit_cheb[0] = par.q_galfit_cheb[0] > 0.0001 < 1
     par.pa_galfit = par.pa_galfit > (-360) < 360
     par.pa_galfit_band = par.pa_galfit_band > (-360) < 360
-    par.pa_galfit_cheb[0] = par.pa_galfit_cheb[0] > (-360) < 360
-    
-;     0  1  2    3   4  5  6   7
-;par=[x, y, mag, re, n, q, pa, sky]
+     
     openu, 1, obj_file, /append
     printf, 1, '# Sersic function'
     printf, 1, ''
@@ -2249,28 +2226,19 @@ FOR i=0ul, n_nums-1 DO BEGIN
 ; replace correctly!
                 par.x_galfit = table[i_con].x_image
                 par.x_galfit_band = fltarr(nband)+table[i_con].x_image
-                par.x_galfit_cheb = fltarr(nband)
-                par.x_galfit_cheb[0] = table[i_con].x_image
                 par.y_galfit = table[i_con].y_image
                 par.y_galfit_band = fltarr(nband)+table[i_con].y_image
-                par.y_galfit_cheb = fltarr(nband)
-                par.y_galfit_cheb[0] = table[i_con].y_image
 ; NEED TO CORRECT MAGNITUDE STARTING PARAMS! DONE using offset
                 par.mag_galfit = table[i_fit].mag_galfit
                 par.mag_galfit_band = table[i_fit].mag_galfit_band
-                par.mag_galfit_cheb = table[i_fit].mag_galfit_cheb
                 par.re_galfit = table[i_fit].re_galfit
                 par.re_galfit_band = table[i_fit].re_galfit_band
-                par.re_galfit_cheb = table[i_fit].re_galfit_cheb
                 par.n_galfit = table[i_fit].n_galfit
                 par.n_galfit_band = table[i_fit].n_galfit_band
-                par.n_galfit_cheb = table[i_fit].n_galfit_cheb
                 par.q_galfit = table[i_fit].q_galfit
                 par.q_galfit_band = table[i_fit].q_galfit_band
-                par.q_galfit_cheb = table[i_fit].q_galfit_cheb
                 par.pa_galfit = table[i_fit].pa_galfit
                 par.pa_galfit_band = table[i_fit].pa_galfit_band
-                par.pa_galfit_cheb = table[i_fit].pa_galfit_cheb
                 
 ;if so fixate the fit
                 fix = ['0', '0', '0', '0', '0', '0', '0']
@@ -2283,39 +2251,20 @@ FOR i=0ul, n_nums-1 DO BEGIN
                 
                 par.x_galfit = table[i_con].x_image
                 par.x_galfit_band = fltarr(nband)+table[i_con].x_image
-                par.x_galfit_cheb = fltarr(nband)
-                par.x_galfit_cheb[0] = table[i_con].x_image
                 par.y_galfit = table[i_con].y_image
                 par.y_galfit_band = fltarr(nband)+table[i_con].y_image
-                par.y_galfit_cheb = fltarr(nband)
-                par.y_galfit_cheb[0] = table[i_con].y_image
 ; NEED TO CORRECT MAGNITUDE STARTING PARAMS! DONE using offset
                 par.mag_galfit = table[i_con].mag_best
                 par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best+setup.mag_offset[1:nband]
-                par.mag_galfit_cheb = fltarr(nband)
-                par.mag_galfit_cheb[0] = table[i_con].mag_best
                 par.re_galfit = 10.^(-0.79)*table[i_con].flux_radius^1.87
                 par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[i_con].flux_radius^1.87
-                par.re_galfit_cheb = fltarr(nband)
-                par.re_galfit_cheb[0] = 10.^(-0.79)*table[i_con].flux_radius^1.87
                 par.n_galfit = 2.5
                 par.n_galfit_band = fltarr(nband)+2.5
-                par.n_galfit_cheb = fltarr(nband)
-                par.n_galfit_cheb[0] = 2.5
                 par.q_galfit = 1-table[i_con].ellipticity
                 par.q_galfit_band = fltarr(nband)+1-table[i_con].ellipticity
-                par.q_galfit_cheb = fltarr(nband)
-                par.q_galfit_cheb[0] = 1-table[i_con].ellipticity
                 par.pa_galfit = table[i_con].theta_image-90.
                 par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
-                par.pa_galfit_cheb = fltarr(nband)
-                par.pa_galfit_cheb[0] = table[i_con].theta_image-90.
                 
-;               par = [table[i_con].x_image, table[i_con].y_image, $
-;                      table[i_con].mag_best, $
-;                      10.^(-0.79)*table[i_con].flux_radius^1.87, $
-;                      2.5, 1-table[i_con].ellipticity, $
-;                      table[i_con].theta_image-90.]
 ;the source is off the frame so just fit profile and magnitude, position fixed
                 fix = ['0', '0', '1', '1', '1', '0', '0']
             ENDELSE
@@ -2328,39 +2277,20 @@ FOR i=0ul, n_nums-1 DO BEGIN
             
             par.x_galfit = table[i_con].x_image
             par.x_galfit_band = fltarr(nband)+table[i_con].x_image
-            par.x_galfit_cheb = fltarr(nband)
-            par.x_galfit_cheb[0] = table[i_con].x_image
             par.y_galfit = table[i_con].y_image
             par.y_galfit_band = fltarr(nband)+table[i_con].y_image
-            par.y_galfit_cheb = fltarr(nband)
-            par.y_galfit_cheb[0] = table[i_con].y_image
 ; NEED TO CORRECT MAGNITUDE STARTING PARAMS!
             par.mag_galfit = table[i_con].mag_best
             par.mag_galfit_band = fltarr(nband)+table[i_con].mag_best+setup.mag_offset[1:nband]
-            par.mag_galfit_cheb = fltarr(nband)
-            par.mag_galfit_cheb[0] = table[i_con].mag_best
             par.re_galfit = 10.^(-0.79)*table[i_con].flux_radius^1.87
             par.re_galfit_band = fltarr(nband)+10.^(-0.79)*table[i_con].flux_radius^1.87
-            par.re_galfit_cheb = fltarr(nband)
-            par.re_galfit_cheb[0] = 10.^(-0.79)*table[i_con].flux_radius^1.87
             par.n_galfit = 2.5
             par.n_galfit_band = fltarr(nband)+2.5
-            par.n_galfit_cheb = fltarr(nband)
-            par.n_galfit_cheb[0] = 2.5
             par.q_galfit = 1-table[i_con].ellipticity
             par.q_galfit_band = fltarr(nband)+1-table[i_con].ellipticity
-            par.q_galfit_cheb = fltarr(nband)
-            par.q_galfit_cheb[0] = 1-table[i_con].ellipticity
             par.pa_galfit = table[i_con].theta_image-90.
             par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
-            par.pa_galfit_cheb = fltarr(nband)
-            par.pa_galfit_cheb[0] = table[i_con].theta_image-90.
             
-;               par = [table[i_con].x_image, table[i_con].y_image, $
-;                      table[i_con].mag_best, $
-;                      10.^(-0.79)*table[i_con].flux_radius^1.87, $
-;                      2.5, 1-table[i_con].ellipticity, $
-;                      table[i_con].theta_image-90.]
 ;the source is off the frame so just fit profile and magnitude
             fix = ['0', '0', '1', '1', '1', '0', '0']
         ENDELSE
@@ -2380,19 +2310,13 @@ FOR i=0ul, n_nums-1 DO BEGIN
 ; hard contraints work on ALL bands if this is used below. USED!!
     par.re_galfit_band = par.re_galfit_band < conmaxre > 0.3
 ; hard contraints work only on principle band if this is used
-    par.re_galfit_cheb[0] = par.re_galfit_cheb[0] < conmaxre > 0.3
     par.n_galfit = par.n_galfit < setup.conmaxn > setup.conminn
     par.n_galfit_band = par.n_galfit_band < setup.conmaxn > setup.conminn
-    par.n_galfit_cheb[0] = par.n_galfit_cheb[0] < setup.conmaxn > setup.conminn
     par.q_galfit = par.q_galfit > 0.0001 < 1
     par.q_galfit_band = par.q_galfit_band > 0.0001 < 1
-    par.q_galfit_cheb[0] = par.q_galfit_cheb[0] > 0.0001 < 1
     par.pa_galfit = par.pa_galfit > (-360) < 360
     par.pa_galfit_band = par.pa_galfit_band > (-360) < 360
-    par.pa_galfit_cheb[0] = par.pa_galfit_cheb[0] > (-360) < 360
     
-;     0  1  2    3   4  5  6   7
-;par=[x, y, mag, re, n, q, pa, sky]
     openu, 1, obj_file, /append
     printf, 1, '# Sersic function'
     printf, 1, ''
@@ -3874,10 +3798,11 @@ add_tag, fittab, 'frame', strarr(nband+1), fittab2
 fittab = fittab2
 delvarx, fittab2
 
-; fill in sextractor values
+; fill in sextractor values from table into fittab
 struct_assign, table, fittab
 
 ; rename table in order to work in the rest of the code
+; this overwrites 'table' with fittab
 table = fittab
 delvarx, fittab
 

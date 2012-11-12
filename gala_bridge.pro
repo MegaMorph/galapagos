@@ -91,7 +91,7 @@ for b=1,nband do begin
      setup.wstep, setup.gap, setup.nslope, sky_file[b], $
      setup.galfit_out, setup.outcat, setup.outparam, $
      setup.stampfile, global_sky, global_sigsky, $
-     setup.convbox, nums, frames, setup.galexe, b, $
+     setup.convbox, nums, frames, b, $
      orgpath_pre, outpath_file, outpath_file_no_band, nband, $
      xarr, yarr, seed
     if b eq 1 then begin
