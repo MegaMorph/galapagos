@@ -1,4 +1,4 @@
-PRO define_addcol, addcol, nband, bd_fit = bd_fit
+PRO define_addcol, addcol, nband, bd_fit = bd_fit, read_bd = read_bd
   
 ; version as it should be!
 ;    hlpcheb0 = 'fltarr('+strtrim(cheb[0]+1,2)+')'
@@ -55,57 +55,57 @@ PRO define_addcol, addcol, nband, bd_fit = bd_fit
             ['PA_GALFIT_BAND', bandfloat], ['PAERR_GALFIT_BAND', bandfloat], $
             ['SKY_GALFIT_BAND', bandfloat], ['PSF_GALFIT_BAND', bandstring], $
             ['SKY_GALFIT_CHEB', bandfloat]]
-  if keyword_set(bd_fit) then addcol=[[addcol], $
-                                      ['FLAG_GALFIT_BD', '0'], ['NITER_GALFIT_BD', '0'], $
-                                      ['NEIGH_GALFIT_BD', '0'], ['CHISQ_GALFIT_BD','0.'], $
-                                      ['VERSION_GALFIT_BD', '" "'], $
-                                      ['FIRSTCON_GALFIT_BD','0'], ['LASTCON_GALFIT_BD','0'], $
-                                      ['NDOF_GALFIT_BD','0l'], ['NFREE_GALFIT_BD','0l'], $
-                                      ['NFIX_GALFIT_BD','0l'], ['CHI2NU_GALFIT_BD','0.'], $
-                                      ['INITFILE_BD', '" "'], ['CONSTRNT_BD', '" "'], $
-                                      ['FILE_GALFIT_BD', '" "'],$
-                                      ['CPUTIME_SETUP_GALFIT_BD', '0.'], ['CPUTIME_FIT_GALFIT_BD', '0.'], $
-                                      ['CPUTIME_TOTAL_GALFIT_BD', '0.'], $
-                                      ['X_GALFIT_D', '0.'], ['XERR_GALFIT_D', '0.'], $
-                                      ['X_GALFIT_B', '0.'], ['XERR_GALFIT_B', '0.'], $
-                                      ['X_GALFIT_CHEB_D', hlpcheb0], ['XERR_GALFIT_CHEB_D', hlpcheb0], $
-                                      ['X_GALFIT_CHEB_B', hlpcheb0], ['XERR_GALFIT_CHEB_B', hlpcheb0], $
-                                      ['Y_GALFIT_D', '0.'], ['YERR_GALFIT_D', '0.'], $
-                                      ['Y_GALFIT_B', '0.'], ['YERR_GALFIT_B', '0.'], $
-                                      ['Y_GALFIT_CHEB_D', hlpcheb1], ['YERR_GALFIT_CHEB_D', hlpcheb1], $
-                                      ['Y_GALFIT_CHEB_B', hlpcheb1], ['YERR_GALFIT_CHEB_B', hlpcheb1], $
-                                      ['MAG_GALFIT_D', '0.'], ['MAGERR_GALFIT_D', '0.'], $
-                                      ['MAG_GALFIT_B', '0.'], ['MAGERR_GALFIT_B', '0.'], $
-                                      ['MAG_GALFIT_CHEB_D', hlpcheb2], ['MAGERR_GALFIT_CHEB_D', hlpcheb2], $
-                                      ['MAG_GALFIT_CHEB_B', hlpcheb2], ['MAGERR_GALFIT_CHEB_B', hlpcheb2], $
-                                      ['RE_GALFIT_D', '0.'], ['REERR_GALFIT_D', '0.'], $
-                                      ['RE_GALFIT_B', '0.'], ['REERR_GALFIT_B', '0.'], $
-                                      ['RE_GALFIT_CHEB_D', hlpcheb3], ['REERR_GALFIT_CHEB_D', hlpcheb3], $
-                                      ['RE_GALFIT_CHEB_B', hlpcheb3], ['REERR_GALFIT_CHEB_B', hlpcheb3], $
-                                      ['N_GALFIT_D', '0.'], ['NERR_GALFIT_D', '0.'], $
-                                      ['N_GALFIT_B', '0.'], ['NERR_GALFIT_B', '0.'], $
-                                      ['N_GALFIT_CHEB_D', hlpcheb4], ['NERR_GALFIT_CHEB_D', hlpcheb4], $
-                                      ['N_GALFIT_CHEB_B', hlpcheb4], ['NERR_GALFIT_CHEB_B', hlpcheb4], $
-                                      ['Q_GALFIT_D', '0.'], ['QERR_GALFIT_D', '0.'], $
-                                      ['Q_GALFIT_B', '0.'], ['QERR_GALFIT_B', '0.'], $
-                                      ['Q_GALFIT_CHEB_D', hlpcheb5], ['QERR_GALFIT_CHEB_D', hlpcheb5], $
-                                      ['Q_GALFIT_CHEB_B', hlpcheb5], ['QERR_GALFIT_CHEB_B', hlpcheb5], $
-                                      ['PA_GALFIT_D', '0.'], ['PAERR_GALFIT_D', '0.'], $
-                                      ['PA_GALFIT_B', '0.'], ['PAERR_GALFIT_B', '0.'], $
-                                      ['PA_GALFIT_CHEB_D', hlpcheb6], ['PAERR_GALFIT_CHEB_D', hlpcheb6], $
-                                      ['PA_GALFIT_CHEB_B', hlpcheb6], ['PAERR_GALFIT_CHEB_B', hlpcheb6], $
-                                      ['X_GALFIT_BAND_D', bandfloat], ['XERR_GALFIT_BAND_D', bandfloat], $
-                                      ['X_GALFIT_BAND_B', bandfloat], ['XERR_GALFIT_BAND_B', bandfloat], $
-                                      ['Y_GALFIT_BAND_D', bandfloat], ['YERR_GALFIT_BAND_D', bandfloat], $
-                                      ['Y_GALFIT_BAND_B', bandfloat], ['YERR_GALFIT_BAND_B', bandfloat], $
-                                      ['MAG_GALFIT_BAND_D', bandfloat], ['MAGERR_GALFIT_BAND_D', bandfloat], $
-                                      ['MAG_GALFIT_BAND_B', bandfloat], ['MAGERR_GALFIT_BAND_B', bandfloat], $
-                                      ['RE_GALFIT_BAND_D', bandfloat], ['REERR_GALFIT_BAND_D', bandfloat], $
-                                      ['RE_GALFIT_BAND_B', bandfloat], ['REERR_GALFIT_BAND_B', bandfloat], $
-                                      ['N_GALFIT_BAND_D', bandfloat], ['NERR_GALFIT_BAND_D', bandfloat], $
-                                      ['N_GALFIT_BAND_B', bandfloat], ['NERR_GALFIT_BAND_B', bandfloat], $
-                                      ['Q_GALFIT_BAND_D', bandfloat], ['QERR_GALFIT_BAND_D', bandfloat], $
-                                      ['Q_GALFIT_BAND_B', bandfloat], ['QERR_GALFIT_BAND_B', bandfloat], $
-                                      ['PA_GALFIT_BAND_D', bandfloat], ['PAERR_GALFIT_BAND_D', bandfloat], $
-                                      ['PA_GALFIT_BAND_B', bandfloat], ['PAERR_GALFIT_BAND_B', bandfloat]]  
+  if keyword_set(bd_fit) or keyword_set(read_bd) then addcol=[[addcol], $
+                                                              ['FLAG_GALFIT_BD', '0'], ['NITER_GALFIT_BD', '0'], $
+                                                              ['NEIGH_GALFIT_BD', '0'], ['CHISQ_GALFIT_BD','0.'], $
+                                                              ['VERSION_GALFIT_BD', '" "'], $
+                                                              ['FIRSTCON_GALFIT_BD','0'], ['LASTCON_GALFIT_BD','0'], $
+                                                              ['NDOF_GALFIT_BD','0l'], ['NFREE_GALFIT_BD','0l'], $
+                                                              ['NFIX_GALFIT_BD','0l'], ['CHI2NU_GALFIT_BD','0.'], $
+                                                              ['INITFILE_BD', '" "'], ['CONSTRNT_BD', '" "'], $
+                                                              ['FILE_GALFIT_BD', '" "'],$
+                                                              ['CPUTIME_SETUP_GALFIT_BD', '0.'], ['CPUTIME_FIT_GALFIT_BD', '0.'], $
+                                                              ['CPUTIME_TOTAL_GALFIT_BD', '0.'], $
+                                                              ['X_GALFIT_D', '0.'], ['XERR_GALFIT_D', '0.'], $
+                                                              ['X_GALFIT_B', '0.'], ['XERR_GALFIT_B', '0.'], $
+                                                              ['X_GALFIT_CHEB_D', hlpcheb0], ['XERR_GALFIT_CHEB_D', hlpcheb0], $
+                                                              ['X_GALFIT_CHEB_B', hlpcheb0], ['XERR_GALFIT_CHEB_B', hlpcheb0], $
+                                                              ['Y_GALFIT_D', '0.'], ['YERR_GALFIT_D', '0.'], $
+                                                              ['Y_GALFIT_B', '0.'], ['YERR_GALFIT_B', '0.'], $
+                                                              ['Y_GALFIT_CHEB_D', hlpcheb1], ['YERR_GALFIT_CHEB_D', hlpcheb1], $
+                                                              ['Y_GALFIT_CHEB_B', hlpcheb1], ['YERR_GALFIT_CHEB_B', hlpcheb1], $
+                                                              ['MAG_GALFIT_D', '0.'], ['MAGERR_GALFIT_D', '0.'], $
+                                                              ['MAG_GALFIT_B', '0.'], ['MAGERR_GALFIT_B', '0.'], $
+                                                              ['MAG_GALFIT_CHEB_D', hlpcheb2], ['MAGERR_GALFIT_CHEB_D', hlpcheb2], $
+                                                              ['MAG_GALFIT_CHEB_B', hlpcheb2], ['MAGERR_GALFIT_CHEB_B', hlpcheb2], $
+                                                              ['RE_GALFIT_D', '0.'], ['REERR_GALFIT_D', '0.'], $
+                                                              ['RE_GALFIT_B', '0.'], ['REERR_GALFIT_B', '0.'], $
+                                                              ['RE_GALFIT_CHEB_D', hlpcheb3], ['REERR_GALFIT_CHEB_D', hlpcheb3], $
+                                                              ['RE_GALFIT_CHEB_B', hlpcheb3], ['REERR_GALFIT_CHEB_B', hlpcheb3], $
+                                                              ['N_GALFIT_D', '0.'], ['NERR_GALFIT_D', '0.'], $
+                                                              ['N_GALFIT_B', '0.'], ['NERR_GALFIT_B', '0.'], $
+                                                              ['N_GALFIT_CHEB_D', hlpcheb4], ['NERR_GALFIT_CHEB_D', hlpcheb4], $
+                                                              ['N_GALFIT_CHEB_B', hlpcheb4], ['NERR_GALFIT_CHEB_B', hlpcheb4], $
+                                                              ['Q_GALFIT_D', '0.'], ['QERR_GALFIT_D', '0.'], $
+                                                              ['Q_GALFIT_B', '0.'], ['QERR_GALFIT_B', '0.'], $
+                                                              ['Q_GALFIT_CHEB_D', hlpcheb5], ['QERR_GALFIT_CHEB_D', hlpcheb5], $
+                                                              ['Q_GALFIT_CHEB_B', hlpcheb5], ['QERR_GALFIT_CHEB_B', hlpcheb5], $
+                                                              ['PA_GALFIT_D', '0.'], ['PAERR_GALFIT_D', '0.'], $
+                                                              ['PA_GALFIT_B', '0.'], ['PAERR_GALFIT_B', '0.'], $
+                                                              ['PA_GALFIT_CHEB_D', hlpcheb6], ['PAERR_GALFIT_CHEB_D', hlpcheb6], $
+                                                              ['PA_GALFIT_CHEB_B', hlpcheb6], ['PAERR_GALFIT_CHEB_B', hlpcheb6], $
+                                                              ['X_GALFIT_BAND_D', bandfloat], ['XERR_GALFIT_BAND_D', bandfloat], $
+                                                              ['X_GALFIT_BAND_B', bandfloat], ['XERR_GALFIT_BAND_B', bandfloat], $
+                                                              ['Y_GALFIT_BAND_D', bandfloat], ['YERR_GALFIT_BAND_D', bandfloat], $
+                                                              ['Y_GALFIT_BAND_B', bandfloat], ['YERR_GALFIT_BAND_B', bandfloat], $
+                                                              ['MAG_GALFIT_BAND_D', bandfloat], ['MAGERR_GALFIT_BAND_D', bandfloat], $
+                                                              ['MAG_GALFIT_BAND_B', bandfloat], ['MAGERR_GALFIT_BAND_B', bandfloat], $
+                                                              ['RE_GALFIT_BAND_D', bandfloat], ['REERR_GALFIT_BAND_D', bandfloat], $
+                                                              ['RE_GALFIT_BAND_B', bandfloat], ['REERR_GALFIT_BAND_B', bandfloat], $
+                                                              ['N_GALFIT_BAND_D', bandfloat], ['NERR_GALFIT_BAND_D', bandfloat], $
+                                                              ['N_GALFIT_BAND_B', bandfloat], ['NERR_GALFIT_BAND_B', bandfloat], $
+                                                              ['Q_GALFIT_BAND_D', bandfloat], ['QERR_GALFIT_BAND_D', bandfloat], $
+                                                              ['Q_GALFIT_BAND_B', bandfloat], ['QERR_GALFIT_BAND_B', bandfloat], $
+                                                              ['PA_GALFIT_BAND_D', bandfloat], ['PAERR_GALFIT_BAND_D', bandfloat], $
+                                                              ['PA_GALFIT_BAND_B', bandfloat], ['PAERR_GALFIT_BAND_B', bandfloat]]  
 END

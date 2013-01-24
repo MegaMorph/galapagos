@@ -8,7 +8,7 @@
 ;@/home/boris/mmm/astro-megamorph/galapagos/fxmove.pro
 ;@/home/boris/mmm/astro-megamorph/galapagos/writefits.pro
 ;@/home/boris/mmm/astro-megamorph/galapagos/kill_galfit.pro
-
+@/home/boris/megamorph_dev/astro-megamorph/galapagos/gala_bd_bridge.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
@@ -1929,7 +1929,7 @@ FOR b=1, nband DO BEGIN
     if b lt nband then SKYG_po=SKYG_po+','
     if b lt nband then SKYG_po2=SKYG_po2+','
 ENDFOR
-; add BAND here and there!!!
+; add BAND here and there!
 printf, 1, ' 2) '+SKYG_po+'    '+SKYG_po2+'  '+band_po+'      # dsky/dx (sky gradient in x)'
 printf, 1, ' 3) '+SKYG_po+'    '+SKYG_po2+'  '+band_po+'      # dsky/dy (sky gradient in y)'
 printf, 1, ' Z) 0                  # output image'
@@ -2475,7 +2475,7 @@ setup = create_struct('files', '', $
                       'maglim_gal', -1, $
                       'maglim_star', -1., $
                       'nneighb', 0, $
-                      'max_proc', 0.0, $
+                      'max_proc', 0, $
                       'min_dist', 0.0, $
                       'min_dist_block', -1., $
                       'srclist', '', $
@@ -2501,11 +2501,17 @@ setup = create_struct('files', '', $
                       'cheb', intarr(7)-1, $
                       'galfit_out_path',' ', $
                       'dobd', 0, $
-                      'bd_maglim', -1., $
                       'cheb_b', intarr(7)-1, $
                       'cheb_d', intarr(7)-1, $
-                      'galfit_bd_out_path',' ', $
+                      'bd_label',' ', $
+                      'bd_hpc',0, $
+                      'bd_hpc_path',' ', $
+                      'bd_srclist', '', $
+                      'bd_srclistrad', 0.0, $
+                      'bd_maglim', -1., $
+                      'bd_psf_corr', strarr(2), $
                       'docombine', 0, $
+                      'docombinebd', 0, $
                       'cat', '')
 
 ;   setup.enlarge = -1
@@ -2701,32 +2707,41 @@ WHILE NOT eof(1) DO BEGIN
             else setup.docombine = (content EQ 'execute') ? 1 : 0
         END
         'F01)': BEGIN
-            if block_bd eq 1 then setup.bd_maglim = content $
-            else setup.cat = content
+            if block_bd eq 1 then begin
+                for n=0,5 do begin
+                    pos=strpos(content, ',')
+                    setup.cheb_b[n]=strmid(content,0,pos)
+                    content=strmid(content,pos+1)
+                ENDFOR 
+                setup.cheb_b[6]=content
+            ENDIF ELSE setup.docombinebd = (content EQ 'execute') ? 1 : 0
         END
         'F02)': BEGIN
-            for n=0,5 do begin
-                pos=strpos(content, ',')
-                setup.cheb_b[n]=strmid(content,0,pos)
-                content=strmid(content,pos+1)
-            ENDFOR
-            setup.cheb_b[6]=content
+            if block_bd eq 1 then begin
+                for n=0,5 do begin
+                    pos=strpos(content, ',')
+                    setup.cheb_d[n]=strmid(content,0,pos)
+                    content=strmid(content,pos+1)
+                ENDFOR
+                setup.cheb_d[6]=content
+            ENDIF ELSE setup.cat = content
         END
-        'F03)': BEGIN
-            for n=0,5 do begin
-                pos=strpos(content, ',')
-                setup.cheb_d[n]=strmid(content,0,pos)
-                content=strmid(content,pos+1)
-            ENDFOR
-            setup.cheb_d[6]=content
+        'F03)': setup.bd_label = content
+        'F04)': setup.bd_srclist = content
+        'F05)': setup.bd_srclistrad = float(content)
+        'F06)': setup.bd_maglim = float(content)
+        'F07)': setup.bd_hpc = (content EQ 'HPC') ? 1 : 0
+        'F08)': setup.bd_hpc_path = set_trailing_slash(content)
+        'F09)': BEGIN
+            pos=strpos(content, ',')
+            setup.bd_psf_corr[0] = strtrim(strmid(content,0,pos),2)
+            content=strmid(content,pos+1)
+            setup.bd_psf_corr[1] = strtrim(content,2)
         END
-        'F04)': BEGIN
-            if content eq '' then setup.galfit_bd_out_path = content
-            if content ne '' then setup.galfit_bd_out_path = set_trailing_slash(content)
-        END
-        
         'G00)': setup.docombine = (content EQ 'execute') ? 1 : 0
-        'G01)': setup.cat = content
+        'G01)': setup.docombinebd = (content EQ 'execute') ? 1 : 0
+        'G02)': setup.cat = content
+
     ENDCASE
 ENDWHILE
 close, 1
@@ -2758,7 +2773,7 @@ bad_input:
 message, 'Invalid Entry in '+setup_file
 END
 
-PRO read_image_files, setup, silent=silent
+PRO read_image_files, setup, save_folder, silent=silent
 ; reads in the image file and returns the results to galapagos
 ; count number of columns in file
 lineone = ''
@@ -2835,6 +2850,9 @@ if ncolf eq 6 then begin
     ENDIF
     readcol, setup.files, band, wavelength, mag_offset, filelist, zeropoint, exptime, $
       format = 'A,I,F,A,F,F', comment = '#', /silent      
+
+; copy the setup files to the folder
+    for f = 0, n_elements(filelist)-1 do spawn, 'cp '+filelist[f]+' '+save_folder
     
     nband=fix(n_elements(band)-1)
 ; read first file to get number of images...
@@ -3444,7 +3462,7 @@ printf, lun, message
 free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot
+PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump=jump
 start=systime(0)
 print, 'start: '+start
 IF n_params() LE 1 THEN gala_pro = 'galapagos'
@@ -3462,13 +3480,26 @@ ENDIF
 ;==============================================================================
 ;read in the setup file
 read_setup, setup_file, setup
+
+
+if keyword_set(jump) then goto, jump_over_this
+
+;copy setup file to output folder for future reference
+date=systime(0)
+date=strsplit(date,' ',/extract)  
+save_folder = setup.outdir+'setup_'+date[4]+'_'+date[1]+'_'+date[2]
+IF NOT file_test(save_folder) THEN $
+  spawn, 'mkdir '+save_folder
+spawn, 'cp '+setup_file+' '+save_folder
+spawn, 'cp '+setup.files+' '+save_folder
+
 IF keyword_set(logfile) THEN $
   start_log, logfile, 'Reading setup file... done!'
-if setup.dobd eq 1 then print, 'You are trying to do B/D decomposition? You are crazy!' 
+if setup.dobd eq 1 then print, 'You are trying to do B/D decomposition? Are you sure you know what you are doing?!' 
 
 ;==============================================================================   
 ;read input files into arrays
-read_image_files, setup
+read_image_files, setup, save_folder
 nband = setup.nband
 images = setup.images
 weights = setup.weights
@@ -3541,7 +3572,7 @@ IF keyword_set(logfile) THEN $
 ; to get output catalogue
 ; This already defines ALL parameters, even the B/D ones if later
 ; needed. Nothing is done to those until starting the BD-block!
-define_addcol, addcol, nband, bd_fit = setup.dobd
+define_addcol, addcol, nband, bd_fit = setup.dobd, read_bd = setup.docombinebd
 ;==============================================================================
 ;run SExtractor
 IF setup.dosex THEN BEGIN
@@ -3861,10 +3892,10 @@ IF setup.dosky or setup.dobd  THEN BEGIN
 ; if sav file exists and is newer than sextractor table, simply read
 ; in the indices from there!
        table[tab_i].do_list = 1
+       delvarx, tab_i
    ENDELSE
 ENDIF
 
-;goto, jump_over_this
 ;==============================================================================
 ;measure sky and run galfit?
 ;==============================================================================
@@ -4165,12 +4196,16 @@ ENDIF
 ; written out into a file, though. Or decision is reconsidered, as
 ; object parameters have changed and decision might be a different one.
 ; ?? d) Neighbours will only be deblended as single sersics!
+
 IF setup.dobd THEN BEGIN
+   outpath_galfit_bd = strtrim(outpath[*,0]+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)
+   outpath_galfit_bd = set_trailing_slash(outpath_galfit_bd)
+   FOR i=0ul, n_elements(outpath_galfit_bd)-1 DO IF NOT file_test(outpath_galfit_bd[i]) THEN $
+     spawn, 'mkdirhier '+outpath_galfit_bd[i]
+
+   IF setup.bd_hpc THEN print, 'only preparing the galfit feedme files, NO fits done!'
    print, 'reading all single sersic results so that B/D has the best possible knowledge' 
 
-;  goto, jump_over_this
-;  goto, jump_over_this2
-    
 ; first read in all single sersic results (ALL)
 ; This should NOT be neccessary, when table and fittab contain the
 ; same objects and/or if a proper database is used!!
@@ -4179,27 +4214,67 @@ IF setup.dobd THEN BEGIN
 
 ;find the image files for the sources
     print,' '
+    sscnt =0ul 
     FOR i=0ul, ntab-1 DO BEGIN
-        statusline, ' reading single sersic result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
+        statusline, ' reading single sersic result from object '+strtrim(i+1,2)+' of '+strtrim(ntab,2)+', '+strtrim(sscnt,2)+' objects succesfully read in'
         objnum = round_digit(table[i].number, 0, /str)
         
-        idx = where(table[i].frame EQ orgim[*,0])
+        idx = where(table[i].frame[0] EQ orgim[*,0])
         out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
 
         obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
         sky_file = strarr(nband+1)
         for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
-        
 ; read in single sersic again
+        if file_test(out_file+'.fits') then sscnt += 1
         update_table, table, i, out_file, obj_file, sky_file, nband, setup
         table[i].org_image_band = orgim[idx[0],1:nband]
         
     ENDFOR
     print, ' '
+    print, strtrim(sscnt,2)+' succesful single-sersic fits read in'
+    print, ' '
     
 ;=========================================================================
 ; finished reading in all single sersic results
 ;=========================================================================
+;;====create BD sourcelist================================================
+   add_tag, table, 'do_list_bd', 0, table_new
+   table = table_new
+   delvarx, table_new
+
+; get sourcelist of intereting (primary) sources and correlate to catalogue
+   IF (setup.bd_srclist EQ '' OR setup.bd_srclistrad LE 0) THEN BEGIN
+       table.do_list_bd = 1
+   ENDIF ELSE BEGIN
+; only do this when the sav file does not exist or is older than the
+; sextractor table!
+       sav_file_test = file_info(setup.outdir+'primary_list_bd.sav')
+       sex_file_test = file_info(setup.outdir+setup.sexcomb)
+   
+       IF sav_file_test.exists EQ 0 OR (sav_file_test.exists EQ 1 AND sav_file_test.mtime LT sex_file_test.mtime) THEN BEGIN
+           print, 'correlating SExtractor catalogue to source list for B/D. Might take some time'
+           readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT   
+           
+           srccor, do_ra/15., do_dec, table.alpha_j2000/15., table.delta_j2000, $
+             setup.srclistrad, do_i, tab_i, OPTION=1, /SPHERICAL, /SILENT
+           
+; print indices in to file to be read in next time (much faster)
+; This has to be done here and not when cutting the postage stamps,
+; because the order of objects is different, so indices would be wrong
+           save, tab_i, filename=setup.outdir+'primary_list_bd.sav'
+       ENDIF ELSE BEGIN
+           print, 'source correlation has already been done, simply reading result!'
+           restore, setup.outdir+'primary_list_bd.sav'
+       ENDELSE
+       
+; if sav file exists and is newer than sextractor table, simply read
+; in the indices from there!
+       table[tab_i].do_list_bd = 1
+       delvarx, tab_i
+   ENDELSE
+
+
     IF keyword_set(logfile) THEN $
       update_log, logfile, 'Beginning Bulge_Disk_decomposition ...'
 ; set standard values for B/D parameters
@@ -4221,132 +4296,148 @@ IF setup.dobd THEN BEGIN
     table.q_galfit_b = -1.
     table.q_galfit_band_b = fltarr(nband)-1.
 
-;************************ DEBUGGING ONLY!!!!!
-stop
-    save, /all, filename = strtrim(setup.outdir,2)+'before_bd2.sav'
-stop
-jump_over_this2:
-stop
-    restore, strtrim(setup.outdir,2)+'before_bd2.sav'
-    
-    stop
+
+;******************************************************************************
+;****************************************************************************** 
 ;calculate sky for the brightest objects
-;******************************************************************************
-;******************************************************************************
-;current object (will be used and overwritten by the neue, optimized, queue)
-    cur = 0l
-    delvarx, todo, bridge_arr, bridge_use, bridge_obj, bridge_pos, blocked
+;current object (will be used and overwritten by the new, optimized, queue)
+    save, /all, filename = setup.outdir+'before_'+setup.bd_label+'.sav'
+jump_over_this:
+
+    restore, setup.outdir+'before_'+setup.bd_label+'.sav'
+stop
+;; adapt setup
+; setup.bd_hpc = 1
+; setup.cheb_d = [0,0,8,0,-1,0,0]
+; setup.cheb_b = [0,0,8,0,0,0,0]
+; setup.bd_label = 'bd3'
+; outpath_galfit_bd = strtrim(outpath[*,0]+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)
+; outpath_galfit_bd = set_trailing_slash(outpath_galfit_bd)
+; FOR i=0ul, n_elements(outpath_galfit_bd)-1 DO IF NOT file_test(outpath_galfit_bd[i]) THEN spawn, 'mkdirhier '+outpath_galfit_bd[i]
+
+
+    IF NOT setup.bd_hpc THEN BEGIN
+        cur = 0l
+        delvarx, todo, bridge_arr, bridge_use, bridge_obj, bridge_pos, blocked
 ;create object array for child processes 
-    bridge_arr = objarr(setup.max_proc)
+        bridge_arr = objarr(setup.max_proc)
 ;allow main to see which process is free
-    bridge_use = bytarr(setup.max_proc)
+        bridge_use = bytarr(setup.max_proc)
 ;save the object number (needed to update the table)
-    bridge_obj = lonarr(setup.max_proc)-1
+        bridge_obj = lonarr(setup.max_proc)-1
 ;save the positions of the objects in the bridges
-    bridge_pos = dblarr(2, setup.max_proc)+!values.F_NAN
-    
-;initialise every bridge (specify output property to allow debugging)
-    FOR i=0, setup.max_proc-1 DO $
-      bridge_arr[i] = obj_new('IDL_IDLBridge')
-    
-    if keyword_set(plot) then begin
-        loadct,39,/silent
-        plot, table.alpha_j2000, table.delta_j2000, psym=3, ystyle=1, xstyle=1
-    endif
-    
-;loop over all objects
-    loop = 0l
-    
-    REPEAT BEGIN
-        IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
-            update_log, logfile, 'last in cue... '+strtrim(cur, 2)
-            FOR i=0, setup.max_proc-1 DO $
-              update_log, logfile, 'Bridge status... '+ $
-              strtrim(bridge_arr[i]->status(), 2)
-        ENDIF
-        loop++
+        bridge_pos = dblarr(2, setup.max_proc)+!values.F_NAN
         
+;initialise every bridge (specify output property to allow debugging)
+        FOR i=0, setup.max_proc-1 DO $
+          bridge_arr[i] = obj_new('IDL_IDLBridge')
+        
+        FOR i=0, setup.max_proc-1 DO BEGIN
+            bridge_arr[i]->execute, 'astrolib'
+            bridge_arr[i]->execute, '.r '+gala_pro
+        ENDFOR  
+        if keyword_set(plot) then begin
+            loadct,39,/silent
+            plot, table.alpha_j2000, table.delta_j2000, psym=3, ystyle=1, xstyle=1
+        endif
+        
+;loop over all objects
+        loop = 0l
+        
+        REPEAT BEGIN
+            IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
+                update_log, logfile, 'last in cue... '+strtrim(cur, 2)
+                FOR i=0, setup.max_proc-1 DO $
+                  update_log, logfile, 'Bridge status... '+ $
+                  strtrim(bridge_arr[i]->status(), 2)
+            ENDIF
+            loop++
+            
 loopstart_bd:
 ; only successful single sersic object??
 ; todo eq flag_galfit eq 2 and flag_galfit_bd eq 0?????
-        
-        todo=where(table.flag_galfit_bd eq 0 AND table.do_list EQ 1, ctr)
-        if ctr eq 0 then begin
-            FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
-            goto, loopend
-        ENDIF
-        ct = 0
-        
+; new source catalogue?
+            
+            todo=where(table.flag_galfit_bd eq 0 AND table.do_list_bd EQ 1 and $
+                       table.mag_galfit_band[0] gt 0 and table.mag_galfit_band[0] lt setup.bd_maglim, ctr)
+            if ctr eq 0 then begin
+                FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
+                goto, loopend_bd
+            ENDIF
+            ct = 0
+            
 loopstart2_bd:
 ;get status of bridge elements
-        FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
-        
-;check for free bridges
-        free = where(bridge_use eq 0, ct)
-        
-;         IF ct GT 0 AND cur LT nbr THEN BEGIN
-        IF ct GT 0 AND todo[0] ne -1 THEN BEGIN
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+            FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
             
+;check for free bridges
+            free = where(bridge_use eq 0, ct)
+            
+;         IF ct GT 0 AND cur LT nbr THEN BEGIN
+            IF ct GT 0 AND todo[0] ne -1 THEN BEGIN
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                
 ;at least one bridge is free --> start newobject
 ;the available bridge is free[0]
-            
-;treat finished objects first
-            IF bridge_obj[free[0]] GE 0 THEN BEGIN
-;read in feedback data
-                idx = where(table[bridge_obj[free[0]]].frame[0] EQ orgim[*,0])
-                objnum = round_digit(table[bridge_obj[free[0]]].number, 0, /str)
-                obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.obj)[0]
-                out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.galfit_out)[0]
-                sky_file = strarr(nband+1)
-                for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
                 
+;treat finished objects first
+                IF bridge_obj[free[0]] GE 0 THEN BEGIN
+;read in feedback data
+                    idx = where(table[bridge_obj[free[0]]].frame[0] EQ orgim[*,0])
+                    objnum = round_digit(table[bridge_obj[free[0]]].number, 0, /str)
+                    obj_file = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
+                    out_file = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.galfit_out)[0]
+                    sky_file = strarr(nband+1)
+;!!!                for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
+                    for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
 ;check if file was done successfully or bombed (done in update_table)
-;else table is automatically filled with standard values                
-                update_table, table, bridge_obj[free[0]], out_file, obj_file, sky_file, nband, setup, /bd
-
+;else table is automatically filled with standard values     
+                    
+                    update_table, table, bridge_obj[free[0]], out_file, obj_file, sky_file, nband, setup, /bd
+                    
 ;clear object
-                bridge_obj[free[0]] = -1
+                    bridge_obj[free[0]] = -1
 ;clear position of finished object
-                bridge_pos[*, free[0]]= [!values.F_NAN, !values.F_NAN]
-            ENDIF
-            
+                    bridge_pos[*, free[0]]= [!values.F_NAN, !values.F_NAN]
+                ENDIF
+; only run the loop when the fit is actually done, everything else
+; doesn't make sense
 ;check if current position is far enough from bridge positions
-            filled = where(finite(bridge_pos[0, *]) EQ 1 AND $
-                           bridge_use GT 0, ct)
-            ob=0l
-            blocked=-1
-            IF ct GT 0 THEN BEGIN
-                REPEAT BEGIN
+                filled = where(finite(bridge_pos[0, *]) EQ 1 AND $
+                               bridge_use GT 0, ct)
+                ob=0l
+                blocked=-1
+                IF ct GT 0 THEN BEGIN
+                    REPEAT BEGIN
 ; get distance to all active objects
-                    gcirc, 1, table[todo[ob]].alpha_j2000/15d, table[todo[ob]].delta_j2000, $
-                      bridge_pos[0, filled]/15d, bridge_pos[1, filled], dist
+                        gcirc, 1, table[todo[ob]].alpha_j2000/15d, table[todo[ob]].delta_j2000, $
+                          bridge_pos[0, filled]/15d, bridge_pos[1, filled], dist
 ; get distance to all blocked objects
-                    if n_elements(blocked) gt 1 then $
-                      gcirc, 1, table[todo[ob]].alpha_j2000/15d, table[todo[ob]].delta_j2000, $
-                      table[blocked[1:n_elements(blocked)-1]].alpha_j2000/15d, $
-                      table[blocked[1:n_elements(blocked)-1]].delta_j2000, dist_block
-                    if n_elements(blocked) eq 1 then dist_block = 2*setup.min_dist
+                        if n_elements(blocked) gt 1 then $
+                          gcirc, 1, table[todo[ob]].alpha_j2000/15d, table[todo[ob]].delta_j2000, $
+                          table[blocked[1:n_elements(blocked)-1]].alpha_j2000/15d, $
+                          table[blocked[1:n_elements(blocked)-1]].delta_j2000, dist_block
+                        if n_elements(blocked) eq 1 then dist_block = 2*setup.min_dist
 ; can be simplified when the plots are taken out!
-                    IF min(dist) LT setup.min_dist or min(dist_block) lt setup.min_dist_block THEN BEGIN
-                        blocked = [[blocked],todo[ob]]
-                    ENDIF
-                    
-                    ob++
-                    if ob eq n_elements(todo) and $
-                      (min(dist) lt setup.min_dist or min(dist_block) lt setup.min_dist_block) then begin
-                        wait, 1
-                        ob=0l
-                        print, 'starting over'
-                        goto, loopstart2_bd
-                    ENDIF
-                    
-                ENDREP UNTIL (min(dist) gt setup.min_dist and min(dist_block) gt setup.min_dist_block) or ob ge n_elements(todo)-1
-                IF min(dist) LT setup.min_dist or min(dist_block) lt setup.min_dist_block THEN CONTINUE
-            ENDIF
-            ob=ob-1>0
-            cur=todo[ob]
-            
+                        IF min(dist) LT setup.min_dist or min(dist_block) lt setup.min_dist_block THEN BEGIN
+                            blocked = [[blocked],todo[ob]]
+                        ENDIF
+                        
+                        ob++
+                        if ob eq n_elements(todo) and $
+                          (min(dist) lt setup.min_dist or min(dist_block) lt setup.min_dist_block) then begin
+                            wait, 1
+                            ob=0l
+;                        print, 'starting over'
+                            goto, loopstart2_bd
+                        ENDIF
+                        
+                    ENDREP UNTIL (min(dist) gt setup.min_dist and min(dist_block) gt setup.min_dist_block) or ob ge n_elements(todo)-1
+                    IF min(dist) LT setup.min_dist or min(dist_block) lt setup.min_dist_block THEN CONTINUE
+                ENDIF
+                ob=ob-1>0
+                cur=todo[ob]
+                
 ; perform some kind of STAR classification so B/D is only done for galaxies
 ; currently, SExtractor is used, but maybe others are more useful
 ;              if table[cur].class_star gt 0.8 then begin
@@ -4357,158 +4448,251 @@ loopstart2_bd:
             
 ; check whether this object has already been done, if so, read in
 ; result and restart
-            ct = 0 
-            IF cur LT nbr THEN idx = where(table[cur].frame[0] EQ orgim[*,0], ct)
-            IF ct GT 0 THEN BEGIN
-                objnum = round_digit(table[cur].number, 0, /str)
-                obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.obj)[0]
-                out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.galfit_out)[0]
-                sky_file = strarr(nband+1)
-                for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
+                ct = 0 
+                IF cur LT nbr THEN idx = where(table[cur].frame[0] EQ orgim[*,0], ct)
+                IF ct GT 0 THEN BEGIN
+                    objnum = round_digit(table[cur].number, 0, /str)
+                    obj_file = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
+                    out_file = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.galfit_out)[0]
+                    sky_file = strarr(nband+1)
+;!!!                for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
+                    for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
 ;check if file was done successfully or bombed and update table                  
-                IF file_test(obj_file) THEN BEGIN
-                    print, obj_file+' found.'
-                    print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
-                    update_table, table, cur, out_file, obj_file, sky_file, nband, setup, /bd
-                    IF n_elements(todo) ne 1 then goto, loopstart_bd
-                    IF n_elements(todo) eq 1 then goto, loopend_bd
+                    IF file_test(obj_file) THEN BEGIN
+;                    print, obj_file+' found.'
+                        print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
+                        
+                        update_table, table, cur, out_file, obj_file, sky_file, nband, setup, /bd
+                        IF n_elements(todo) ne 1 then goto, loopstart_bd
+                        IF n_elements(todo) eq 1 then goto, loopend_bd
+                    ENDIF
                 ENDIF
-            ENDIF
-            
+                
 ;store position of new object
-            bridge_obj[free[0]] = cur
-            bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
-            table[cur].flag_galfit_bd = 1
-            if n_elements(where(table.flag_galfit_bd)) mod 10 eq 0 then print, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit_bd ge 1)),2)+' of '+strtrim(n_elements(where(table.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
-            if keyword_set(plot) then begin
-                plot, table.alpha_J2000,table.delta_J2000, psym=3, ystyle=1, xstyle=1
-                if n_elements(blocked) gt 1 then begin
-                    plots, table[blocked[1:n_elements(blocked)-1]].alpha_J2000,table[blocked[1:n_elements(blocked)-1]].delta_J2000, psym=4, col=200, symsize=2
-                    for r=1,n_elements(blocked)-1 do tvellipse, setup.min_dist_block/3600., setup.min_dist_block/3600., table[blocked[r]].alpha_J2000,table[blocked[r]].delta_J2000,col=200,/data
-                ENDIF                
-                done=where(table.flag_galfit_bd ge 1, count)
-                if count ge 1 then begin
-                    plots, table[done].alpha_J2000,table[done].delta_J2000, psym=1, col=135, thick=2, symsize=0.5
-                endif
-                plots, bridge_pos[0,*], bridge_pos[1,*], psym=1, col=235
-                for q=0,n_elements(bridge_pos[0,*])-1 do tvellipse, setup.min_dist/3600., setup.min_dist/3600., bridge_pos[0,q], bridge_pos[1,q], col=235,/data,thick=2
-            ENDIF
+                bridge_obj[free[0]] = cur
+                bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
+                table[cur].flag_galfit_bd = 1
+                if n_elements(where(table.flag_galfit_bd)) mod 10 eq 0 then $
+                  print, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit_bd ge 1)),2)+' of ' $
+                  +strtrim(n_elements(where(table.do_list_bd EQ 1 and table.mag_galfit_band[0] gt 0 $
+                                            AND table.mag_galfit_band[0] lt setup.bd_maglim)),2)+ $
+                  ' (of '+strtrim(n_elements(table),2)+' objects detected)   '
+                if keyword_set(plot) then begin
+                    plot, table.alpha_J2000,table.delta_J2000, psym=3, ystyle=1, xstyle=1
+                    if n_elements(blocked) gt 1 then begin
+                        plots, table[blocked[1:n_elements(blocked)-1]].alpha_J2000,table[blocked[1:n_elements(blocked)-1]].delta_J2000, psym=4, col=200, symsize=2
+                        for r=1,n_elements(blocked)-1 do tvellipse, setup.min_dist_block/3600., setup.min_dist_block/3600., table[blocked[r]].alpha_J2000,table[blocked[r]].delta_J2000,col=200,/data
+                    ENDIF                
+                    done=where(table.flag_galfit_bd ge 1, count)
+                    if count ge 1 then begin
+                        plots, table[done].alpha_J2000,table[done].delta_J2000, psym=1, col=135, thick=2, symsize=0.5
+                    endif
+                    plots, bridge_pos[0,*], bridge_pos[1,*], psym=1, col=235
+                    for q=0,n_elements(bridge_pos[0,*])-1 do tvellipse, setup.min_dist/3600., setup.min_dist/3600., bridge_pos[0,q], bridge_pos[1,q], col=235,/data,thick=2
+                ENDIF
+                
+;find the matching filenames
+                idx = where(table[cur].frame[0] EQ orgim[*,0])
+;define the file names for the:
+;postage stamp parameters
+                stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
+                objnum = round_digit(table[cur].number, 0, /str)
+;galfit masks
+                mask_file = strarr(nband+1)
+                for q=1,nband do mask_file[q] = (outpath_galfit[idx]+outpre[idx,q]+objnum+'_'+setup.bd_label+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
+;galfit obj file
+                obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
+                obj_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
+;galfit constraint file
+                constr_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.constr)[0]
+                constr_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.constr)[0]
+;galfit input file
+                im_file = strarr(nband+1)
+                for q=1,nband do im_file[q] = (orgpath_pre[idx,q]+objnum+'_'+setup.stamp_pre[q])[0]
+                
+;galfit output path
+                out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
+                out_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.galfit_out)[0]
+;sky summary file
+                sky_file = strarr(nband+1)
+                for q=1,nband do sky_file[q] = (outpath_galfit[idx]+outpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+                
+; choose closest PSF according to RA & DEC and subtract filename from structure 'psf_struct'
+; read in chosen_psf into 'psf', filename in chosen_psf_file   
+                choose_psf, table[cur].alpha_j2000, table[cur].delta_j2000, $
+                  psf_struct, table[cur].frame, chosen_psf_file, nband
+                
+; change seed for random in getsky_loop
+                seed=table[cur].number
+; create sav file for gala_bridge to read in
+                
+; writing out the fittab into the sav file is HUGE for big surveys!
+; USE 'NEIGHBOURS' TO CUT DOWN TABLE SIZE OF FITTAB!!
+                
+;select part of table with frames neighbouring the current frame;
+; THIS PART IS PRETTY SLOW AND DISABLED FOR NOW as the table is not
+; used by the B/D script
+;           int_obj = where(table.frame[0] EQ table[cur].frame[0])
+;            
+;            FOR i=0ul, n_elements(neighbours[*, idx])-1 DO BEGIN
+;               tabi = where(table.frame[0] EQ neighbours[i, idx[0]], ct)
+;               IF ct GT 0 THEN int_obj = [int_obj, tabi]
+;            ENDFOR
+;              save_table = table[int_obj]
+;            
+;; find new values of [cur] and 
+;; [idx] will stay the same because it's not the object, but the tile it is on!
+;            save_cur = where(save_table.frame[0] eq table[cur].frame[0] and save_table.number eq table[cur].number)
+;            save_cur = save_cur[0]
+;            
+;           save, save_cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
+;                 sky_file, stamp_param_file, mask_file, im_file, obj_file, $
+;                 constr_file, out_file, save_table, nband, orgpath_pre, outpath_file, $
+;                 outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
+;                 orgpath_band, orgpath_file, seed,$
+;                 filename=out_file+'.sav'
+;;;;;;;; END OF COMMENTED SECTION
+
+                save, out_file, out_file_bd, obj_file, obj_file_bd, constr_file, constr_file_bd, setup,$
+                  filename=out_file_bd+'.sav'
+                IF setup.max_proc GT 1 THEN BEGIN
+                    IF keyword_set(logfile) THEN $
+                      update_log, logfile, 'Starting new bridge... ('+out_file+')'
+; print, 'starting new object at '+systime(0)
+;                bridge_arr[free[0]]->execute, $
+;                  'gala_bridge, "'+out_file+'.sav", /bd_fit', /nowait
+                    
+;++++++++++++++++++++++++++ MARCOS SCRIPT
+                    if file_test(out_file+'.fits') then $
+                      bridge_arr[free[0]]->execute, $
+                      'bd_fit, "'+out_file_bd+'.sav"',/nowait
+                    
+;                bridge_arr[free[0]]->execute, $
+;                  'bd_fit, "'+out_file+'.fits"'; ,"'+setup.bd_label+'","'+setup.galexe+'"',/nowait
+;                  'gala_bridge, "'+out_file+'.sav", /bd_fit', /nowait
+                    
+;PRO bd_fit, obj_fitstab_file, label, no_fit=no_fit
+;;   num = '21_17.346'
+;;   obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
+                    
+;--------------------------- MARCOS SCRIPT
+                    
+                ENDIF ELSE BEGIN
+                    IF keyword_set(logfile) THEN $
+                      update_log, logfile, 'Starting next object... ('+out_file+')'
+                    cd, orgpath[idx,0]
+;                gala_bridge, out_file+'.bd.sav'
+;                file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
+;                  /allow_nonexistent, /noexpand_path
+                    
+;++++++++++++++++++++++++++ MARCOS SCRIPT
+;                bd_fit, out_file+'.fits',setup.bd_label, setup.galexe
+                    if file_test(out_file+'.fits') then $
+                      bd_fit, out_file_bd+'.sav'
+;--------------------------- MARCOS SCRIPT
+                    
+                ENDELSE
+;switch to next object
+            ENDIF ELSE BEGIN
+;all bridges are busy --> wait 
+                wait, 1
+            ENDELSE
             
+loopend_bd:
+;stop when all done and no bridge in use any more
+        ENDREP UNTIL todo[0] eq -1 AND total(bridge_use) EQ 0
+        
+;have to read in the last batch of objects
+        remain = where(bridge_obj ge 0, ct)
+        IF ct GT 0 THEN BEGIN
+            FOR i=0, ct-1 DO BEGIN
+                idx = where(table[bridge_obj[remain[i]]].frame[0] EQ orgim[*,0])
+                objnum = round_digit(table[bridge_obj[remain[i]]].number, 0, /str)
+                obj_file = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
+                out_file = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.galfit_out)[0]
+                sky_file = strarr(nband+1)
+                for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+                
+                if keyword_set(plot) then begin
+                    plots, table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, psym=1, col=135, thick=2, symsize=2
+                    tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
+                      table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, col=0,/data
+                ENDIF
+                bridge_obj[remain[i]] = -1
+                bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
+                
+;check if file was done successfully or bombed
+; if succesfully, fill fitting parameters into fittab
+                
+                update_table, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup, /bd
+;print, 'out file exists -- fittab updated'
+;else output file does not exist --> bombed
+            ENDFOR
+        ENDIF
+    ENDIF
+        
+; If HPC mode, all the above , especially the 'loop' is not needed only files are created
+; without knowledge of previous B/D fits.
+; Also updating tables all the time is not needed as it does not have any influence on the further procedure
+; no bridge is used, as the setup script is VERY fast
+    if setup.bd_hpc THEN BEGIN
+        
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
+        cur = 0l
+; only successful single sersic object??
+; todo eq flag_galfit eq 2 and flag_galfit_bd eq 0?????
+        todo=where(table.flag_galfit_bd eq 0 AND table.do_list_bd EQ 1 and $
+                   table.mag_galfit_band[0] gt 0 and table.mag_galfit_band[0] lt setup.bd_maglim, cntloop)
+        
+        FOR loopk= 0l, cntloop-1 DO BEGIN 
+            cur = todo[loopk]
+
 ;find the matching filenames
             idx = where(table[cur].frame[0] EQ orgim[*,0])
 ;define the file names for the:
 ;postage stamp parameters
             stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
-            objnum = round_digit(table[cur].number, 0, /str)
-;galfit masks
-            mask_file = strarr(nband+1)
-            for q=1,nband do mask_file[q] = (outpath_galfit[idx]+outpre[idx,q]+objnum+'_bd_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
-;galfit obj file
-            obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.obj)[0]
-;galfit constraint file
-            constr_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.constr)[0]
-;galfit input file
-            im_file = strarr(nband+1)
-            for q=1,nband do im_file[q] = (orgpath_pre[idx,q]+objnum+'_'+setup.stamp_pre[q])[0]
-            
-;galfit output path
-            out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.galfit_out)[0]
-;sky summary file
-            sky_file = strarr(nband+1)
-            for q=1,nband do sky_file[q] = (outpath_galfit[idx]+outpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
-            
-; choose closest PSF according to RA & DEC and subtract filename from structure 'psf_struct'
-; read in chosen_psf into 'psf', filename in chosen_psf_file   
-            choose_psf, table[cur].alpha_j2000, table[cur].delta_j2000, $
-              psf_struct, table[cur].frame, chosen_psf_file, nband
-            
-; change seed for random in getsky_loop
-            seed=table[cur].number
-; create sav file for gala_bridge to read in
-            
-; writing out the fittab into the sav file is HUGE for big surveys!
-; USE 'NEIGHBOURS' TO CUT DOWN TABLE SIZE OF FITTAB!!
-            
-;select part of table with frames neighbouring the current frame;
-            int_obj = where(table.frame[0] EQ table[cur].frame[0])
-            
-            FOR i=0ul, n_elements(neighbours[*, idx])-1 DO BEGIN
-               tabi = where(table.frame[0] EQ neighbours[i, idx[0]], ct)
-               IF ct GT 0 THEN int_obj = [int_obj, tabi]
-            ENDFOR
-              save_table = table[int_obj]
-            
-; find new values of [cur] and 
-; [idx] will stay the same because it's not the object, but the tile it is on!
-            save_cur = where(save_table.frame[0] eq table[cur].frame[0] and save_table.number eq table[cur].number)
-            save_cur = save_cur[0]
-            
-            save, save_cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
-                  sky_file, stamp_param_file, mask_file, im_file, obj_file, $
-                  constr_file, out_file, save_table, nband, orgpath_pre, outpath_file, $
-                  outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
-                  orgpath_band, orgpath_file, seed,$
-                  filename=out_file+'.sav'
 
-            IF setup.max_proc GT 1 THEN BEGIN
-                IF keyword_set(logfile) THEN $
-                  update_log, logfile, 'Starting new bridge... ('+out_file+')'
-; print, 'starting new object at '+systime(0)
-                bridge_arr[free[0]]->execute, $
-                  'gala_bridge, "'+out_file+'.sav", /bd_fit', /nowait
-            ENDIF ELSE BEGIN
-                IF keyword_set(logfile) THEN $
-                  update_log, logfile, 'Starting next object... ('+out_file+')'
-                cd, orgpath[idx,0]
-                gala_bridge, out_file+'.bd.sav'
-                file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
-                  /allow_nonexistent, /noexpand_path
-            ENDELSE
-;switch to next object
-        ENDIF ELSE BEGIN
-;all bridges are busy --> wait 
-            wait, 1
+            objnum = round_digit(table[cur].number, 0, /str)
+
+;galfit obj file
+            obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
+            obj_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
+;galfit constraint file
+            constr_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.constr)[0]
+            constr_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.constr)[0]
+;galfit output path
+            out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
+            out_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.galfit_out)[0]                
+
+; check whether this object has already been done, if so, skip
+            IF file_test(obj_file_bd) THEN print, obj_file_bd+' skipped, exists already'
+            IF file_test(obj_file_bd) THEN CONTINUE
+
+            if loopk mod 100 eq 0 then $
+              print, systime()+': starting object No. '+strtrim(loopk,2)+' of ' $
+              +strtrim(cntloop,2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
             
-        ENDELSE
-        
-loopend_bd:
-;stop when all done and no bridge in use any more
-    ENDREP UNTIL todo[0] eq -1 AND total(bridge_use) EQ 0
-    
-;have to read in the last batch of objects
-    remain = where(bridge_obj ge 0, ct)
-    IF ct GT 0 THEN BEGIN
-        FOR i=0, ct-1 DO BEGIN
-            idx = where(table[bridge_obj[remain[i]]].frame[0] EQ orgim[*,0])
-            objnum = round_digit(table[bridge_obj[remain[i]]].number, 0, /str)
-            obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.obj)[0]
-            out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.galfit_out)[0]
-            sky_file = strarr(nband+1)
-            for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
-            
-            if keyword_set(plot) then begin
-                plots, table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, psym=1, col=135, thick=2, symsize=2
-                tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
-                  table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, col=0,/data
-            ENDIF
-            bridge_obj[remain[i]] = -1
-            bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
-            
-;check if file was done successfully or bombed
-; if succesfully, fill fitting parameters into fittab
-            update_table, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup, /bd
-;print, 'out file exists -- fittab updated'
-;else output file does not exist --> bombed
+; create sav file for bd_fit to read in
+            save, out_file, out_file_bd, obj_file, obj_file_bd, constr_file, constr_file_bd, setup,$
+              filename=out_file_bd+'.sav'
+
+            if file_test(out_file+'.fits') then $
+              bd_fit, out_file_bd+'.sav'
+
         ENDFOR
+        
+;all feedme files exist, prepare PC files
+        bd_fit_hpc, table, setup
+
     ENDIF
 ENDIF
 
-jump_over_this:
 ;==============================================================================
 ;read in sextractor table, combine with galfit results, write out
 ;combined fits table
 ; has to be adapted to also read B/D!
-IF setup.docombine THEN BEGIN
+IF setup.docombine or setup.docombinebd THEN BEGIN
    print, 'reading sexcat for output table'
    tab = read_sex_table(setup.outdir+setup.sexcomb, $
                         outpath_file[0,0]+setup.outparam, $
@@ -4533,6 +4717,10 @@ IF setup.docombine THEN BEGIN
    for q=0, nband do orgpath_file[*,q]=orgpath_pre[*,q]+strtrim(setup.stamp_pre[q],2)+'.'
    orgpath_file_no_band = orgpath
    for q=0, nband do orgpath_file_no_band[*,q]=orgpath[*,q]+orgpre[*,q]
+   if setup.docombinebd then begin
+       outpath_galfit_bd = strtrim(outpath[*,0]+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)
+       outpath_galfit_bd = set_trailing_slash(outpath_galfit_bd)
+   ENDIF
    
    print,' '
    FOR i=0ul, ntab-1 DO BEGIN
@@ -4549,9 +4737,10 @@ IF setup.docombine THEN BEGIN
 ; read in single sersic again
       update_table, out, i, out_file, obj_file, sky_file, nband, setup, /final
 ; read in B/D again
-      if setup.dobd then begin
-         out_file_bd = (outpath_galfit[idx]+orgpre[idx]+objnum+'_bd_'+setup.galfit_out)[0]
-         update_table, out, i, out_file_bd, obj_file, sky_file, nband, setup, /bd, /final
+      if setup.docombinebd then begin
+         out_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.galfit_out)[0]
+         obj_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
+         update_table, out, i, out_file_bd, obj_file_bd, sky_file, nband, setup, /bd, /final
          out[i].org_image_band = orgim[idx[0],1:nband]
       ENDIF
       

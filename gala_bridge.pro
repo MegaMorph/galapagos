@@ -7,10 +7,6 @@ PRO gala_bridge, filein, bd_fit = bd_fit
 ;orgpath_file_no_band, seed
 
 restore, filein
-; THIS TABLE SHOULD BE HANDED OVER THROUGH THE SAVE FILE, not through
-; a .ttmp file
-;if not keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.ttmp', 1)
-;if keyword_set(fit_bd) then table = mrdfits(setup.outdir+setup.sexcomb+'.bd.ttmp', 1)
 cur = save_cur
 table = save_table
 
@@ -142,6 +138,6 @@ prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, 
    ELSE spawn, setup.galexe+' '+obj_file
    spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
 
-;   file_delete, filein
+   file_delete, filein
    wait, 1
 END
