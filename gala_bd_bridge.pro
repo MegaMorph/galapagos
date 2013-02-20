@@ -83,6 +83,8 @@ in_file = out_file+'.fits'
 
    band_str = strupcase(strtrim(band_info.band,2))
    nband = n_elements(band_str)
+   if nband eq 1 then bandstr = ' '
+   if nband gt 1 then bandstr = 'band'
 
    tmp = mrdfits(in_file, 'MODEL_'+band_str[0], model, /silent)
 
@@ -116,26 +118,30 @@ in_file = out_file+'.fits'
    x = string(ss_mult.X_GALFIT_BAND, $
                 format = '('+string(nband)+'(A,","))')
    x = strtrim(strcompress(x, /remove_all), 2)
-   x = ' 1) '+strmid(x, 0, strlen(x)-1)+'  1  band   # position x     [pixel]'
+   x = ' 1) '+strmid(x, 0, strlen(x)-1)+ $
+        '    '+strtrim(setup.cheb_d[0]+1,2)+' '+bandstr+'   # position x     [pixel]'
    printf, filew, x
    y = string(ss_mult.Y_GALFIT_BAND, $
                 format = '('+string(nband)+'(A,","))')
    y = strtrim(strcompress(y, /remove_all), 2)
-   y = ' 2) '+strmid(y, 0, strlen(y)-1)+'  1  band   # position y     [pixel]'
+   y = ' 2) '+strmid(y, 0, strlen(y)-1)+ $
+     '    '+strtrim(setup.cheb_d[1]+1,2)+'  '+bandstr+'   # position y     [pixel]'
    printf, filew, y
    mag = string(ss_mult.MAG_GALFIT_BAND+2.5*alog10(2), $
                 format = '('+string(nband)+'(A,","))')
    mag = strtrim(strcompress(mag, /remove_all), 2)
-   mag = ' 3) '+strmid(mag, 0, strlen(mag)-1)+'   9   band    # total magnitude'
+   mag = ' 3) '+strmid(mag, 0, strlen(mag)-1)+ $
+        '    '+strtrim(setup.cheb_d[2]+1,2)+'  '+bandstr+'    # total magnitude'
    printf, filew, mag
 ;correct re to be the right shape if cheb_d eq 0!!
 ; re started at constant value in any case!
-   re = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND), $
-                format = '('+string(nband)+'(A,","))')
+   if nband eq 1 then re = string(ss_mult.RE_GALFIT_BAND, format = '(A)')
+   if nband gt 1 then re = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND), $
+                                  format = '('+string(nband)+'(A,","))')
    re = strtrim(strcompress(re, /remove_all), 2)
-
    re = ' 4) '+strmid(re, 0, strlen(re)-1)+ $
-        '    '+strtrim(setup.cheb_d[3]+1,2)+'   band       #     R_e              [Pixels]'
+        '    '+strtrim(setup.cheb_d[3]+1,2)+'   '+bandstr+'       #     R_e              [Pixels]'
+
    printf, filew, re
 ;correct n to be the right shape if cheb_d eq 0!!
 ; sersic index of disk always started at 1
@@ -143,18 +149,20 @@ in_file = out_file+'.fits'
                 format = '('+string(nband)+'(A,","))')
    n = strtrim(strcompress(n, /remove_all), 2)
    n = ' 5) '+strmid(n, 0, strlen(n)-1)+ $
-        '   '+strtrim(setup.cheb_d[4]+1,2)+'   band       # Sersic exponent (deVauc=4, expdisk=1)'
+     '   '+strtrim(setup.cheb_d[4]+1,2)+'   '+bandstr+'       # Sersic exponent (deVauc=4, expdisk=1)'
    printf, filew, n
    q = string(ss_mult.Q_GALFIT_BAND, $
                 format = '('+string(nband)+'(A,","))')
    q = strtrim(strcompress(q, /remove_all), 2)
-   q = ' 9) '+strmid(q, 0, strlen(q)-1)+'    1   band       # axis ratio (b/a)'
+   q = ' 9) '+strmid(q, 0, strlen(q)-1)+ $
+        '    '+strtrim(setup.cheb_d[5]+1,2)+'   '+bandstr+'       # axis ratio (b/a)'
    printf, filew, q
    pa = string(ss_mult.PA_GALFIT_BAND, $
                 format = '('+string(nband)+'(A,","))')
    pa = strtrim(strcompress(pa, /remove_all), 2)
    pa = ' 10) '+strmid(pa, 0, strlen(pa)-1)+ $
-        '    1   band       # position angle (PA) [Degrees: Up=0, Left=90]'
+        '    '+strtrim(setup.cheb_d[6]+1,2)+ $
+        '  '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
    printf, filew, pa
 
    printf, filew, ' Z) 0                  # output image (see above)'
@@ -169,25 +177,30 @@ in_file = out_file+'.fits'
    printf, filew, mag
 ;correct re to be the right shape if cheb_b eq 0!!
 ; re started at constant value in any case!
-   re = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND)*0.75, $
-                format = '('+string(nband)+'(A,","))')
+   if nband eq 1 then re = string(ss_mult.RE_GALFIT_BAND, format = '(A)')
+   if nband gt 1 then re = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND), $
+                                  format = '('+string(nband)+'(A,","))')
    re = strtrim(strcompress(re, /remove_all), 2)
    re = ' 4) '+strmid(re, 0, strlen(re)-1)+ $
-        '    '+strtrim(setup.cheb_b[3]+1,2)+'   band       #     R_e              [Pixels]'
+        '    '+strtrim(setup.cheb_b[3]+1,2)+'   '+bandstr+'       #     R_e              [Pixels]'
    printf, filew, re
 ;correct n to be the right shape if cheb_b eq 0!!
    if setup.cheb_b[4] eq -1 then n = string((strarr(nband)+4.), $
                                             format = '('+string(nband)+'(A,","))')
-   if setup.cheb_b[4] ne -1 then n = string(((strarr(nband)+median(ss_mult.N_GALFIT_BAND) >1.5)), $
+   if setup.cheb_b[4] ne -1 then begin
+       if nband eq 1 then n = string((ss_mult.N_GALFIT_BAND >1.5), format = '(A)')
+       if nband gt 1 then n = string(((strarr(nband)+median(ss_mult.N_GALFIT_BAND) >1.5)), $
                                             format = '('+string(nband)+'(A,","))')
+   endif
    n = strtrim(strcompress(n, /remove_all), 2)
    n = ' 5) '+strmid(n, 0, strlen(n)-1)+ $
-        '   '+strtrim(setup.cheb_b[4]+1,2)+'   band       # Sersic exponent (deVauc=4, expdisk=1)'
+        '   '+strtrim(setup.cheb_b[4]+1,2)+'   '+bandstr+'       # Sersic exponent (deVauc=4, expdisk=1)'
    printf, filew, n
    q = string(ss_mult.Q_GALFIT_BAND >0.6, $
                 format = '('+string(nband)+'(A,","))')
    q = strtrim(strcompress(q, /remove_all), 2)
-   q = ' 9) '+strmid(q, 0, strlen(q)-1)+'    1   band       # axis ratio (b/a)'
+   q = ' 9) '+strmid(q, 0, strlen(q)-1)+ $
+        '    '+strtrim(setup.cheb_b[5]+1,2)+'   '+bandstr+'       # axis ratio (b/a)'
    printf, filew, q
    printf, filew, pa
 
@@ -213,49 +226,49 @@ in_file = out_file+'.fits'
                 format = '('+string(nband)+'(A,","))')
          x = strtrim(strcompress(x, /remove_all), 2)
          x = ' 1) '+strmid(x, 0, strlen(x)-1)+ $
-             '  0  band   # position x     [pixel]'
+             '  0  '+bandstr+'   # position x     [pixel]'
          printf, filew, x
 
          y = string(tab.(40+comp*3*7), $
                 format = '('+string(nband)+'(A,","))')
          y = strtrim(strcompress(y, /remove_all), 2)
          y = ' 2) '+strmid(y, 0, strlen(y)-1)+ $
-             '  0  band   # position y     [pixel]'
+             '  0  '+bandstr+'   # position y     [pixel]'
          printf, filew, y
 
          mag = string(tab.(43+comp*3*7), $
                 format = '('+string(nband)+'(A,","))')
          mag = strtrim(strcompress(mag, /remove_all), 2)
          mag = ' 3) '+strmid(mag, 0, strlen(mag)-1)+ $
-             '   0   band    # total magnitude'
+             '   0   '+bandstr+'    # total magnitude'
          printf, filew, mag
 
          re = string(tab.(46+comp*3*7), $
                 format = '('+string(nband)+'(A,","))')
          re = strtrim(strcompress(re, /remove_all), 2)
          re = ' 4) '+strmid(re, 0, strlen(re)-1)+ $
-             '    0   band       #     R_e              [Pixels]'
+             '    0   '+bandstr+'       #     R_e              [Pixels]'
          printf, filew, re
 
          n = string(tab.(49+comp*3*7), $
                 format = '('+string(nband)+'(A,","))')
          n = strtrim(strcompress(n, /remove_all), 2)
          n = ' 5) '+strmid(n, 0, strlen(n)-1)+ $
-             '   0   band       # Sersic exponent (deVauc=4, expdisk=1)'
+             '   0   '+bandstr+'       # Sersic exponent (deVauc=4, expdisk=1)'
          printf, filew, n
 
          q = string(tab.(52+comp*3*7), $
                 format = '('+string(nband)+'(A,","))')
          q = strtrim(strcompress(q, /remove_all), 2)
          q = ' 9) '+strmid(q, 0, strlen(q)-1)+ $
-             '    0   band       # axis ratio (b/a)'
+             '    0   '+bandstr+'       # axis ratio (b/a)'
          printf, filew, q
 
          pa = string(tab.(55+comp*3*7), $
                 format = '('+string(nband)+'(A,","))')
          pa = strtrim(strcompress(pa, /remove_all), 2)
          pa = ' 10) '+strmid(pa, 0, strlen(pa)-1)+ $
-             '    0   band       # position angle (PA) [Degrees: Up=0, Left=90]'
+             '    0   '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
          printf, filew, pa
 
          printf, filew, ' Z) 0                  # output image (see above)'
@@ -275,7 +288,7 @@ in_file = out_file+'.fits'
    printf, ut, '# Component/    parameter   constraint  Comment'
    printf, ut, '# operation                  values'
 
-   FOR j=2, 2 do begin ;maxcomp+1 DO BEGIN
+   FOR j=2, maxcomp+1 DO BEGIN
       printf, ut, '           '+strtrim(j, 2)+' n 0.2 to 8'
       printf, ut, '           '+strtrim(j, 2)+' re 0.3 to 400'
       printf, ut, '           '+strtrim(j, 2)+' q 0.0001 to 1'

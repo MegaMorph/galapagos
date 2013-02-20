@@ -2560,6 +2560,7 @@ WHILE NOT eof(1) DO BEGIN
     
 ;get rid of leading and trailing blanks
     line = strtrim(line, 2)
+;    print, line
     
 ;comment or empty line encountered?
     IF strmid(line, 0, 1) EQ '#' OR strlen(line) EQ 0 THEN CONTINUE
@@ -2625,7 +2626,8 @@ WHILE NOT eof(1) DO BEGIN
         'D19)': setup.max_proc = fix(content)
         'D20)': setup.min_dist = float(content)
         'D21)': setup.min_dist_block = float(content)
-        'D22)': setup.srclist = content
+        'D22)': IF content EQ 'none' OR content EQ '' THEN setup.srclist = '' $
+        ELSE setup.srclist = content
         'D23)': setup.srclistrad = float(content)
         
         'E00)': setup.galexe = content
@@ -2727,7 +2729,8 @@ WHILE NOT eof(1) DO BEGIN
             ENDIF ELSE setup.cat = content
         END
         'F03)': setup.bd_label = content
-        'F04)': setup.bd_srclist = content
+        'F04)': IF content EQ 'none' OR content EQ '' THEN setup.bd_srclist = '' $
+        ELSE setup.bd_srclist = content
         'F05)': setup.bd_srclistrad = float(content)
         'F06)': setup.bd_maglim = float(content)
         'F07)': setup.bd_hpc = (content EQ 'HPC') ? 1 : 0
@@ -3481,7 +3484,6 @@ ENDIF
 ;read in the setup file
 read_setup, setup_file, setup
 
-
 if keyword_set(jump) then goto, jump_over_this
 
 ;copy setup file to output folder for future reference
@@ -3489,7 +3491,7 @@ date=systime(0)
 date=strsplit(date,' ',/extract)  
 save_folder = setup.outdir+'setup_'+date[4]+'_'+date[1]+'_'+date[2]
 IF NOT file_test(save_folder) THEN $
-  spawn, 'mkdir '+save_folder
+  spawn, 'mkdirhier '+save_folder
 spawn, 'cp '+setup_file+' '+save_folder
 spawn, 'cp '+setup.files+' '+save_folder
 
@@ -3559,7 +3561,7 @@ ENDFOR
 ;==============================================================================
 ;check if output path exists
 IF NOT file_test(setup.outdir) THEN $
-  spawn, 'mkdirhier '+setup.outdir
+  spawn, 'mkdi rhier '+setup.outdir
 FOR i=0ul, n_elements(outpath_band)-1 DO IF NOT file_test(outpath_band[i]) THEN $
   spawn, 'mkdirhier '+strtrim(outpath_band[i],2)
 FOR i=0ul, n_elements(outpath_galfit)-1 DO IF NOT file_test(outpath_galfit[i]) THEN $
@@ -4060,6 +4062,7 @@ loopstart2:
             bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
             table[cur].flag_galfit = 1
             if n_elements(where(table.flag_galfit)) mod 10 eq 0 then print, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(where(table.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
+;            if n_elements(where(table.flag_galfit)) mod 10 eq 0 then statusline, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(where(table.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
 ;              print, obj_file
             if keyword_set(plot) then begin
                plot, table.alpha_J2000,table.delta_J2000, psym=3, ystyle=1, xstyle=1
@@ -4305,7 +4308,7 @@ IF setup.dobd THEN BEGIN
 jump_over_this:
 
     restore, setup.outdir+'before_'+setup.bd_label+'.sav'
-stop
+
 ;; adapt setup
 ; setup.bd_hpc = 1
 ; setup.cheb_d = [0,0,8,0,-1,0,0]
@@ -4314,7 +4317,6 @@ stop
 ; outpath_galfit_bd = strtrim(outpath[*,0]+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)
 ; outpath_galfit_bd = set_trailing_slash(outpath_galfit_bd)
 ; FOR i=0ul, n_elements(outpath_galfit_bd)-1 DO IF NOT file_test(outpath_galfit_bd[i]) THEN spawn, 'mkdirhier '+outpath_galfit_bd[i]
-
 
     IF NOT setup.bd_hpc THEN BEGIN
         cur = 0l
@@ -4561,15 +4563,10 @@ loopstart2_bd:
 ; print, 'starting new object at '+systime(0)
 ;                bridge_arr[free[0]]->execute, $
 ;                  'gala_bridge, "'+out_file+'.sav", /bd_fit', /nowait
-                    
 ;++++++++++++++++++++++++++ MARCOS SCRIPT
                     if file_test(out_file+'.fits') then $
                       bridge_arr[free[0]]->execute, $
                       'bd_fit, "'+out_file_bd+'.sav"',/nowait
-                    
-;                bridge_arr[free[0]]->execute, $
-;                  'bd_fit, "'+out_file+'.fits"'; ,"'+setup.bd_label+'","'+setup.galexe+'"',/nowait
-;                  'gala_bridge, "'+out_file+'.sav", /bd_fit', /nowait
                     
 ;PRO bd_fit, obj_fitstab_file, label, no_fit=no_fit
 ;;   num = '21_17.346'
@@ -4581,7 +4578,7 @@ loopstart2_bd:
                     IF keyword_set(logfile) THEN $
                       update_log, logfile, 'Starting next object... ('+out_file+')'
                     cd, orgpath[idx,0]
-;                gala_bridge, out_file+'.bd.sav'
+;                gala_bridge, out_file+'.bd.sav', /bd_fit', /nowait
 ;                file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
 ;                  /allow_nonexistent, /noexpand_path
                     
