@@ -5,6 +5,8 @@ PRO gala_bridge, filein, bd_fit = bd_fit
 ;constr_file, out_file, table, nband, outpath_file
 ;orgpath_band, orgpath_pre, orgpath_galfit, orgpath_file,
 ;orgpath_file_no_band, seed
+;stop
+;print, outpath_galfit[idx]
 
 restore, filein
 cur = save_cur
@@ -137,6 +139,7 @@ prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, 
    IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file $
    ELSE spawn, setup.galexe+' '+obj_file
    spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
+   spawn, 'rm ~/galfit.[0123456789]*'
 
    file_delete, filein
    wait, 1

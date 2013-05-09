@@ -2892,7 +2892,7 @@ if ncolf eq 6 then begin
     setup=remove_tags(setup,'expt')
     add_tag, setup, 'expt', exptime, setup2
     setup=setup2
-    delvarx, setup2
+    delvarx,  setup2
     for b=0,nband do begin
         readcol, filelist[b], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
           format = 'A,A,A,A', comment = '#', /silent
@@ -4219,7 +4219,8 @@ IF setup.dobd THEN BEGIN
     print,' '
     sscnt =0ul 
     FOR i=0ul, ntab-1 DO BEGIN
-        statusline, ' reading single sersic result from object '+strtrim(i+1,2)+' of '+strtrim(ntab,2)+', '+strtrim(sscnt,2)+' objects succesfully read in'
+;        statusline, ' reading single sersic result from object '+strtrim(i+1,2)+' of '+strtrim(ntab,2)+', '+strtrim(sscnt,2)+' objects succesfully read in'
+        print, ' reading single sersic result from object '+strtrim(i+1,2)+' of '+strtrim(ntab,2)+', '+strtrim(sscnt,2)+' objects succesfully read in'
         objnum = round_digit(table[i].number, 0, /str)
         
         idx = where(table[i].frame[0] EQ orgim[*,0])
@@ -4308,7 +4309,6 @@ IF setup.dobd THEN BEGIN
 jump_over_this:
 
     restore, setup.outdir+'before_'+setup.bd_label+'.sav'
-
 ;; adapt setup
 ; setup.bd_hpc = 1
 ; setup.cheb_d = [0,0,8,0,-1,0,0]
@@ -4460,6 +4460,9 @@ loopstart2_bd:
 ;!!!                for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
                     for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
 ;check if file was done successfully or bombed and update table                  
+;                    IF file_test(out_file+'.fits') THEN BEGIN ; to be
+;                    used for reruns after HPC. Delete obj files, run
+;                    again. Also disable galfit in bd_fit
                     IF file_test(obj_file) THEN BEGIN
 ;                    print, obj_file+' found.'
                         print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
@@ -4475,7 +4478,7 @@ loopstart2_bd:
                 bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
                 table[cur].flag_galfit_bd = 1
                 if n_elements(where(table.flag_galfit_bd)) mod 10 eq 0 then $
-                  print, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit_bd ge 1)),2)+' of ' $
+                  print, systime()+': starting B/D on object No. '+strtrim(n_elements(where(table.flag_galfit_bd ge 1)),2)+' of ' $
                   +strtrim(n_elements(where(table.do_list_bd EQ 1 and table.mag_galfit_band[0] gt 0 $
                                             AND table.mag_galfit_band[0] lt setup.bd_maglim)),2)+ $
                   ' (of '+strtrim(n_elements(table),2)+' objects detected)   '
@@ -4554,8 +4557,8 @@ loopstart2_bd:
 ;                 orgpath_band, orgpath_file, seed,$
 ;                 filename=out_file+'.sav'
 ;;;;;;;; END OF COMMENTED SECTION
-
-                save, out_file, out_file_bd, obj_file, obj_file_bd, constr_file, constr_file_bd, setup,$
+                galfit_path = outpath_galfit_bd[idx]
+                save, out_file, out_file_bd, obj_file, obj_file_bd, constr_file, constr_file_bd, setup, galfit_path, $
                   filename=out_file_bd+'.sav'
                 IF setup.max_proc GT 1 THEN BEGIN
                     IF keyword_set(logfile) THEN $
@@ -4594,7 +4597,9 @@ loopstart2_bd:
 ;all bridges are busy --> wait 
                 wait, 1
             ENDELSE
-            
+            time_limit = 240
+            kill_galfit, 'galfitm-0.1.2.1', time_limit
+ 
 loopend_bd:
 ;stop when all done and no bridge in use any more
         ENDREP UNTIL todo[0] eq -1 AND total(bridge_use) EQ 0
@@ -4721,7 +4726,8 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
    
    print,' '
    FOR i=0ul, ntab-1 DO BEGIN
-      statusline, 'reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
+;      statusline, 'reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
+      print, 'reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
       objnum = round_digit(tab[i].number, 0, /str)
       
       idx = where(tab[i].tile EQ orgim[*,0])

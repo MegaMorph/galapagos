@@ -61,7 +61,6 @@
 ;PRO bd_fit, out_file, out_file_bd, setup, obj_file, obj_file_bd,
 ;   constr_file, constr_file_bd, no_fit=no_fit
 PRO bd_fit, filein
-
 restore, filein
 ;obj_fitstab_file = out_file_bd+'.fits'
 in_file = out_file+'.fits'
@@ -145,8 +144,13 @@ in_file = out_file+'.fits'
    printf, filew, re
 ;correct n to be the right shape if cheb_d eq 0!!
 ; sersic index of disk always started at 1
-   n = string(1+fltarr(nband), $
-                format = '('+string(nband)+'(A,","))')
+   if setup.cheb_d[4] eq -1 then n = string((strarr(nband)+1.), $
+                                            format = '('+string(nband)+'(A,","))')
+   if setup.cheb_d[4] ne -1 then begin
+       if nband eq 1 then n = string((ss_mult.N_GALFIT_BAND <1.5), format = '(A)')
+       if nband gt 1 then n = string(((strarr(nband)+median(ss_mult.N_GALFIT_BAND) <1.5)), $
+                                            format = '('+string(nband)+'(A,","))')
+   endif
    n = strtrim(strcompress(n, /remove_all), 2)
    n = ' 5) '+strmid(n, 0, strlen(n)-1)+ $
      '   '+strtrim(setup.cheb_d[4]+1,2)+'   '+bandstr+'       # Sersic exponent (deVauc=4, expdisk=1)'
@@ -303,18 +307,25 @@ in_file = out_file+'.fits'
               ' '+ strtrim(pos_offset*0.5, 2)
    ENDFOR
    printf, ut
-   printf, ut, '           2-3 x 0 0'
-   printf, ut, '           2-3 y 0 0'
+   printf, ut, '           2_3 x offset'
+   printf, ut, '           2_3 y offset'
 
    printf, ut
    free_lun, ut
 
    ;run galfit
+   cd, galfit_path
    IF NOT setup.bd_hpc THEN BEGIN
-      IF keyword_set(nice) THEN spawn, 'nice '+setup.galexe+' '+obj_file_bd $
-      ELSE spawn, setup.galexe+' '+obj_file_bd
-  ENDIF
-  file_delete, filein
+       IF file_test(out_file_bd+'.fits') eq 0 then begin
+           IF keyword_set(nice) THEN spawn, 'nice '+setup.galexe+' '+obj_file_bd $
+           ELSE spawn, setup.galexe+' '+obj_file_bd
+           wait, 1
+       ENDIF
+   ENDIF
+   spawn, 'rm '+galfit_path+'/galfit.[0123456789]*'
+   spawn, 'rm ~/galfit.[0123456789]*'
+   file_delete, filein
+
 END
 
 PRO bd_fit_hpc, data_table, setup
