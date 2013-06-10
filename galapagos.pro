@@ -3561,7 +3561,7 @@ ENDFOR
 ;==============================================================================
 ;check if output path exists
 IF NOT file_test(setup.outdir) THEN $
-  spawn, 'mkdi rhier '+setup.outdir
+  spawn, 'mkdirhier '+setup.outdir
 FOR i=0ul, n_elements(outpath_band)-1 DO IF NOT file_test(outpath_band[i]) THEN $
   spawn, 'mkdirhier '+strtrim(outpath_band[i],2)
 FOR i=0ul, n_elements(outpath_galfit)-1 DO IF NOT file_test(outpath_galfit[i]) THEN $
