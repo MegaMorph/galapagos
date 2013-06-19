@@ -2906,7 +2906,7 @@ if ncolf eq 6 then begin
         setup.outpath_band[*,b]=setup.outpath[*,b]+strtrim(band[b],2)
     endfor 
 endif
-if ncolf ne 6 and ncolf ne 4 then message, 'Invalid Entry in '+setup_file
+if ncolf ne 6 and ncolf ne 4 then message, 'Invalid Entry in '+setup.files
 END
 
 FUNCTION read_sersic_results, obj, nband, bd=bd
@@ -3371,22 +3371,22 @@ for j=0,n_elements(name_res)-1 do begin
     IF ct GT 0 THEN BEGIN
         type=size(res.(j))
 ; if keyword is INT
-        if type[1] eq 2 or type[1] eq 3 then begin
+        if type[-2] eq 2 or type[-2] eq 3 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=-99999
         ENDIF
 ; if keyword is FLOAT
-        if type[1] eq 4 then begin
+        if type[-2] eq 4 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=-99999.
         ENDIF
 ; if keyword is DOUBLE
-        if type[1] eq 5 then begin
+        if type[-2] eq 5 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=double(-99999.)
         ENDIF
 ; if keyword is STRING
-        if type[1] eq 7 then begin
+        if type[-2] eq 7 then begin
             wh=where(res.(j) eq ' ', ct)
             if ct gt 0 then res[wh].(j)='null'
         ENDIF
@@ -3402,7 +3402,7 @@ if not file_test(out_file+'.fits') then begin
 ; LONG TERM SOLUTION: MAKE SURE THAT BRIDGE DOESN"T CRASH!! EVER!
 ; WHY DO WE SET BACK FLAG_GALFIT IN THE FIRST PLACE??????
    if not file_test(obj_file) and not file_test(out_file+'.sav') then begin        
-; object has not yet been started. Not strictly speaking true, could
+; object has not yet been started.
       if not keyword_set(bd) then begin
          table[i].flag_galfit = 0
       endif
