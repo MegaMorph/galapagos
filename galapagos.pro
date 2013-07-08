@@ -4560,6 +4560,7 @@ loopstart2_bd:
                 galfit_path = outpath_galfit_bd[idx]
                 save, out_file, out_file_bd, obj_file, obj_file_bd, constr_file, constr_file_bd, setup, galfit_path, $
                   filename=out_file_bd+'.sav'
+
                 IF setup.max_proc GT 1 THEN BEGIN
                     IF keyword_set(logfile) THEN $
                       update_log, logfile, 'Starting new bridge... ('+out_file+')'
