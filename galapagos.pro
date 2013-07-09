@@ -4466,7 +4466,7 @@ loopstart2_bd:
                     IF file_test(obj_file) THEN BEGIN
 ;                    print, obj_file+' found.'
                         print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
-                        
+
                         update_table, table, cur, out_file, obj_file, sky_file, nband, setup, /bd
                         IF n_elements(todo) ne 1 then goto, loopstart_bd
                         IF n_elements(todo) eq 1 then goto, loopend_bd

@@ -112,6 +112,7 @@ in_file = out_file+'.fits'
      printf, filew, line
    ENDREP UNTIL strpos(strtrim(line, 2), '# Sersic function') EQ 0
 
+; DISK PARAMETERS
    printf, filew
    printf, filew, ' 0) sersic             # Object type --- DISC'
    x = string(ss_mult.X_GALFIT_BAND, $
@@ -134,14 +135,19 @@ in_file = out_file+'.fits'
    printf, filew, mag
 ;correct re to be the right shape if cheb_d eq 0!!
 ; re started at constant value in any case!
-   if nband eq 1 then re = string(ss_mult.RE_GALFIT_BAND, format = '(A)')
-   if nband gt 1 then re = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND), $
+; up to single_bd1 and multi_bd5
+;   if nband eq 1 then re_d = string(ss_mult.RE_GALFIT_BAND, format = '(A)')
+;   if nband gt 1 then re_d = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND), $
+;                                  format = '('+string(nband)+'(A,","))'
+; new setup after single_bd2 and multi_bd6
+   if nband eq 1 then re_d = string(ss_mult.RE_GALFIT_BAND >1., format = '(A)')
+   if nband gt 1 then re_d = string(strarr(nband)+(median(ss_mult.RE_GALFIT_BAND)>1.), $
                                   format = '('+string(nband)+'(A,","))')
-   re = strtrim(strcompress(re, /remove_all), 2)
-   re = ' 4) '+strmid(re, 0, strlen(re)-1)+ $
-        '    '+strtrim(setup.cheb_d[3]+1,2)+'   '+bandstr+'       #     R_e              [Pixels]'
+   re_d = strtrim(strcompress(re_d, /remove_all), 2)
+   re_d = ' 4) '+strmid(re_d, 0, strlen(re_d)-1)+ $
+     '    '+strtrim(setup.cheb_d[3]+1,2)+'   '+bandstr+'       #     R_e              [Pixels]'
 
-   printf, filew, re
+   printf, filew, re_d
 ;correct n to be the right shape if cheb_d eq 0!!
 ; sersic index of disk always started at 1
    if setup.cheb_d[4] eq -1 then n = string((strarr(nband)+1.), $
@@ -171,6 +177,7 @@ in_file = out_file+'.fits'
 
    printf, filew, ' Z) 0                  # output image (see above)'
 
+; BULGE PARAMETERS
    printf, filew
    printf, filew
    printf, filew, '# Sersic function'
@@ -181,13 +188,20 @@ in_file = out_file+'.fits'
    printf, filew, mag
 ;correct re to be the right shape if cheb_b eq 0!!
 ; re started at constant value in any case!
-   if nband eq 1 then re = string(ss_mult.RE_GALFIT_BAND, format = '(A)')
-   if nband gt 1 then re = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND), $
+
+;; old setup up to single_bd and multi_bd5
+;   if nband eq 1 then re_b = string(ss_mult.RE_GALFIT_BAND, format = '(A)')
+;   if nband gt 1 then re_b = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND), $
+;                                  format = '('+string(nband)+'(A,","))')
+; new setup after single_bd2 and multi_bd6
+   if nband eq 1 then re_b = string(ss_mult.RE_GALFIT_BAND*0.5 > 0.5, format = '(A)')
+   if nband gt 1 then re_b = string(strarr(nband)+(median(ss_mult.RE_GALFIT_BAND)*0.5 > 0.5), $
                                   format = '('+string(nband)+'(A,","))')
-   re = strtrim(strcompress(re, /remove_all), 2)
-   re = ' 4) '+strmid(re, 0, strlen(re)-1)+ $
+
+   re_b = strtrim(strcompress(re_b, /remove_all), 2)
+   re_b = ' 4) '+strmid(re_b, 0, strlen(re_b)-1)+ $
         '    '+strtrim(setup.cheb_b[3]+1,2)+'   '+bandstr+'       #     R_e              [Pixels]'
-   printf, filew, re
+   printf, filew, re_b
 ;correct n to be the right shape if cheb_b eq 0!!
    if setup.cheb_b[4] eq -1 then n = string((strarr(nband)+4.), $
                                             format = '('+string(nband)+'(A,","))')
