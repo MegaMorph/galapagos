@@ -8,7 +8,7 @@
 ;@/home/boris/mmm/astro-megamorph/galapagos/fxmove.pro
 ;@/home/boris/mmm/astro-megamorph/galapagos/writefits.pro
 ;@/home/boris/mmm/astro-megamorph/galapagos/kill_galfit.pro
-@/home/boris/megamorph_dev/astro-megamorph/galapagos/gala_bd_bridge.pro
+@~/megamorph_dev/astro-megamorph/galapagos/gala_bd_bridge.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
