@@ -3491,7 +3491,7 @@ date=systime(0)
 date=strsplit(date,' ',/extract)  
 save_folder = setup.outdir+'setup_'+date[4]+'_'+date[1]+'_'+date[2]
 IF NOT file_test(save_folder) THEN $
-  spawn, 'mkdirhier '+save_folder
+  spawn, 'mkdir -p '+save_folder
 spawn, 'cp '+setup_file+' '+save_folder
 spawn, 'cp '+setup.files+' '+save_folder
 
@@ -3561,11 +3561,11 @@ ENDFOR
 ;==============================================================================
 ;check if output path exists
 IF NOT file_test(setup.outdir) THEN $
-  spawn, 'mkdirhier '+setup.outdir
+  spawn, 'mkdir -p '+setup.outdir
 FOR i=0ul, n_elements(outpath_band)-1 DO IF NOT file_test(outpath_band[i]) THEN $
-  spawn, 'mkdirhier '+strtrim(outpath_band[i],2)
+  spawn, 'mkdir -p '+strtrim(outpath_band[i],2)
 FOR i=0ul, n_elements(outpath_galfit)-1 DO IF NOT file_test(outpath_galfit[i]) THEN $
-  spawn, 'mkdirhier '+outpath_galfit[i]
+  spawn, 'mkdir -p  '+outpath_galfit[i]
 IF keyword_set(logfile) THEN $
   update_log, logfile, 'Initialisation... done!'
 ;===============================================================================
@@ -4204,7 +4204,7 @@ IF setup.dobd THEN BEGIN
    outpath_galfit_bd = strtrim(outpath[*,0]+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)
    outpath_galfit_bd = set_trailing_slash(outpath_galfit_bd)
    FOR i=0ul, n_elements(outpath_galfit_bd)-1 DO IF NOT file_test(outpath_galfit_bd[i]) THEN $
-     spawn, 'mkdirhier '+outpath_galfit_bd[i]
+     spawn, 'mkdir -p '+outpath_galfit_bd[i]
 
    IF setup.bd_hpc THEN print, 'only preparing the galfit feedme files, NO fits done!'
    print, 'reading all single sersic results so that B/D has the best possible knowledge' 
