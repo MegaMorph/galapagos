@@ -1,3 +1,4 @@
+
 ;@/home/boris/mmm/astro-megamorph/galapagos/mrd_struct.pro
 ;@/home/boris/mmm/astro-megamorph/galapagos/mrdfits.pro
 ;@/home/boris/mmm/astro-megamorph/galapagos/mrd_hread.pro
@@ -346,7 +347,7 @@ IF cold_table[0].number NE 0 THEN BEGIN
 ;      fits_read, hotseg, segim_hot, seghd_hot
       segim = readfits(coldseg, seghd, /silent)
       segim_hot = readfits(hotseg, seghd_hot, /silent)
-      
+
       FOR i=0ul, ncold-1 DO BEGIN
          idx = where(cold_cxx[i]*(hot_table.x_image- $
                                   cold_table[i].x_image)^2.+ $
@@ -385,7 +386,7 @@ IF cold_table[0].number NE 0 THEN BEGIN
       ENDFOR
       writefits, outseg, segim, seghd
    ENDIF ELSE file_copy, coldseg, outseg, /overwrite
-   
+
    IF multi EQ 3 THEN table_all = [cold_table, hot_table] $
    ELSE table_all = cold_table
 
@@ -530,10 +531,10 @@ openw, 1, outparam
 FOR i=0ul, n_elements(cat)-1 DO BEGIN
     xfac = rad[i]*(abs(sin(cat[i].theta_image))+ $
                    (1-cat[i].ellipticity)*abs(cos(cat[i].theta_image)))* $
-      sizefac
+           sizefac
     yfac = rad[i]*(abs(cos(cat[i].theta_image))+ $
                    (1-cat[i].ellipticity)*abs(sin(cat[i].theta_image)))* $
-      sizefac
+           sizefac
     major = max([xfac, yfac])
     minor = min([xfac, yfac])
     
@@ -3465,7 +3466,7 @@ printf, lun, message
 free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump=jump
+PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump=jump, mac=mac
 start=systime(0)
 print, 'start: '+start
 IF n_params() LE 1 THEN gala_pro = 'galapagos'
@@ -3702,7 +3703,7 @@ IF setup.dostamps THEN BEGIN
       ENDELSE
 ;stop when all done and no bridge in use any more
    ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
-   
+  
 ; original instead of bridge mode
 ;               create_stamp_file, images[i,0], $
 ;                 outpath_file[i,0]+setup.outcat, $
@@ -3721,7 +3722,7 @@ IF setup.dostamps THEN BEGIN
    
 ; kill bridge, make new one!
    IF n_elements(post_bridge_arr) GT 0 THEN obj_destroy, post_bridge_arr
-   
+
    post_bridge_arr = objarr(setup.max_proc)
 ;allow main to see which process is free
    post_bridge_use = bytarr(setup.max_proc)
@@ -3750,6 +3751,7 @@ IF setup.dostamps THEN BEGIN
          
          save, i, weights, outpath_file, setup, outpath_file_no_band, nband, filename=outpath_file_no_band[i,0]+'skymap.sav'
          IF setup.max_proc GT 1 THEN BEGIN
+            print, 'starting skymap '+outpath_file_no_band[i,0]+'skymap.sav'
             post_bridge_arr[free[0]]->execute, $
                'skymap_bridge, "'+outpath_file_no_band[i,0]+'skymap.sav"', /nowait
          ENDIF ELSE BEGIN
@@ -3790,7 +3792,7 @@ ENDIF
 ;==============================================================================
 IF keyword_set(logfile) THEN $
    update_log, logfile, 'Setting up output catalogue...'
-;;==============================================================================
+;==============================================================================
 ;read in the combined SExtractor table
 print, 'reading SExtractor output'
 sexcat = read_sex_table(setup.outdir+setup.sexcomb, $
@@ -4155,8 +4157,10 @@ loopstart2:
 ; time. Not fully automated yet, needs to use input value for
 ; time_limit and name of galfit task
            time_limit = 150
-           kill_galfit, 'galfitm-0.1.2.1', time_limit
            
+           galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+           kill_galfit, galfit_string, time_limit,mac=mac
+;            kill_galfit, 'galfitm-0.1.2.1', time_limit, mac=mac
         ENDELSE
         
 loopend:
@@ -4599,8 +4603,9 @@ loopstart2_bd:
                 wait, 1
             ENDELSE
             time_limit = 240
-            kill_galfit, 'galfitm-0.1.2.1', time_limit
- 
+            galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+            kill_galfit, galfit_string, time_limit,mac=mac 
+;            kill_galfit, 'galfitm-0.1.2.1', time_limit, mac=mac
 loopend_bd:
 ;stop when all done and no bridge in use any more
         ENDREP UNTIL todo[0] eq -1 AND total(bridge_use) EQ 0
