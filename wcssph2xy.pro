@@ -8,19 +8,22 @@
 ;     and y (map) angular coordinates.  This procedure is the inverse of 
 ;     WCSXY2SPH.    See WCS_DEMO for example of use.
 ;
+;     This is a lower level procedure -- given a FITS header, the user will 
+;     usually use ADXY which will then call WCSSPH2XY with the appropriate 
+;     parameters.
 ; CATEGORY:
 ;     Mapping and Auxiliary FITS Routine
 ;
 ; CALLING SEQUENCE:
 ;      wcssph2xy, longitude, latitude, x, y, [ map_type , CTYPE = ,
-;               FACE =,PROJP1 = , PROJP2= , CRVAL = , CRXY = , LONGPOLE = ,
-;               NORTH_OFFSET =, SOUTH_OFFSET =, BADINDEX =]
+;               FACE =,PV2= , CRVAL = , CRXY = , LONGPOLE = ,
+;               LATPOLE = , NORTH_OFFSET =, SOUTH_OFFSET =, BADINDEX =]
 ;
 ; INPUT PARAMETERS:
 ;     longitude - longitude of data, scalar or vector, in degrees 
 ;     latitude - latitude of data, same number of elements as longitude, 
 ;               in degrees
-;     map_type - optional positional parameter, numeric scalar (0-25) 
+;     map_type - optional positional parameter, numeric scalar (0-26) 
 ;               corresponding to a particular map projection.  This is not a 
 ;               FITS standard, it is simply put in to allow function similar 
 ;               to that of less general map projection procedures (eg AITOFF).
@@ -31,25 +34,25 @@
 ;  code   code
 ;  ----  ------  -----------------------    -----------------------------------
 ;   DEF     0    Default = Cartesian
-;   AZP     1    Zenithal perspective       projp1 required
-;   TAN     2    Gnomic                     AZP w/ projp1 = 0
-;   SIN     3    Orthographic               AZP w/ projp1 = Infinity (>10^14)
-;   STG     4    Stereographic              AZP w/ projp1 = 1
+;   AZP     1    Zenithal perspective       PV2_1 required
+;   TAN     2    Gnomic                     AZP w/ mu = 0
+;   SIN     3    Orthographic               PV2_1,PV2_2 optional
+;   STG     4    Stereographic              AZP w/ mu = 1
 ;   ARC     5    Zenithal Equidistant
-;   ZPN     6    Zenithal polynomial        prop1-projp9 required, useless
+;   ZPN     6    Zenithal polynomial        PV2_0, PV2_1....PV2_20 possible
 ;   ZEA     7    Zenithal equal area
-;   AIR     8    Airy                       projp1 required
-;   CYP     9    Cylindrical perspective    projp1 and projp2 required
+;   AIR     8    Airy                       PV2_1 required
+;   CYP     9    Cylindrical perspective    PV2_1 and PV2_2 required
 ;   CAR    10    Cartesian
 ;   MER    11    Mercator
-;   CEA    12    Cylindrical equal area     projp1 required
-;   COP    13    Conical perspective        projp1 and projp2 required
-;   COD    14    Conical equidistant        projp1 and projp2 required
-;   COE    15    Conical equal area         projp1 and projp2 required
-;   COO    16    Conical orthomorphic       projp1 and projp2 required
-;   BON    17    Bonne's equal area         projp1 required
+;   CEA    12    Cylindrical equal area     PV2_1 required
+;   COP    13    Conical perspective        PV2_1 and PV2_2 required
+;   COD    14    Conical equidistant        PV2_1 and PV2_2 required
+;   COE    15    Conical equal area         PV2_1 and PV2_2 required
+;   COO    16    Conical orthomorphic       PV2_1 and PV2_2 required
+;   BON    17    Bonne's equal area         PV2_1 required
 ;   PCO    18    Polyconic
-;   GLS    19    Sinusoidal
+;   SFL    19    Sanson-Flamsteed
 ;   PAR    20    Parabolic
 ;   AIT    21    Hammer-Aitoff
 ;   MOL    22    Mollweide
@@ -58,6 +61,7 @@
 ;   QSC    24    Quadrilateralized 
 ;                Spherical Cube
 ;   TSC    25    Tangential Spherical Cube
+;   SZP    26    Slant Zenithal Projection   PV2_1,PV2_2, PV2_3 optional
 ;
 ; OPTIONAL INPUT KEYWORD PARAMETERS:
 ;
@@ -65,32 +69,34 @@
 ;              strings corresponding to the CTYPE1, CTYPE2, and CTYPE3 
 ;              FITS keywords: 
 ;
-;               CTYPE(0) - first four characters specify standard system
+;               CTYPE[0] - first four characters specify standard system
 ;               ('RA--','GLON' or 'ELON' for right ascension, Galactic 
 ;               longitude or ecliptic longitude respectively), second four 
 ;               letters specify the type of map projection (eg '-AIT' for 
 ;               Aitoff projection)
-;               CTYPE(1) - first four characters specify standard system
+;               CTYPE[1] - first four characters specify standard system
 ;               ('DEC-','GLAT' or 'ELAT' for declination, galactic latitude
 ;               or ecliptic latitude respectively; these must match 
 ;               the appropriate system of ctype1), second four letters of 
 ;               ctype2 must match second four letters of ctype1.
-;               CTYPE(2) - if present must be the 8 character string,'CUBEFACE',
+;               CTYPE[2] - if present must be the 8 character string,'CUBEFACE',
 ;                only used for spherical cube projections to identify an axis 
 ;               as containing the face on which each x and y pair of 
 ;               coordinates lie.
-;       PROJP1 - scalar with first projection parameter, this may
-;               or may not be necessary depending on the map projection used
-;       PROJP2 - scalar with second projection parameter, this may
-;               or may not be necessary depending on the map projection used
+;       PV2  - Vector of projection parameter associated with latitude axis
+;             PV2 will have up to 21 elements for the ZPN projection, up to 3
+;             for the SIN projection and no more than 2 for any other
+;             projection.   The first element corresponds to PV2_1, the 
+;             second to PV2_2, etc.
 ;       CRVAL - 2 element vector containing standard system coordinates (the 
 ;               longitude and latitude) of the reference point
 ;       CRXY - 2 element vector giving the x and y coordinates of the 
 ;               reference point, if this is not set the offset is [0,0]
 ;               This is not a FITS standard -- it is similar to CRPIX but in 
 ;               angular X,Y coordinates (degrees) rather than pixel coordinates
+;       LATPOLE -  native latitude of the standard system's North Pole
 ;       LONGPOLE - native longitude of standard system's North Pole, default
-;               is 180 degrees
+;               is 180 degrees for Zenithal systems
 ;       NORTH_OFFSET - offset (radians) added to input points near north pole.
 ;       SOUTH_OFFSET - offset (radians) added to input points near south pole.
 ;       BADINDEX     - vector, list of transformed points too close to poles.
@@ -103,7 +109,7 @@
 ;               crxy(0).  NOTE: x in all map projections increases to the 
 ;               left, not the right.
 ;       y - y coordinate of data, same number of elements as longitude, in 
-;               degrees; if CRXY is set, y will be returned offset by crxy(1)
+;               degrees; if CRXY is set, y will be returned offset by crxy[1]
 ;       bad - vector returning index to transformed points close to pole.
 ;
 ; OPTIONAL OUTPUT KEYWORD PARAMETERS:
@@ -116,9 +122,9 @@
 ;               in the "sideways T" configuration.
 ; NOTES:
 ;       The conventions followed here are described in more detail in 
-;       "Representations of Celestial Coordinates in FITS" by Mark Calabretta
-;       and Eric Greisen (2002, A&A, 395, 1077; also  see  
-;       http://www.aoc.nrao.edu/~egreisen).  The general 
+;       "Representations of Celestial Coordinates in FITS" by Calabretta
+;       and  Greisen (2002, A&A, 395, 1077; also see  
+;       http://fits.gsfc.nasa.gov/fits_wcs.html).  The general 
 ;       scheme outlined in that article is to first use WCS_ROTATE to convert 
 ;       coordinates in one of three standard systems (celestial, galactic, 
 ;       or ecliptic) into a "native system" of latitude and longitude.  The 
@@ -170,16 +176,6 @@
 ; PROCEDURES CALLED:
 ;       WCS_ROTATE
 ;
-; COPYRIGHT NOTICE:
-;
-;       Copyright 1993, The Regents of the University of California. This
-;       software was produced under U.S. Government contract (W-7405-ENG-36)
-;       by Los Alamos National Laboratory, which is operated by the
-;       University of California for the U.S. Department of Energy.
-;       The U.S. Government is licensed to use, reproduce, and distribute
-;       this software. Neither the Government nor the University makes
-;       any warranty, express or implied, or assumes any liability or
-;       responsibility for the use of this software.
 ;
 ; AUTHOR:
 ;
@@ -187,7 +183,7 @@
 ;
 ; MODIFICATIONS/REVISION LEVEL:
 ;
-;       1.1     8/31/93
+;       1.1     8/31/93  
 ;       2.3     9/15/93  W. Landsman (HSTX) Update quad cube coords, vectorize
 ;                        keywords
 ;       2.4     12/29/93 I. Freedman (HSTX) Eliminated LU decomposition
@@ -198,42 +194,53 @@
 ;       2.8     June 95 Change loop indices from integer to long
 ;       2.9     3/18/96 Change FACE usage for cube projections to match WCSLIB
 ;                       C/FORTRAN software library.
-;       Converted to IDL V5.0   W. Landsman   September 1997
 ;       2.10    02/18/99 Fixed implementation of ARC algorithm
+;       2.11    June 2003 Update conic projections, add LATPOLE keyword
+;	2.12	Aug 2003, N.Rich - Fix pre-V5.5 bug from previous update
+;       2.13    Sep 2003, W. Landsman CTYPE keywords need not be 8 characters
+;       2.14    Jan 2004, W. Landsman don't modify scalars, fix PARabolic code
+;       2.15    Feb 2004, W. Landsman Fix AZP and AIR algorithms
+;       3.0    May 2004  W. Landsman Support extended SIN (=NCP), slant zenithal
+;                  (SZP), and zenithal polynomail (ZPN) projections, use
+;                   PV2 keyword vector instead of PROJP1, PROJP2
+;       3.1     Jul 2005 W.Landsman/C. Markwardt Set unprojectable points in
+;                   tangent projection to NaN
+;       3.1.1   Jul 2005 Fixed 3.1 mod to work for scalars
+;       3.2     Dec 2005 Fixed Airy projection for latitude centered at 90 deg
+;       3.3     Aug 2007 R. Munoz, W.Landsman Correct treatment of PV1_2 and 
+;                        PV2_2 parameters
+;       3.4    Oct 2007  Sergey Koposov Support HEALPIX projection
+;       3.4.1  June 2009 Check for range of validity of ZPN polynomial W.L.
 ;-
 
 PRO wcssph2xy,longitude,latitude,x,y,map_type, ctype=ctype,$
-              face=face,projp1=projp1,projp2=projp2,$
-              crval=crval,crxy=crxy,longpole=longpole, $
+              face=face, pv2 = pv2,$
+              crval=crval,crxy=crxy,longpole=longpole, latpole= latpole, $
               north_offset=north_offset, south_offset=south_offset, $
               badindex=badindex
 
+compile_opt idl2
 ; DEFINE ANGLE CONSTANTS 
  pi = !DPI
  pi2 = pi/2.d0
  radeg = 57.295779513082323d0
  map_types=['DEF','AZP','TAN','SIN','STG','ARC','ZPN','ZEA','AIR','CYP',$
-            'CAR','MER','CEA','COP','COD','COE','COO','BON','PCO','GLS',$
-            'PAR','AIT','MOL','CSC','QSC','TSC']
- origin = [ 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,  0, 0, 0, $
-            1, 1, 1, 1, 1, 1,1, 1 , 1]
+            'CAR','MER','CEA','COP','COD','COE','COO','BON','PCO','SFL',$
+            'PAR','AIT','MOL','CSC','QSC','TSC', 'SZP']
 ; check to see that enough parameters (at least 4) were sent
  if (N_params() lt 4) then begin
-    print,'Syntax - WCSSPH2XY, longitude, latitude, x, y, [ map_type, 
-    print,'             CTYPE= ,FACE=, PROJP1=, PROJP2=, CRVAL=, CRXY=, 
-    print,'             LONGPOLE= ,NORTH_OFFSET=, SOUTH_OFFSET=, BADINDEX=]'
+    print,'Syntax - WCSSPH2XY, longitude, latitude, x, y, [ map_type,' 
+    print,'           CTYPE= ,FACE=, PV2_1=, PV2_2=, CRVAL=, CRXY=, LATPOLE='
+    print,'           LONGPOLE= ,NORTH_OFFSET=, SOUTH_OFFSET=, BADINDEX=]'
     return
  endif 
+  
    
 ; GENERAL ERROR CHECKING
 ; find the number of elements in each of the data arrays
 
- n_long = n_elements( longitude )
- n_lat = n_elements( latitude )
-
-; convert all scalar data values into arrays with one element each
-if (n_long eq 1) then longitude = dblarr(1) + longitude
-if (n_lat eq 1) then latitude = dblarr(1) + latitude
+ n_long = N_elements( longitude )
+ n_lat = N_elements( latitude )
 
 ; check to see that the data arrays have the same size
  if (n_long ne n_lat) then begin
@@ -261,11 +268,9 @@ endif else if (n_params() eq 4) then begin
 
   if N_elements( ctype ) GE 2  then begin
         ctype2 = ctype[1]
-        if ((strlen(ctype1) ne 8) or (strlen(ctype2) ne 8)) then $
-              message,'CTYPE1 and CTYPE2 (if set) must be 8 character strings.'
         if (projection_type ne strupcase(strmid(ctype2,5,3))) then begin
-      message,'The same map projection type must be in the last',/continue
-      print,'four characters of both CTYPE1 and CTYPE2.'
+      message,'The same map projection type must be in characters',/continue
+      message,' 5-8 of both CTYPE1 and CTYPE2.',/CON
       return
     endif
     if (((strupcase(strmid(ctype1,1,2)) eq 'RA') and $
@@ -315,7 +320,6 @@ if (((n_elements(crval1) eq 1) and (n_elements(crval2) eq 0)) or $
 ; Convert all longitude values into the range -180 to 180 so that equations
 ; work properly.
   lng = double( longitude )   & lat = double( latitude )
-  sz_long = size(lng)
   temp = where(lng ge 180.0, Ntemp)
   if Ntemp GT 0 then lng[temp] = lng[temp] - 360.0d0
 
@@ -351,15 +355,22 @@ if (((n_elements(crval1) eq 1) and (n_elements(crval2) eq 0)) or $
 ; given are in "native" coordinates already (this is  essentially what is done
 ; in the procedure AITOFF).
 
-   if N_elements(crval) GE 2 then begin
-           if N_elements(map_type) EQ 0 then $
-           map_type = where(projection_type EQ map_types)
-           orgn = origin[map_type[0]] 
+ PV2_1 = N_elements(pv2) GT 0 ? pv2[0] : 0
+ PV2_2 = N_elements(pv2) GT 1 ? pv2[1] : 0
+
+ if N_elements(crval) GE 2 then begin
+           if N_elements(map_type) EQ 0 then begin
+           	wmt      = where(projection_type EQ map_types)
+		map_type = wmt[0]
+	   endif
+           conic = (map_type GE 13) and (map_type LE 16) 
+           zenithal = ((map_type GE 1) and (map_type LE 8)) or (map_type EQ 26) 
 
 ; Rotate from standard celestial coordinates into the native system.
-
+        if conic then theta0 = PV2_1 else if zenithal then theta0 = 90 $
+                 else theta0 = 0                 
         wcs_rotate, lng, lat, phi, theta, crval, $
-                longpole=longpole, origin = orgn
+                latpole = latpole, longpole=longpole, theta0 = theta0
         phi = phi/radeg
         theta = theta/radeg
  endif else begin
@@ -370,25 +381,53 @@ if (((n_elements(crval1) eq 1) and (n_elements(crval2) eq 0)) or $
 ; BRANCH BY MAP PROJECTION TYPE
 case strupcase(projection_type) of
   'AZP':begin
-    if (n_elements(projp1) eq 0) then message,$
-      'AZP map projection requires the keyword PROJP1 to be set'
-    if (projp1 lt 0) then message,$
-      'AZP map projection requires the keyword PROJP1 >= 0'
-    r_theta = radeg*cos(theta)*(projp1 + 1.d0)/(projp1 + sin(theta))
-    x = r_theta*sin(phi)
-    y = -r_theta*cos(phi)
-  end  
+     if (PV2_1 lt 0) then message,$
+      'AZP map projection requires the keyword PV2_1 >= 0'
+    gamma = PV2_2/radeg
+    mu = PV2_1
 
-  'TAN':begin
-    r_theta = radeg/tan(theta)
+    r_theta = radeg*cos(theta)*(mu + 1.d0)/ $
+             ( (mu + sin(theta)) + cos(theta)*cos(phi)*tan(gamma))
     x = r_theta*sin(phi)
-    y = -r_theta*cos(phi)
+    y = -r_theta*cos(phi)/cos(gamma)
+  end  
+  'SZP': begin
+     mu = N_elements(PV2) GT 0 ? PV2[0] : 0
+     phi_c = N_elements(PV2) GT 1 ? PV2[1] : 0
+     theta_c = N_elements(PV2) GT 1 ? PV2[2] : 90
+     phi_c = phi_c/radeg & theta_c = theta_c/radeg
+     xp = -mu*cos(theta_c)*sin(phi_c)
+     yp =  mu*cos(theta_c)*cos(phi_c)
+     zp =  mu*sin(theta_c) + 1.
+     denom = zp - (1-sin(theta))
+     x = radeg*( zp*cos(theta)*sin(phi) - xp*(1-sin(theta)) )/ denom
+     y = -radeg*( zp*cos(theta)*cos(phi) + yp*(1-sin(theta)) )/ denom
+
+     end
+  'TAN':begin
+    sz_theta = size(theta,/dimen)
+    if sz_theta[0] EQ 0 then x = !Values.D_NAN else $
+          x = make_array(value = !values.D_NAN, dimen=sz_theta)
+    y = x
+    g = where(theta GT 0, Ng)
+    if Ng GT 0 then begin
+        r_theta = radeg/tan(theta[g])
+        x[g] = r_theta*sin(phi[g])
+        y[g] = -r_theta*cos(phi[g])
+    endif
   end
 
   'SIN':begin
-    r_theta = radeg*cos(theta)
-    x = r_theta*sin(phi)
-    y = -r_theta*cos(phi)
+    if N_elements(PV2_1) EQ 0 then PV2_1 = 0
+    if N_elements(PV2_2) EQ 0 then PV2_2 = 0
+    if (PV2_1 EQ 0) and (PV2_2 EQ 0) then begin
+        r_theta = radeg*cos(theta)
+        x = r_theta*sin(phi)
+        y = -r_theta*cos(phi)
+    endif else begin                   ;NCP projection
+        x =  radeg*(cos(theta)*sin(phi) + PV2_1*(1-sin(theta)) )
+        y = -radeg*(cos(theta)*cos(phi) - PV2_2*(1-sin(theta)) )
+    endelse
   end
 
   'STG':begin
@@ -404,8 +443,31 @@ case strupcase(projection_type) of
   end
 
   'ZPN':begin
-    message,'ZPN is not implemented due to its general uselessness.'
-  end
+    z = pi2 - theta
+    g = where(pv2 NE 0, Ng)
+    np = Ng GT 0 ? max(g) : 0
+    par = pv2[0:np]
+    Nbad  = 0
+;Check for range of validity for a nonlinear polynomial.    Set the derivative
+; to zero and check for any real, positive roots.      
+    if np GT 2 then begin 
+          dpar = (indgen(np)+1) * par[1:*]     ;Polynomial derivative
+	  zroots = fz_roots(dpar)               ;Find zeros
+	  g = where(imaginary(zroots) EQ 0, Ng)      ;Any real roots? 
+          if Ng GT 0 then zroots = float(zroots[g])
+	  g = where(zroots gt 0,Ng)
+	  if Ng GT 0 then rlim = min(zroots[g])
+	  bad = where(z GT rlim, Nbad)
+    endif   
+    r_theta = radeg*poly(z, par)
+    x = r_theta*sin(phi)
+    y = -r_theta*cos(phi)
+    if Nbad GT 0 then begin  
+        x[bad] = !VALUES.F_NAN
+	y[bad] = !VALUES.F_NAN
+	endif
+    end
+
 
   'ZEA':begin
     r_theta = 2.d0*radeg*sin((pi2 - theta)/2.d0)
@@ -414,16 +476,16 @@ case strupcase(projection_type) of
   end
 
   'AIR':begin
-    if not(keyword_set(projp1)) then begin
+    if not(keyword_set(PV2_1)) then begin
       message,/informational,$
-          'PROJP1 not set, using default of PROJP1 = 90 for AIR map projection'
-      projp1 = 9.d1
+          'PV2_1 not set, using default of PV2_1 = 90 for AIR map projection'
+      PV2_1 = 9.d1
     endif
-    theta_b = projp1/radeg
+    theta_b = PV2_1/radeg
 
     xi = (pi2 - theta)/2.d0
 
-; When theta_b (aka projp1 in radians) is equal to pi/2 the normal equations
+; When theta_b (aka PV2_1 in radians) is equal to pi/2 the normal equations
 ; for the AIR projection produce infinities.  To avoid the problem, values
 ; of theta_b equal to pi/2 cause a different set of equations to be used.
     if (theta_b eq pi2) then begin
@@ -434,28 +496,28 @@ case strupcase(projection_type) of
 
       if (min(theta) lt -36/radeg) then begin
         message,'AIR produces overlap of native latitudes south of ',/continue
-        print,'-36 with the PROJP1 = 90'
+        print,'-36 with the PV2_1 = 90'
         return
       endif
 
 ; points with xi too small are labelled as bad to prevent poor behavior of the
 ; equation for r_theta
-      bad = where(abs(xi) lt 1.d-10)
-      good = where(abs(xi) ge 1.d-10)
-      r_theta = make_array(size = sz_long)
-      if (bad[0] ne -1) then r_theta[bad] = 0.d0
-      if (good[0] ne -1) then $
-        r_theta[good] = -radeg*alog(cos(xi[good]))/tan(xi[good])
+      good = where(abs(xi) ge 1.d-10, Ngood)
+      r_theta = lng*0
+      if (Ngood GT 0) then $
+        r_theta[good] = -2*radeg*(alog(cos(xi[good]))/tan(xi[good]) - $
+	                 0.5*tan(xi[good]))
 
     endif else begin
       xi_b = (pi2 - theta_b)/2.d0
+      a = alog(cos(xi_b))/tan(xi_b)/tan(xi_b)
 
 ; AIR produces the same radii for different latitudes, causing some overlap.  To
 ; avoid this problem, if latitudes which are far enough south to be a problem 
 ; are included in the data, the routine will stop.
 
       xi_temp = (findgen(90) + 1)/radeg
-      radius=-!radeg*(alog(cos(xi_temp))/tan(xi_temp)+alog(cos(xi_b))/$
+      radius=-radeg*(alog(cos(xi_temp))/tan(xi_temp)+alog(cos(xi_b))/$
                                                       tan(xi_b)*tan(xi_temp))
       i = 0
       repeat i = i + 1 $
@@ -464,39 +526,38 @@ case strupcase(projection_type) of
       else min_lat = -90
       if (min(theta) lt min_lat[0]/radeg) then begin
         message,'AIR produces overlap of native latitudes south of ',/continue
-        print,format='(i3,a21,i3)',min_lat[0],' with the PROJP1 = ',projp1
+        print,format='(i3,a21,i3)',min_lat[0],' with the PV2_1 = ',PV2_1
         return
       endif
 
 ; points with xi too small are labelled as bad to prevent poor behavior of the
 ; equation for r_theta
-      bad = where(abs(xi) lt 1.d-10)
-      good = where(abs(xi) ge 1.d-10)
-      r_theta = make_array(size = sz_long)
-      if (bad[0] ne -1) then r_theta[bad] = 0.d0
-      if (good[0] ne -1) then r_theta[good] = -radeg*(alog(cos(xi[good]))/$
-        tan(xi[good]) + alog(cos(xi_b))/tan(xi_b)*tan(xi[good]))
+ 
+      good = where(abs(xi) ge 1.d-10, Ngood)
+      r_theta = lng*0
+      if (Ngood GT 0) then r_theta[good] = -2*radeg*(alog(cos(xi[good]))/$
+        tan(xi[good]) + a*tan(xi[good]))
     endelse
     x = r_theta*sin(phi)
     y = -r_theta*cos(phi)
   end
 
   'CYP':begin
-    if (n_elements(projp1) eq 0) then begin
+    if (n_elements(PV2_1) eq 0) then begin
       message,/informational,$
-           'PROJP1 not set, using default of PROJP1 = 0 for CYP map projection'
-      projp1 = 0.d0
+           'PV2_1 not set, using default of PV2_1 = 0 for CYP map projection'
+      PV2_1 = 0.d0
     endif
-    if (n_elements(projp2) eq 0) then begin
+    if (n_elements(PV2_2) eq 0) then begin
       message,/informational,$
-           'PROJP2 not set, using default of PROJP2 = 1 for CYP map projection'
-      projp2 = 1.d0
+           'PV2_2 not set, using default of PV2_2 = 1 for CYP map projection'
+      PV2_2 = 1.d0
     endif
-    if (projp1 eq -projp2) then message,$
-      'PROJP1 = -PROJP2 is not allowed for CYP map projection.'
+    if (PV2_1 eq -PV2_2) then message,$
+      'PV2_1 = -PV2_2 is not allowed for CYP map projection.'
 
-    x = projp2*radeg*phi
-    y = radeg*(projp1 + projp2)*sin(theta)/(projp1 + cos(theta))
+    x = PV2_2*radeg*phi
+    y = radeg*(PV2_1 + PV2_2)*sin(theta)/(PV2_1 + cos(theta))
   end
   
   'CAR':begin
@@ -510,137 +571,145 @@ case strupcase(projection_type) of
   end
   
   'CEA':begin
-    if not(keyword_set(projp1)) then message,$
-      'CEA map projection requires that PROJP1 keyword be set.'
-    if ((projp1 le 0) or (projp1 gt 1)) then message,$
-      'CEA map projection requires 0 < PROJP1 <= 1'
+    if N_elements(PV2_1) EQ 0  then message,$
+      'CEA map projection requires that PV2_1 keyword be set.'
+    if ((PV2_1 le 0) or (PV2_1 gt 1)) then message,$
+      'CEA map projection requires 0 < PV2_1 <= 1'
     x = radeg*phi
-    y = radeg*sin(theta)/projp1
+    y = radeg*sin(theta)/PV2_1
   end
   
   'COP':begin
-    if not(keyword_set(projp1)) then message,$
-      'COP map projection requires that PROJP1 keyword be set.'
-    if not(keyword_set(projp2)) then begin 
+    if not(keyword_set(PV2_1)) then message,$
+      'COP map projection requires that PV2_1 keyword be set.'
+    if not(keyword_set(PV2_2)) then begin 
       message,/informational,$
-      'PROJP2 not set, using default of PROJP2 = PROJP1 for COP map projection'
-      projp2=projp1
+      'PV2_2 not set, using default of PV2_2 = 0 for COP map projection'
+      PV2_2= 0
     endif
-    if ((projp1 lt -90) or (projp2 gt 90) or (projp1 gt projp2)) then message,$
- 'PROJP1 and PROJP2 must satisfy -90<=PROJP1<=PROJP2<=90 for COP map projection'
-    if (projp1 eq -projp2) then message,$
- 'COP projection with PROJP1=-PROJP2 is better done as a cylindrical projection'
-    theta_1 = projp1/radeg
-    theta_2 = projp2/radeg
-    theta_a = (theta_1 + theta_2)/2.d0
+    if ((PV2_1 lt -90) or (PV2_2 gt 90) or (PV2_1 gt 90)) then message,$
+ 'PV2_1 and PV2_2 must satisfy -90<=PV2_1<=90,0<=PV2_2<=90 for COP projection'
+    if (PV2_1 eq -PV2_2) then message,$
+ 'COP projection with PV2_1=-PV2_2 is better done as a cylindrical projection'
+    theta_a = PV2_1/radeg
+    alpha = PV2_2/radeg
     bad = where((theta ge theta_a + pi2) or (theta le theta_a - pi2))
     if (bad[0] ne -1) then begin 
       message,/continue,$
-  'COP map projection diverges for native latitude = (PROJP1 + PROJP2)/2 +- 90.'
+  'COP map projection diverges for native latitude = PV2_1 +- 90.'
       message,'Remove these points and try again.'
     endif
 
-    alpha = (theta_2 - theta_1)/2.d0
     r_theta = radeg*cos(alpha)*(1.d0/tan(theta_a)-tan(theta-theta_a))
     a_phi = phi*sin(theta_a)
-    y_0 = radeg*2.d0*cos(alpha)/sin(2.d0*theta_a)
+    y_0 = radeg*cos(alpha)/tan(theta_a)
     x = r_theta*sin(a_phi)
     y = y_0 - r_theta*cos(a_phi)
+
   end
   
   'COD':begin
-    if not(keyword_set(projp1)) then message,$
-      'COD map projection requires that PROJP1 keyword be set.'
-    if not(keyword_set(projp2)) then begin
+    if not(keyword_set(PV2_1)) then message,$
+      'COD map projection requires that PV2_1 keyword be set.'
+    if not(keyword_set(PV2_2)) then begin
       message,/informational,$
-     'PROJP2 not set, using default of PROJP2 = PROJP1 for COD map projection'
-      projp2 = projp1
+     'PV2_2 not set, using default of PV2_2 = 0 for COD map projection'
+      PV2_2 = 0
     end
-    if ((projp1 lt -90) or (projp2 gt 90) or (projp1 gt projp2)) then message,$
- 'PROJP1 and PROJP2 must satisfy -90<=PROJP1<=PROJP2<=90 for COD map projection'
-    if (projp1 eq -projp2) then message,$
-    'COD gives divergent equations for PROJP1 = -PROJP2'
-    theta_1 = projp1/radeg
-    theta_2 = projp2/radeg
+    if ((PV2_1 lt -90) or (PV2_2 gt 90) or (PV2_1 gt 90)) then message,$
+ 'PV2_1 and PV2_2 must satisfy -90<=PV2_1<=90,PV2_2<=90 for COD projection'
+    if (PV2_1 eq -PV2_2) then message,$
+    'COD gives divergent equations for PV2_1 = -PV2_2'
+    theta_a = PV2_1/radeg
 
-; when projp1 not = projp2 use regular equations
-  if (projp1 ne projp2) then begin
-      theta_a = (theta_1 + theta_2)/2.d0
-      alpha = (theta_2 - theta_1)/2.d0
-      r_theta = radeg*(theta_a - theta + alpha/(tan(alpha)*tan(theta_a)))
+; when PV2_1 not = PV2_2 use regular equations
+  if (PV2_2 NE 0) then begin
+      alpha = PV2_2/radeg
+      r_theta = theta_a - theta + alpha/(tan(alpha)*tan(theta_a))
       a_phi = sin(theta_a)*sin(alpha)*phi/alpha
-      y_0 = radeg*(theta_a - pi2 + alpha/(tan(alpha)*tan(theta_a)))
-; if the two parameters projp1 and projp2 are equal use the simpler set of
+      y_0 = radeg*alpha/(tan(alpha)*tan(theta_a))
+; if the two parameters PV2_1 and PV2_2 are equal use the simpler set of
 ; equations
     endif else begin 
-      r_theta = radeg*(theta_1 - theta + 1.d0/tan(theta_1))
-      a_phi = phi*sin(theta_1)
-      y_0 = radeg*(theta_1 - pi2 + 1.d0/tan(theta_1))
+      r_theta = theta_a - theta + 1.d0/tan(theta_a)
+      a_phi = phi*sin(theta_a)
+      y_0 = radeg/tan(theta_a)
 
     endelse
-    x = r_theta*sin(a_phi)
-    y = y_0 - r_theta*cos(a_phi)
+    x = radeg*r_theta*sin(a_phi)
+    y = y_0 - radeg*r_theta*cos(a_phi)
+    
   end
   
   'COE':begin
-    if not(keyword_set(projp1)) then message,$
-      'COE map projection requires that PROJP1 keyword be set.'
-    if not(keyword_set(projp2)) then begin
+    if N_elements(PV2_1) EQ 0 then message,$
+      'COE map projection requires that PV2_1 keyword be set.'
+    if N_elements(PV2_2) EQ 0 then begin
       message,/informational,$
-      'PROJP2 not set, using default of PROJP2 = PROJP1 for COE map projection'
-      projp2 = projp1
+      'PV2_2 not set, using default of PV2_2 = 0 for COE map projection'
+      PV2_2 = 0
     end
-    if ((projp1 lt -90) or (projp2 gt 90) or (projp1 gt projp2)) then message,$
- 'PROJP1 and PROJP2 must satisfy -90<=PROJP1<=PROJP2<=90 for COE map projection'
-    if (projp1 eq -projp2) then message,$
-    'COE gives divergent equations for PROJP1 = -PROJP2'
-    theta_1 = projp1/radeg
-    theta_2 = projp2/radeg
-    gamma = sin(theta_1) + sin(theta_2)
- r_theta=radeg*2.d0*sqrt(1.d0+sin(theta_1)*sin(theta_2)-gamma*sin(theta))/gamma
-    a_phi = phi*gamma/2.d0
-    y_0 = radeg*2.d0*sqrt(1.d0+sin(theta_1)*sin(theta_2)-gamma)/gamma
+    if ((PV2_1 lt -90) or (PV2_2 gt 90) or (PV2_1 gt PV2_2)) then message,$
+ 'PV2_1 and PV2_2 must satisfy -90<=PV2_1<=PV2_2<=90 for COE map projection'
+    if (PV2_1 eq -PV2_2) then message,$
+    'COE gives divergent equations for PV2_1 = -PV2_2'
+   
+    theta_1 = (PV2_1 - PV2_2)/radeg
+    theta_2 = (PV2_1 + PV2_2)/radeg
+    s_1 = sin(theta_1)
+    s_2 = sin(theta_2)
+    stheta_a = sin(PV2_1/radeg)
+    gamma = s_1 + s_2
+    r_theta=radeg*2.d0*sqrt(1.d0+ s_1*s_2-gamma*sin(theta))/gamma
+
+     a_phi = phi*gamma/2.d0
+    y_0 = radeg*2.d0*sqrt(1.d0+ s_1*s_2-gamma*stheta_a)/gamma
     x = r_theta*sin(a_phi)
     y = y_0 - r_theta*cos(a_phi)
   end
   
   'COO':begin
-    if not(keyword_set(projp1)) then message,$
-      'COO map projection requires that PROJP1 keyword be set.'
-    if not(keyword_set(projp2)) then begin
+    if not(keyword_set(PV2_1)) then message,$
+      'COO map projection requires that PV2_1 keyword be set.'
+    if not(keyword_set(PV2_2)) then begin
       message,/informational,$
-      'PROJP2 not set, using default of PROJP2 = PROJP1 for COO map projection'
-      projp2 = projp1
+      'PV2_2 not set, using default of PV2_2 = 0 for COO map projection'
+      PV2_2 = 0
     end
-    if ((projp1 lt -90) or (projp2 gt 90) or (projp1 gt projp2)) then message,$
- 'PROJP1 and PROJP2 must satisfy -90<=PROJP1<=PROJP2<=90 for COO map projection'
-    if (projp1 eq -projp2) then message,$
-    'COO gives divergent equations for PROJP1 = -PROJP2'
-    theta_1 = projp1/radeg
-    theta_2 = projp2/radeg
+    if ((PV2_1 lt -90) or (PV2_2 gt 90) or (PV2_1 gt 90)) then message,$
+ 'PV2_1 and PV2_2 must satisfy -90<=PV2_1<=90,PV2_2<=90 for COO projection'
+    if (PV2_1 eq -PV2_2) then message,$
+    'COO gives divergent equations for PV2_1 = -PV2_2'
+    theta_1 = (PV2_1 - PV2_2)/radeg
+    theta_2 = (PV2_1 + PV2_2)/radeg 
+    theta_a = PV2_1/radeg
 
-; for cases where projp1 = projp2, use a simpler formula to calculate c,
+
+; for cases where PV2_1 = 0, use a simpler formula to calculate c,
 ; otherwise use the regular formula
-    if (projp1 eq projp2) then c = sin(theta_1) else $
+    if (PV2_2 eq 0) then c = sin(theta_1) else $
     c = alog(cos(theta_2)/cos(theta_1))/alog(tan((pi2-theta_2)/2.d0)/$
     tan((pi2-theta_1)/2.d0))
 
     alpha = radeg*cos(theta_1)/(c*(tan((pi2-theta_1)/2.d0))^c)
     r_theta = alpha*(tan((pi2-theta)/2.d0))^c
+    y_0 = alpha*tan((pi2-theta_a)/2.)^c 
     a_phi = c*phi
     x = r_theta*sin(a_phi)
-    y = - r_theta*cos(a_phi)
+    y = y_0 - r_theta*cos(a_phi)
+
   end
  
   'BON':begin
-    if (n_elements(projp1) eq 0) then message,$
-      'BON map projection requires that PROJP1 keyword be set.'
-    if ((projp1 lt -90) or (projp1 gt 90)) then message,$
-      'PROJP1 must satisfy -90 <= PROJP1 <= 90 for BON map projection'
-    if (projp1 eq 0) then message,$
-      'PROJP1 = 0 for BON map projection is better done with GLS map projection'
+    if (N_elements(PV2) LT 1) then message,$
+      'BON map projection requires that PV2_1 keyword be set.'
+    pv2_1 = pv2[0]
+    if ((PV2_1 lt -90) or (PV2_1 gt 90)) then message,$
+      'PV2_1 must satisfy -90 <= PV2_1 <= 90 for BON map projection'
+    if (PV2_1 eq 0) then message,$
+      'PV2_1 = 0 for BON map projection is better done with SFL map projection'
 
-    theta_1 = projp1/radeg
+    theta_1 = PV2_1/radeg
     s = theta_1/abs(theta_1)
     y_0 = 1.d0/tan(theta_1) + theta_1
     a = phi*cos(theta)/(y_0 - theta)
@@ -651,29 +720,31 @@ case strupcase(projection_type) of
   'PCO':begin
 ; The equations for x and y are poorly behaved for theta = 0.  Avoid this by
 ; explicitly assigning values for x and y when theta = 0.
-    zero_ind = where(theta eq 0)
+    zero_ind = where(theta eq 0, Nzero)
 
 ; create x and y with same structure as longitude
-    x = make_array(size = sz_long)  & y = x
-    if (zero_ind[0] ne -1) then begin
+    x = lng*0  & y = x
+    if (Nzero GT 0) then begin
       x[zero_ind] = radeg*phi[zero_ind]
       y[zero_ind] = 0.d0
     endif
-    good_ind = where(theta ne 0)
+    good_ind = where(theta ne 0, Ngood)
+    if Ngood GT 0 then begin
     x[good_ind] = radeg*sin(phi[good_ind]*sin(theta[good_ind]))/$
                   tan(theta[good_ind])
     y[good_ind] = radeg*(theta[good_ind]+$
         (1.d0 - cos(phi[good_ind]*sin(theta[good_ind])))/tan(theta[good_ind]))
+    endif
   end
   
-  'GLS':begin
+  'SFL':begin
     x = radeg*phi*cos(theta)
     y = radeg*theta
   end
   
   'PAR':begin
-    x = phi*(2.d0*cos(2.d0*theta/3.d0) - 1.d0)
-    y = pi*sin(theta/3.d0)
+    x = radeg*phi*(2.d0*cos(2.d0*theta/3.d0) - 1.d0)
+    y = 180.0*sin(theta/3.d0)
   end
   
   'AIT':begin
@@ -686,7 +757,7 @@ case strupcase(projection_type) of
 ; Use Newton's method to find a numerical solution to the equation:
 ;  alpha + 1/2*sin(2*alpha) - 1/2*pi*sin(theta) = 0
     tolerance = 1.0d-14
-    alpha = make_array(size = sz_long) 
+    alpha = lng*0
     repeat begin
     alpha_old = alpha
     alpha = alpha_old - (alpha_old + 0.5*sin(2.d0*alpha_old) - $
@@ -706,8 +777,8 @@ case strupcase(projection_type) of
 ; determine the face on which the x and y coordinates will reside by setting
 ; rho equal to the maximum of n,m,l,-m,-l,-n which corresponds to faces 0
 ; through 5 respectively
-    rho =  make_array(size = sz_long) 
-    face = lonarr(n_long)
+    rho =  lng*0
+    if size(lng,/N_dimen) EQ 0 then  face = 0 else face = lonarr(n_long)
 
 ; use an array to store a remapping of the direction cosines.  This way, faces
 ; 0 and 5 take points on their borders with faces 1-4.  The reason for this is
@@ -723,7 +794,7 @@ case strupcase(projection_type) of
 
 ; based on the face determined for each point, find the parameters alpha and
 ; beta1
-    alpha = make_array(size = sz_long) 
+    alpha = lng*0
     beta1 = alpha
     for i = 0l, n_long-1 do begin
       case face[i] of
@@ -769,6 +840,7 @@ case strupcase(projection_type) of
     c_11 = 0.15384112876
     c_02 = 0.106959469314
     fconst = 45.0d0
+
     x = fconst*(alpha*gam_s+alpha^3*(1-gam_s)+alpha*beta1^2*(1-alpha^2)*$
         (gam+(em-gam)*alpha^2+(1-beta1^2)*(c_00+c_10*alpha^2+c_01*beta1^2+$
         c_20*alpha^4+c_11*alpha^2*beta1^2+c_02*beta1^4))+alpha^3*(1-alpha^2)*$
@@ -796,8 +868,8 @@ case strupcase(projection_type) of
 ; determine the face on which the x and y coordinates will reside by setting
 ; rho equal to the maximum of n,m,l,-m,-l,-n which corresponds to faces 0
 ; through 5 respectively
-    rho = make_array( size = sz_long, /NOZERO) 
-    face = lonarr(n_long)
+    rho = lng*0
+    if size(lng,/N_dimen) EQ 0 then face = 0 else face = lonarr(n_long)
 
 ; use an array to store a remapping of the direction cosines.  This way, faces
 ; 0 and 5 take points on their borders with faces 1-4.  The reason for this is
@@ -813,8 +885,8 @@ case strupcase(projection_type) of
 
 ; based on the face determined for each point, find the parameters alpha and
 ; beta1
-    alpha = make_array(size = sz_long, /NOZERO) 
-    beta1 = make_array(size = sz_long, /NOZERO)
+    alpha = lng*0
+    beta1 = alpha
     for i = 0l, n_long-1 do begin
       case face[i] of
         0:begin
@@ -844,7 +916,7 @@ case strupcase(projection_type) of
       endcase
     end
 
-    x = make_array( size =  sz_long )
+    x = lng*0
     y = x &  xi = y
 
     s = 2.d0*(((alpha gt abs(beta1)) or (beta1 ge abs(alpha))) - 0.5d0)
@@ -871,6 +943,7 @@ case strupcase(projection_type) of
       x[case_3] = 0.d0
       y[case_3] = 0.d0
     endif
+
     if noface eq 1 then begin
         xf=fconst*[0.0d0,0.0d0,2.0d0,4.0d0,6.0d0,0.0d0]
         yf=fconst*[2.0d0,0.0d0,0.0d0,0.0d0,0.0d0,-2.0d0]
@@ -888,8 +961,8 @@ case strupcase(projection_type) of
 ; determine the face on which the x and y coordinates will reside by setting
 ; rho equal to the maximum of n,m,l,-m,-l,-n which corresponds to faces 0
 ; through 5 respectively
-    rho = make_array(size = sz_long, /NOZERO)
-    face = lonarr(n_long)
+    rho = lng*0
+    if size(lng,/N_dimen) EQ 0 then face = 0 else face = lonarr(n_long)
 
 ; use an array to store a remapping of the direction cosines.  This way, faces
 ; 0 and 5 take points on their borders with faces 1-4.  The reason for this is
@@ -904,7 +977,7 @@ case strupcase(projection_type) of
     endfor
 
 ; based on the face determined for each point, find the parameters eta and xi
-    eta = make_array(size = sz_long, /NOZERO)
+    eta = lng*0
     xi = eta
     for i = 0l, n_long-1 do begin
       case face[i] of
@@ -945,6 +1018,31 @@ case strupcase(projection_type) of
         x=(x+xf[face])
         y=(y+yf[face])
     endif
+  end
+  
+  'HPX':begin
+    hpx_k = 3.D ; The main HEALPIX parameters (see Calabretta 2007, MNRAS)
+    hpx_h = 4.D ;
+    thetalim = asin((hpx_k-1)/hpx_k) 
+    
+    eqfaces = where( abs(theta) le thetalim, complement=polfaces)
+    x=phi*0.D
+    y=theta*0.D
+
+    ; equatorial region
+    if eqfaces[0] ne -1 then begin
+        x[eqfaces] = phi[eqfaces]*radeg
+        y[eqfaces] = 90 * hpx_k/ hpx_h * sin( theta[eqfaces])
+    endif
+
+    ;polar regions
+    if polfaces[0] ne -1 then begin
+       hpx_sig = sqrt ( hpx_k * (1 - abs(sin(theta[polfaces]))))
+       hpx_omega = ((hpx_k mod 2 eq 1) or theta[polfaces] gt 0)*1.D
+       hpx_phic = -180 + (2*floor((phi[polfaces]*radeg+180)*hpx_h/360+(1-hpx_omega)/2.)+hpx_omega)*180/hpx_h
+       x[polfaces] = hpx_phic + (phi[polfaces]*radeg-hpx_phic) * hpx_sig
+       y[polfaces] = 180./hpx_h *((theta[polfaces] gt 0)*2-1)* ((hpx_k+1)/2 - hpx_sig)
+    endif 
   end
   else:message,strupcase(projection_type)+$
                ' is not a valid projection type.  Reset CTYPE1 and CTYPE2'

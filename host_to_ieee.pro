@@ -6,10 +6,10 @@ pro host_to_ieee, data, IDLTYPE = idltype
 ;     Translate an IDL variable from host to IEEE representation 
 ; EXPLANATION:
 ;     The variable is converted from the format used by the host architecture
-;     into IEEE-754 representation (as used, for example, in FITS data ).
+;     into IEEE-754 representation ("big endian" as used, e.g., in FITS data ).
 ;
 ;     Duplicates most of the functionality of the SWAP_ENDIAN_INPLACE procedure
-;     introduced in V5.6, with the addition of the IDLTYPE keyword.
+;     with the addition of the IDLTYPE keyword.
 ; CALLING SEQUENCE:
 ;     HOST_TO_IEEE, data, [ IDLTYPE = ]
 ;
@@ -39,6 +39,8 @@ pro host_to_ieee, data, IDLTYPE = idltype
 ;      Converted to IDL V5.0   W. Landsman   September 1997
 ;      Added new integer datatypes  C. Markwardt/W. Landsman  July 2000
 ;      Use /SWAP_IF_LITTLE_ENDIAN keyword for 64bit types W. Landsman Feb 2003
+;      Do not use XDR keywords to BYTEORDER for much improved speed
+;                               W. Landsman   April 2006
 ;-
  On_error,2 
 
@@ -57,15 +59,15 @@ pro host_to_ieee, data, IDLTYPE = idltype
 
       1: return                             ;byte
 
-      2: byteorder, data, /HTONS            ;integer
+      2: byteorder, data, /SSWAP,/SWAP_IF_LITTLE            ;integer
 
-      3: byteorder, data, /HTONL            ;long
+      3: byteorder, data, /LSWAP,/SWAP_IF_LITTLE            ;long
 
-      4: byteorder, data, /FTOXDR           ;float
+      4: byteorder, data, /LSWAP, /SWAP_IF_LITTLE           ;float
 
-      5: byteorder,data,/DTOXDR              ;double
+      5: byteorder,data,/L64SWAP, /SWAP_IF_LITTLE              ;double
  
-      6: byteorder, data, /FTOXDR
+      6: byteorder, data, /LSWAP, /SWAP_IF_LITTLE
      
       7: return                             ;string
 
@@ -80,11 +82,11 @@ pro host_to_ieee, data, IDLTYPE = idltype
         endfor 
        END
 
-     9: byteorder, data, /DTOXDR
+     9: byteorder, data, /L64SWAP, /SWAP_IF_LITTLE
  
-     12: byteorder, data, /HTONS
+     12: byteorder, data, /SSWAP, /SWAP_IF_LITTLE
 
-     13: byteorder, data, /HTONL
+     13: byteorder, data, /LSWAP, /SWAP_IF_LITTLE
 
      14: byteorder, data, /L64swap, /SWAP_IF_LITTLE
 

@@ -41,12 +41,12 @@ PRO sex2ds9reg, sexcat, param, regfile, radius, num=num, $
    IF n_elements(add_column) GT 0 THEN $
     FOR i=0ul, n-1 DO $
      printf, 1, 'fk5;circle('+strtrim(tab[i].alpha_j2000, 2)+','+ $
-             strtrim(tab[i].delta_j2000, 2)+','+strtrim(radius, 2)+'")'+ $
+             strtrim(tab[i].delta_j2000, 2)+','+strtrim(radius, 2)+'p)'+ $
              tagstr[i] $
    ELSE $
     FOR i=0ul, n-1 DO $
      printf, 1, 'fk5;circle('+strtrim(tab[i].alpha_j2000, 2)+','+ $
-             strtrim(tab[i].delta_j2000, 2)+','+strtrim(radius, 2)+'")'+ $
+             strtrim(tab[i].delta_j2000, 2)+','+strtrim(radius, 2)+'p)'+ $
              tagstr
 
    close, 1

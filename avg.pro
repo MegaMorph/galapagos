@@ -64,6 +64,7 @@ FUNCTION AVG,ARRAY,DIMENSION, NAN = NAN, DOUBLE = DOUBLE
 ;       Accept a scalar input value    W. Landsman/jimm@berkeley   November 2000
 ;       Internal calculations always in double precision W. Landsman March 2002
 ;       Return NAN if all values in array are NAN  W. Landsman April 2002
+;       Fixed coding bug if all values in array are NAN W. Landsman Jan 2004
 ;-
  ON_ERROR,2
  S = SIZE(ARRAY,/STR)
@@ -85,7 +86,7 @@ FUNCTION AVG,ARRAY,DIMENSION, NAN = NAN, DOUBLE = DOUBLE
                      NPTS = TOTAL(FINITE(ARRAY),DIMENSION+1 ) 
                      BAD = WHERE(NPTS EQ 0, NBAD)
                      AVERAGE = AVERAGE/(NPTS>1)
-                     IF NBAD GT 0 THEN AVERAGE(NBAD) = !VALUES.D_NAN
+                     IF NBAD GT 0 THEN AVERAGE[BAD] = !VALUES.D_NAN
                  ENDIF ELSE AVERAGE = AVERAGE/S.DIMENSIONS[DIMENSION]
                    
         END ELSE $

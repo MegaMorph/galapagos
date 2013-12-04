@@ -54,15 +54,12 @@
 ;               ; fields.
 ; PROCEDURE CALLS:
 ;       GETTOK() - needed for virtual machine mode only
-; MINIMUM IDL VERSION:
-;       V5.3 (uses STRSPLIT)
 ; MODIFICATION HISTORY:
 ;       Created by T. McGlynn October, 1994.
 ;       Modified by T. McGlynn September, 1995.
 ;          Added capability to create substructures so that structure
 ;          may contain up to 4096 distinct elements.  [This can be
 ;          increased by futher iteration of the process used if needed.]
-;       Converted to IDL V5.0   W. Landsman   September 1997
 ;       Removed V4.0 reference to common block  October 1997
 ;       Allowed unlimited number of structure elements if the version
 ;       is greater than 5.0.  Put back in code to handle prior versions.
@@ -76,6 +73,9 @@
 ;       Restore EXECUTE limit (sigh...), added NO_EXECUTE keyword
 ;                         W. Landsman July 2004
 ;       Fix use of STRUCTYP with /NO_EXECUTE  W. Landsman June 2005
+;       Assume since V6.0 (lmgr function available), remove 131 string length
+;             limit for execute    W. Landsman Jun 2009 
+;      Restore EXECUTE limit (sigh...)   W. Landsman July 2009 
 ;-
 
 ; Check that the number of names is the same as the number of values.
@@ -86,40 +86,45 @@ function mrd_struct, names, values, nrow, no_execute = no_execute,  $
 ; Keywords TEMPDIR, SILENT and OLD_STRUCT no longer do anything but are kept
 ; for backward compatibility.
 
-noexecute = keyword_set(no_execute)
-if !VERSION.RELEASE GE '6.0' then if lmgr(/vm) then noexecute = 1b
 
-if noexecute then begin
+ noexecute = keyword_set(no_execute) or lmgr(/vm) 
+
+ if noexecute then begin
 
     ntags = n_elements(names)
     for i=0,ntags-1 do begin
 ;
 ; create variable with the specified data type
 ;
-	case values[i] of 
+	case strlowcase(values[i]) of 
 ;
 ; scalar values
 ;
-	    '0B': v = 0B
+	    '0b': v = 0B
 	    '0' : v = 0
-	    '0L': v = 0L
-	    '0LL' : v = 0LL
+	    '0l': v = 0L
+	    '0ll' : v = 0LL
 	    '0.': v = 0.0
-	    '0.d0': v = 0.0d0
+	    '0.0d0': v = 0.0d0
+ 	    '0.d0': v = 0.0d0
              '" "': v = " "          ;Added July 2004
 	    'complex(0.,0.)': v = complex(0.,0.)
 	    'dcomplex(0.d0,0.d0)': v = dcomplex(0.d0,0.d0)
 ;
 ; strings and arrays
-;
-	    else: begin
+;`
+	    else: begin	     
 	        value = values[i]
+		remchar,value,"'"
+		remchar,value,'"'
+		if strlen(value) EQ 1 then v= value else begin 
 	        type = gettok(value,'(')
 		if type eq 'string' then $
 			junk = gettok(value,',')      ;remove "replicate(32b"
 		dimen_string = gettok(value,')')	
 		dimen = long(strsplit(dimen_string,',',/extract))
 		case type of
+		    'strarr': v = make_array(dimen=dimen,/string)
 		    'bytarr': v = make_array(dimen=dimen,/byte)
 		    'intarr': v = make_array(dimen=dimen,/int)
 		    'fltarr': v = make_array(dimen=dimen,/float)
@@ -136,7 +141,10 @@ if noexecute then begin
 					v[*] = string(replicate(32B,dimen[0]))
 		    		end else v = string(replicate(32B,dimen[0]))
 			      end
+	            else: message,'ERROR - Invalid field value: ' + values[i]		      
 		endcase
+		        endelse 
+
 	    end
 	endcase     	
 	if i eq 0 then struct = create_struct(names[i],v) $
@@ -157,7 +165,7 @@ strng = "a={"
 comma = ' '
 for i=0,nel-1 do  begin
   
-    ; Now for each element put in a name/value pair.
+   ; Now for each element put in a name/value pair.
     tstrng = strng + comma+names[i] + ':' + values[i]
     
     ; The nominal max length of the execute is 131
@@ -166,32 +174,22 @@ for i=0,nel-1 do  begin
         strng = strng + "}"
         res = execute(strng)
 	if  res eq 0 then return, 0
-	if n_elements(struct) eq 0 then begin
-	    struct = a
-	endif else begin
-	    struct = create_struct(temporary(struct), a)
-	endelse
+        struct = n_elements(struct) eq 0 ? a: $
+	         create_struct(temporary(struct), a)
 	strng = "a={" + names[i] + ":" + values[i]
 	
-    endif else begin
-        strng = tstrng
-    endelse
+    endif else strng = tstrng
     comma = ","
-	 
-endfor
 
+endfor
+	
 
 if strlen(strng) gt 3 then begin
     strng = strng + "}"
     res = execute(strng)
-    if  res eq 0 then return, 0
-    if n_elements(struct) eq 0 then begin
-	struct = a
-    endif else begin
-	struct = create_struct(temporary(struct), a)
-    endelse
-  
-endif
+     if  res eq 0 then return, 0
+     struct = n_elements(struct) eq 0 ? a : create_struct(temporary(struct), a)
+ endif
  
 endelse
 if keyword_set(structyp) then $

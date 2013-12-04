@@ -1,4 +1,5 @@
-pro sxaddhist,history,header,blank = blank,comment= comment, pdu=pdu
+pro sxaddhist,history,header,blank = blank,comment= comment, location=key, $
+                            pdu=pdu
 ;+
 ; NAME:
 ;	SXADDHIST                           
@@ -27,6 +28,8 @@ pro sxaddhist,history,header,blank = blank,comment= comment, pdu=pdu
 ;              Note that according to the FITS definition, any number of 
 ;              'COMMENT' and 'HISTORY' or blank keywords may appear in a header,
 ;              whereas all other keywords may appear only once.   
+;	LOCATION=key - If present, the history will be added before this
+;	       keyword.  Otherwise put it at the end.
 ;	/PDU - if specified, the history will be added to the primary
 ;		data unit header, (before the line beginning BEGIN EXTENSION...)               
 ;		Otherwise, it will be added to the end of the header.
@@ -46,22 +49,28 @@ pro sxaddhist,history,header,blank = blank,comment= comment, pdu=pdu
 ;
 ; SIDE EFFECTS:
 ;       Header array is truncated to the final END statement
+;	LOCATION overrides PDU.
 ; HISTORY:
 ;	D. Lindler  Feb. 87
 ;	April 90  Converted to new idl  D. Lindler
 ;	Put only a single space after HISTORY   W. Landsman  November 1992
 ;	Aug. 95	  Added PDU keyword parameters
 ;	Converted to IDL V5.0   W. Landsman   September 1997
+;	LOCATION added.  M. Greason, 28 September 2004.
 ;-
 ;--------------------------------------------------------------------
  	On_error,2
 
  	if N_params() LT 2 then begin
- 	   print, ' Syntax - SXADDHIST, hist, header, [ /PDU] '
+ 	   print, ' Syntax - SXADDHIST, hist, header, '
+	   print,  '       /PDU, /BLANK, /COMMENT, LOCATION= ] '
  	   return
  	endif
 
 ; Check input parameters
+
+	if (n_elements(key) LE 0) then keynam = ''			$
+	                          else keynam = strupcase(strtrim(key, 2))
 
  	s = size(history) & ndim = s[0] & type = s[ndim+1]
  	if type NE 7 then message, $
@@ -86,13 +95,25 @@ pro sxaddhist,history,header,blank = blank,comment= comment, pdu=pdu
 		    'Invalid FITS header array, END keyword not found'
 
  	blank = string( replicate(32b,80) )
+	n1 = n		;position to insert
+;
+; if LOCATION was specified and found, make room before it.
+;
+	locfnd = 0
+	if (strlen(keynam) gt 0) then begin
+	    extline = where( strupcase(strtrim(strmid(header,0,8),2)) EQ keynam )
+	    n_ext = extline[0]
+	    if (n_ext gt 1) then begin
+	        n1 = n_ext
+	        locfnd = 1
+	    endif
+	endif
 ;
 ; if /PDU find beginning of the extension header and make room for the
 ; history
 ;
-	n1 = n		;position to insert
-	if keyword_set(PDU) then begin
-	    extline = where( strtrim(strmid(header,0,8),2) EQ 'BEGIN EX' )
+	if (keyword_set(PDU) and (locfnd EQ 0)) then begin
+	    extline = where( strupcase(strtrim(strmid(header,0,8),2)) EQ 'BEGIN EX' )
 	    n_ext = extline[0]
 	    if n_ext gt 1 then n1 = n_ext
 	end

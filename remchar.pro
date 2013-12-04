@@ -25,9 +25,9 @@ pro remchar,st,char	;Remove character
 ;	Written D. Lindler October 1986
 ;	Test if empty string needs to be returned   W. Landsman  Feb 1991
 ;	Work on string arrays    W. Landsman   August 1997
-;	Converted to IDL V5.0   W. Landsman   September 1997
+;	Avoid 32 bit integer overflow K. Tolbert/W. Landsman Feb 2007
 ;-
-                                 ;Convert string to byte
+ compile_opt idl2                             
  if N_params() LT 2 then begin
      print,'Syntax - REMCHAR, string, character'
      return
@@ -35,7 +35,7 @@ pro remchar,st,char	;Remove character
 
  bchar = byte(char) & bchar = bchar[0]          ;Convert character to byte
 
- for i = 0,N_elements(st)-1 do  begin
+ for i = 0L,N_elements(st)-1 do  begin
 
  bst = byte(st[i])
  good = where( bst NE bchar, Ngood)

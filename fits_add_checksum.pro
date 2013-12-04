@@ -17,9 +17,8 @@ pro fits_add_checksum, hdr, im, no_timestamp = no_timestamp, $
 ;     Data - data array associated with the FITS header.   If not supplied, or
 ;           set to a scalar, then the program checks whether there is a 
 ;           DATASUM keyword already in the FITS header containing the 32bit
-;           checksum for the data.   if there is no such keyword then ther 
-;           assumed to be no data array 
-;           associated with the FITS header.
+;           checksum for the data.   if there is no such keyword then there 
+;           assumed to be no data array associated with the FITS header.
 ; OPTIONAL INPUT KEYWORDS:
 ;    /FROM_IEEE - If this keyword is set, then the input is assumed to be in 
 ;             big endian format (e.g. an untranslated FITS array).    This 
@@ -35,8 +34,15 @@ pro fits_add_checksum, hdr, im, no_timestamp = no_timestamp, $
 ;     CHECKSUM32, FITS_ASCII_ENCODE(), GET_DATE, SXADDPAR, SXPAR()
 ; REVISION HISTORY:
 ;     W. Landsman    SSAI    December 2002
+;     Fix problem with images with a multiple of 2880 bytes.  W.L. May 2008
+;     Avoid conversion error when DATASUM is an empty string  W.L.  June 2008
+;     Don't update DATASUM if not already present and no data array supplied 
+;                       W.L. July 2008 
+;     Make sure input header array has 80 chars/line  W.L. Aug 2009
 ;-
  On_error,2
+ compile_opt idl2
+ 
  if N_params() EQ 0 then begin 
      print,'Syntax - FITS_ADD_CHECKSUM, Hdr, Data, /No_TIMESTAMP, /FROM_IEEE'
      return
@@ -52,13 +58,15 @@ pro fits_add_checksum, hdr, im, no_timestamp = no_timestamp, $
          exten = sxpar( hdr, 'XTENSION', Count = N_exten)
          if N_exten GT 0 then if exten EQ 'TABLE   ' then $
                  checksum32,[dsum,replicate(32b,2880-remain)],dsum
-         sdsum = strtrim(dsum,2)
     endif
+    sdsum = strtrim(dsum,2)
     dsum_exist= 1b
  endif else begin 
-        if N_datasum EQ 0 then   sdsum = '         0' else begin 
-           dsum = ulong(datasum)
-           datasum_update = 0b     ;Don't update DATASUM keyword  
+        if N_datasum EQ 0 then begin      ;Don't update DATASUM keyword 
+	      datasum_update = 0b     
+ 	      sdsum = '         0' 
+	 endif else begin
+	   if strtrim(datasum,2) EQ '' then dsum=0 else dsum = ulong(datasum)
            sdsum = strtrim(dsum,2)
        endelse   
  endelse 
@@ -75,7 +83,13 @@ pro fits_add_checksum, hdr, im, no_timestamp = no_timestamp, $
  if N_CHECKSUM GT 0 then verb = 'updated ' else verb = 'created '
  sxaddpar,hdr,'CHECKSUM','0000000000000000', $
        ' HDU checksum ' + verb + tm   ;Initialize CHECKSUM keyword
- bhdr = byte(hdr)
+;Make sure each line in header is 80 characters
+ if ~array_equal(strlen(hdr),80) then begin
+     n = N_elements(hdr)
+     bhdr = replicate(32b,80,n )
+     for i=0, n-1 do bhdr[0,i] = byte(hdr[i])
+ endif else bhdr = byte(hdr)
+
  remain = N_elements(bhdr) mod 2880 
  if remain  NE 0 then $
        bhdr = [reform(bhdr,N_elements(bhdr)), replicate(32b, 2880 - remain) ]

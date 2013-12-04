@@ -3,7 +3,7 @@
 ; NAME:
 ;	TEN()
 ; PURPOSE:
-;	Converts a sexigesimal number to decimal.
+;	Converts a sexigesimal number or string to decimal.
 ; EXPLANATION:
 ;	Inverse of the SIXTY() function.
 ;
@@ -13,18 +13,29 @@
 ;	X = TEN( [ HOUR_OR_DEG, MIN ] )
 ;	X = TEN( HOUR_OR_DEG, MIN )
 ;	X = TEN( [ HOUR_OR_DEG ] )      <--  Trivial cases
-;	X = TEN( HOUR_OR_DEG )        <--
+;	X = TEN( HOUR_OR_DEG )          <--
+;
+;        or
+;       X = TEN(HRMNSC_STRING)
 ;
 ; INPUTS:
 ;	HOUR_OR_DEG,MIN,SEC -- Scalars giving sexigesimal quantity in 
 ;		in order from largest to smallest.    
-;
+;                         or
+;       HRMNSC_STRING - String giving sexigesmal quantity separated by
+;               spaces or colons e.g. "10 23 34" or "-3:23:45.2"
+;               Any negative values should begin with a minus sign.
 ; OUTPUTS:
 ;	Function value returned = double real scalar, decimal equivalent of
 ;	input sexigesimal quantity.  A minus sign on any nonzero element
 ;	of the input vector causes all the elements to be taken as
 ;	< 0.
 ;
+; EXAMPLES:
+;       IDL> print,ten(0,-23,34)
+;                 --> -0.39277778
+;       IDL> print,ten("-0:23:34")
+;                 --> -0.39277778
 ; PROCEDURE:
 ;	Mostly involves checking arguments and setting the sign.
 ;
@@ -34,12 +45,23 @@
 ; MODIFICATION HISTORY:
 ;	Written by R. S. Hill, STX, 21 April 87       
 ;	Modified to allow non-vector arguments.  RSH, STX, 19-OCT-87
-;	Converted to IDL V5.0   W. Landsman   September 1997
+;       Recognize -0.0   W. Landsman/B. Stecklum   Dec 2005
+;       Work with string input  W. Landsman Dec 2008
 ;-
+      compile_opt idl2
       np = N_params()
 
-      if (np eq 1) then begin            
-         vector=dd
+      if (np eq 1) then begin
+         if size(dd,/TNAME) EQ 'STRING' then begin  
+	      temp = strtrim(dd,2)
+	      neg = strmid(dd,0,1) EQ '-'
+	      temp = repchr(temp,':',' ')
+	      value = abs(double(gettok(temp,' ')))
+	       mm = double(gettok(temp,' '))
+	       decimal =  value + mm/60. + double(temp)/3600.0d 
+              if neg then decimal = -decimal
+	      return,decimal
+         endif else vector=dd
       endif else begin
          if (np lt 1) or (np gt 3) then goto,bad_args
          vector=dblarr(3)
@@ -53,8 +75,8 @@
       facs=[1.0d0,60.0d0,3600.0d0]
       nel = sz[1]
       sign = +1.0d0
-      signflag = total(vector lt dblarr(nel))
-      if (signflag gt 0.0d0) then sign = -1.0d0
+       dummy=where(strpos(string(vector),'-') ge 0,cnt)
+       if cnt gt 0 then sign = -1.0d0
       vector = abs(vector)
       decim = double(vector[0])
       i = 1

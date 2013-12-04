@@ -1,5 +1,5 @@
 Pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
-                                       after=after , format=format, pdu = pdu
+                 savecomment = savecom, after=after , format=format, pdu = pdu
 ;+
 ; NAME:
 ;       SXADDPAR
@@ -7,7 +7,7 @@ Pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
 ;       Add or modify a parameter in a FITS header array.
 ;
 ; CALLING SEQUENCE:
-;       SXADDPAR, Header, Name, Value, [ Comment,  Location,
+;       SXADDPAR, Header, Name, Value, [ Comment,  Location, /SaveComment, 
 ;                               BEFORE =, AFTER = , FORMAT= , /PDU]
 ;
 ; INPUTS:
@@ -29,7 +29,8 @@ Pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
 ; OPTIONAL INPUT PARAMETERS:
 ;       Comment = String field.  The '/' is added by this routine.  Added 
 ;               starting in position 31.    If not supplied, or set equal to 
-;               '', then the previous comment field is retained (when found) 
+;               '', or /SAVECOMMENT is set, then the previous comment field is 
+;               retained (when found) 
 ;
 ;       Location = Keyword string name.  The parameter will be placed before the
 ;               location of this keyword.    This parameter is identical to
@@ -56,6 +57,9 @@ Pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
 ;       /PDU    = specifies keyword is to be added to the primary data unit
 ;               header. If it already exists, it's current value is updated in
 ;               the current position and it is not moved.
+;       /SAVECOMMENT = if set, then any existing comment is retained, i.e. the
+;               COMMENT parameter only has effect if the keyword did not 
+;               previously exist in the header.
 ; OUTPUTS:
 ;       Header = updated FITS header array.
 ;
@@ -106,11 +110,15 @@ Pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
 ;       Apr 2000, Make user-supplied format upper-case  W. Landsman 
 ;       Oct 2001, Treat COMMENT or blank string like HISTORY keyword W. Landsman
 ;       Jan 2002, Allow BEFORE, AFTER to apply to COMMENT keywords W. Landsman
+;       June 2003, Added SAVECOMMENT keyword    W. Landsman
+;       Jan 2004, If END is missing, then add it at the end W. Landsman
+;       May 2005 Fix SAVECOMMENT error with non-string values W. Landsman
+;       Oct 2005 Jan 2004 change made SXADDPAR fail for empty strings W.L. 
 ;       
 ;-
  if N_params() LT 3 then begin             ;Need at least 3 parameters
       print,'Syntax - Sxaddpar, Header, Name,  Value, [Comment, Postion'
-      print,'                      BEFORE = ,AFTER = , FORMAT = ]'
+      print,'                      BEFORE = ,AFTER = , FORMAT =, /SAVECOMMENT]'
       return
  endif
 
@@ -151,8 +159,22 @@ Pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
 
  keywrd = strmid(header,0,8)                 ;Header keywords
  iend = where(keywrd eq 'END     ',nfound)
- if nfound eq 0 then header[0]=ENDLINE      ;no end, insert at beginning
- iend = iend[0] > 0                          ;Make scalar
+;
+;  If no END, then add it.  Either put it after the last non-null string, or
+;  append it to the end.
+;
+        if nfound EQ 0 then begin
+                ii = where(strtrim(header) ne '',nfound)
+                ii = max(ii) + 1
+                if ii eq n_elements(header) then begin
+                        header = [header,endline]
+                        n = n+1 
+                endif else header[ii] = endline
+                keywrd = strmid(header,0,8)
+                iend = where(keywrd eq 'END     ',nfound)
+        endif
+;
+        iend = iend[0] > 0                      ;make scalar
 
 ;  History, comment and "blank" records are treated differently from the
 ;  others.  They are simply added to the header array whether there are any
@@ -163,6 +185,7 @@ Pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
 ;
 ;  If the header array needs to grow, then expand it in increments of 5 lines.
 ;
+
      if iend GE (n-1) then begin
                  header = [header,replicate(blank,5)] ;yes, add 5.
                  n = N_elements(header)
@@ -231,18 +254,19 @@ Pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
 ; not supply a new one.   Comment starts after column 32 for numeric data,
 ; after the slash (but at least after column 20) for string data. 
 
+ ncomment = comment
  ipos  = where(keywrd eq nn,nfound)
  if nfound gt 0 then begin
          i = ipos[nfound-1]
-         if comment eq '' then begin             ;save comment?
+         if comment eq '' or keyword_set(savecom) then begin  ;save comment?
          if strmid(header[i],10,1) NE "'" then $
-                 comment=strmid(header[i],32,48) else begin
+                 ncomment=strmid(header[i],32,48) else begin
                  slash = strpos(header[i],'/', 20)  
                  if slash NE -1 then $
-                        comment =  strmid(header[i], slash+1, 80) else $
-                        comment = string(replicate(32B,80))
+                        ncomment =  strmid(header[i], slash+1, 80) else $
+                        ncomment = string(replicate(32B,80))
                 endelse
-        endif
+        endif 
          goto, REPLACE    
  endif
 
@@ -288,7 +312,7 @@ REPLACE:
             end else begin              ;other string?
                 if strlen(value) gt 18 then begin       ;long string
                     strput, h, apost + strmid(value,0,68) + apost + $
-                        ' /' + comment,10
+                        ' /' + ncomment,10
                     header[i] = h
                     return
                 endif
@@ -316,7 +340,7 @@ REPLACE:
  endcase
 
  strput,h,' /',30       ;add ' /'
- strput, h, comment, 32 ;add comment
+ strput, h, ncomment, 32 ;add comment
  header[i] = h          ;save line
 
  return

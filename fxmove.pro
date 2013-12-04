@@ -44,7 +44,11 @@ FUNCTION FXMOVE, UNIT, EXTEN, SILENT = Silent, EXT_NO = ext_no, ERRMSG=errmsg
 ;      Save time by not reading the full header  W. Landsman   Feb. 2003
 ;      Allow extension name to be specified, added EXT_NO, ERRMSG keywords
 ;         W. Landsman  December 2006
-;      Make search for EXTNAME case-independet  W.Landsman March 2007 
+;      Make search for EXTNAME case-independent  W.Landsman March 2007 
+;      Avoid round-off error for very large extensions N. Piskunov Dec 2007
+;      Assume since V6.1 (/INTEGER keyword available to PRODUCT() ) Dec 2007
+;      Capture error message from MRD_HREAD (must be used with post-June 2009
+;        version of MRD-HREAD)   W. Landsman  July 2009
 ;-
          DO_NAME = SIZE( EXTEN,/TNAME) EQ 'STRING'
 	 PRINT_ERROR = NOT ARG_PRESENT(ERRMSG)
@@ -78,13 +82,17 @@ FUNCTION FXMOVE, UNIT, EXTEN, SILENT = Silent, EXT_NO = ext_no, ERRMSG=errmsg
                 ; Can't use FXHREAD to read from pipe, since it uses
                 ; POINT_LUN.  So we read this in ourselves using mrd_hread
 
-                MRD_HREAD, UNIT, HEADER, STATUS, SILENT = Silent, FIRSTBLOCK=FIRSTBLOCK
-                IF STATUS LT 0 THEN RETURN, -1
+                MRD_HREAD, UNIT, HEADER, STATUS, SILENT = Silent, $
+		    FIRSTBLOCK=FIRSTBLOCK, ERRMSG = ERRMSG
+                IF STATUS LT 0 THEN BEGIN 
+		    IF PRINTERROR THEN MESSAGE,ERRMSG
+		    RETURN, -1
+		ENDIF    
                         
                 ; Get parameters that determine size of data
                 ; region.
                 IF DO_NAME THEN IF I GT 1 THEN BEGIN
-		       EXTNAME = STRTRIM(SXPAR(HEADER,'EXTNAME',COUNT=N_name),2)
+		       EXTNAME = STRTRIM(FXPAR(HEADER,'EXTNAME',COUNT=N_name),2)
 			 if N_NAME GT 0 THEN $
 			  IF ENAME EQ STRUPCASE(EXTNAME) THEN BEGIN
 			        EXT_NO= I-1
@@ -102,14 +110,14 @@ FUNCTION FXMOVE, UNIT, EXTEN, SILENT = Silent, EXT_NO = ext_no, ERRMSG=errmsg
                 
                 IF NAXIS GT 0 THEN BEGIN 
                         DIMS = FXPAR(HEADER,'NAXIS*')           ;Read dimensions
-                        NDATA = PRODUCT(DIMS)                        
+			NDATA = PRODUCT(DIMS,/INTEGER) 
                 ENDIF ELSE NDATA = 0
                 
-                NBYTES = (ABS(BITPIX) / 8) * GCOUNT * (PCOUNT + NDATA)
+                NBYTES = LONG64(ABS(BITPIX) / 8) * GCOUNT * (PCOUNT + NDATA)
 ;
 ;  Move to the next extension header in the file.
 ;
-                NREC = LONG((NBYTES + 2879) / 2880)
+                NREC = (NBYTES + 2879) / 2880
                 
                 MRD_SKIP, UNIT, NREC*2880L 
 

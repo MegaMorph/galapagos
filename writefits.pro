@@ -1,5 +1,5 @@
 pro writefits, filename, data, header, heap, Append = Append,  $
-       compress = compress, CheckSum = checksum, NaNValue = NaNvalue
+       compress = compress, CheckSum = checksum, NaNValue = NaNvalue, silent=silent
 ;+
 ; NAME:
 ;       WRITEFITS
@@ -86,6 +86,7 @@ pro writefits, filename, data, header, heap, Append = Append,  $
 ;       Correct checksum if writing heap array   WL           November 2004
 ;       Assume since V5.5, no VMS support, use file_search() WL   September 2006
 ;       Set nbytes variable to LONG64 for very large files WL  May 2007
+;       Added silent keyword to ignore check_fits output. Boris Haeussler Nov 2011
 ;-
   On_error, 2
   compile_opt idl2  
@@ -109,7 +110,7 @@ pro writefits, filename, data, header, heap, Append = Append,  $
                 if keyword_set(append) then mkhdr, header, data, /IMAGE  $
                                        else mkhdr, header, data, /EXTEND
         endif else if naxis GT 0 then $         
-              check_FITS, data, header, /UPDATE, /FITS
+              check_FITS, data, header, /UPDATE, /FITS,silent=silent
 
 ; Remove any STSDAS/random group keywords from the primary header
 
