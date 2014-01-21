@@ -140,8 +140,9 @@ in_file = out_file+'.fits'
 ;   if nband gt 1 then re_d = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND), $
 ;                                  format = '('+string(nband)+'(A,","))'
 ; new setup after single_bd2 and multi_bd6
-   if nband eq 1 then re_d = string(ss_mult.RE_GALFIT_BAND >1., format = '(A)')
-   if nband gt 1 then re_d = string(strarr(nband)+(median(ss_mult.RE_GALFIT_BAND)>1.), $
+   if nband eq 1 then re_d = string(ss_mult.RE_GALFIT_BAND*1.2 >1., format = '(A)')
+; original!   if nband eq 1 then re_d = string(ss_mult.RE_GALFIT_BAND >1., format = '(A)')
+   if nband gt 1 then re_d = string(strarr(nband)+(median(ss_mult.RE_GALFIT_BAND)*1.2 >1.), $
                                   format = '('+string(nband)+'(A,","))')
    re_d = strtrim(strcompress(re_d, /remove_all), 2)
    re_d = ' 4) '+strmid(re_d, 0, strlen(re_d)-1)+ $
@@ -194,8 +195,8 @@ in_file = out_file+'.fits'
 ;   if nband gt 1 then re_b = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND), $
 ;                                  format = '('+string(nband)+'(A,","))')
 ; new setup after single_bd2 and multi_bd6
-   if nband eq 1 then re_b = string(ss_mult.RE_GALFIT_BAND*0.5 > 0.5, format = '(A)')
-   if nband gt 1 then re_b = string(strarr(nband)+(median(ss_mult.RE_GALFIT_BAND)*0.5 > 0.5), $
+   if nband eq 1 then re_b = string(ss_mult.RE_GALFIT_BAND*0.3 > 0.5, format = '(A)')
+   if nband gt 1 then re_b = string(strarr(nband)+(median(ss_mult.RE_GALFIT_BAND)*0.3 > 0.5), $
                                   format = '('+string(nband)+'(A,","))')
 
    re_b = strtrim(strcompress(re_b, /remove_all), 2)
@@ -209,6 +210,8 @@ in_file = out_file+'.fits'
        if nband eq 1 then n = string((ss_mult.N_GALFIT_BAND >1.5), format = '(A)')
        if nband gt 1 then n = string(((strarr(nband)+median(ss_mult.N_GALFIT_BAND) >1.5)), $
                                             format = '('+string(nband)+'(A,","))')
+;; try starting at 1 instead, Marina claims it's more stable (bd8)
+;       if nband gt 1 then n = string(((strarr(nband)+1.)), format = '('+string(nband)+'(A,","))')
    endif
    n = strtrim(strcompress(n, /remove_all), 2)
    n = ' 5) '+strmid(n, 0, strlen(n)-1)+ $

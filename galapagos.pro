@@ -1,4 +1,3 @@
-
 ;@/home/boris/mmm/astro-megamorph/galapagos/mrd_struct.pro
 ;@/home/boris/mmm/astro-megamorph/galapagos/mrdfits.pro
 ;@/home/boris/mmm/astro-megamorph/galapagos/mrd_hread.pro
@@ -3466,7 +3465,7 @@ printf, lun, message
 free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump=jump, mac=mac
+PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
 start=systime(0)
 print, 'start: '+start
 IF n_params() LE 1 THEN gala_pro = 'galapagos'
@@ -3484,8 +3483,6 @@ ENDIF
 ;==============================================================================
 ;read in the setup file
 read_setup, setup_file, setup
-
-if keyword_set(jump) then goto, jump_over_this
 
 ;copy setup file to output folder for future reference
 date=systime(0)
@@ -3794,6 +3791,7 @@ IF keyword_set(logfile) THEN $
    update_log, logfile, 'Setting up output catalogue...'
 ;==============================================================================
 ;read in the combined SExtractor table
+if keyword_set(jump1) then goto, jump_over_this_1
 print, 'reading SExtractor output'
 sexcat = read_sex_table(setup.outdir+setup.sexcomb, $
                         outpath_file[0,0]+setup.outparam, $
@@ -3841,6 +3839,10 @@ struct_assign, table, fittab
 table = fittab
 delvarx, fittab
 
+save, sexcat, table, nbr, filename = setup.outdir+'table_before_start.sav'
+jump_over_this_1:
+restore, setup.outdir+'table_before_start.sav'
+
 orgim = setup.images
 orgwht = setup.weights
 orgpath = set_trailing_slash(setup.outpath)
@@ -3874,23 +3876,24 @@ IF setup.dosky or setup.dobd  THEN BEGIN
    ENDIF ELSE BEGIN
 ; only do this when the sav file does not exist or is older than the
 ; sextractor table!
-       sav_file_test = file_info(setup.outdir+'primary_list.sav')
+       srclist_name = strtrim(strmid(setup.srclist, strpos(setup.srclist,'/',/reverse_search)+1),2)
+       sav_file_test = file_info(setup.outdir+'primary_list_'+srclist_name+'.sav')
        sex_file_test = file_info(setup.outdir+setup.sexcomb)
-   
+  
        IF sav_file_test.exists EQ 0 OR (sav_file_test.exists EQ 1 AND sav_file_test.mtime LT sex_file_test.mtime) THEN BEGIN
            print, 'correlating SExtractor catalogue to source list. Might take some time'
            readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT   
-           
+         
            srccor, do_ra/15., do_dec, table.alpha_j2000/15., table.delta_j2000, $
              setup.srclistrad, do_i, tab_i, OPTION=1, /SPHERICAL, /SILENT
            
 ; print indices in to file to be read in next time (much faster)
 ; This has to be done here and not when cutting the postage stamps,
 ; because the order of objects is different, so indices would be wrong
-           save, tab_i, filename=setup.outdir+'primary_list.sav'
+           save, tab_i, filename=setup.outdir+'primary_list_'+srclist_name+'.sav'
        ENDIF ELSE BEGIN
            print, 'source correlation has already been done, simply reading result!'
-           restore, setup.outdir+'primary_list.sav'
+           restore, setup.outdir+'primary_list_'+srclist_name+'.sav'
        ENDELSE
        
 ; if sav file exists and is newer than sextractor table, simply read
@@ -4219,6 +4222,8 @@ IF setup.dobd THEN BEGIN
 
     ntab = n_elements(table)
 
+    if keyword_set(jump2) then goto, jump_over_this_2
+
 ;find the image files for the sources
     print,' '
     sscnt =0ul 
@@ -4243,6 +4248,13 @@ IF setup.dobd THEN BEGIN
     print, strtrim(sscnt,2)+' succesful single-sersic fits read in'
     print, ' '
     
+;    save, table, filename = setup.outdir+'table_before_'+setup.bd_label+'.sav'
+    save, table, filename = setup.outdir+'table_before_bd.sav'
+jump_over_this_2:
+
+;    restore, setup.outdir+'table_before_'+setup.bd_label+'.sav'
+    restore, setup.outdir+'table_before_bd.sav'
+
 ;=========================================================================
 ; finished reading in all single sersic results
 ;=========================================================================
@@ -4257,31 +4269,31 @@ IF setup.dobd THEN BEGIN
    ENDIF ELSE BEGIN
 ; only do this when the sav file does not exist or is older than the
 ; sextractor table!
-       sav_file_test = file_info(setup.outdir+'primary_list_bd.sav')
+       bd_srclist_name = strtrim(strmid(setup.bd_srclist, strpos(setup.bd_srclist,'/',/reverse_search)+1),2)
+       sav_file_test = file_info(setup.outdir+'primary_list_'+bd_srclist_name+'.sav')
        sex_file_test = file_info(setup.outdir+setup.sexcomb)
-   
+ 
        IF sav_file_test.exists EQ 0 OR (sav_file_test.exists EQ 1 AND sav_file_test.mtime LT sex_file_test.mtime) THEN BEGIN
            print, 'correlating SExtractor catalogue to source list for B/D. Might take some time'
-           readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT   
+           readcol, setup.bd_srclist, do_ra, do_dec, format='F,F', comment='#', /silent
            
            srccor, do_ra/15., do_dec, table.alpha_j2000/15., table.delta_j2000, $
-             setup.srclistrad, do_i, tab_i, OPTION=1, /SPHERICAL, /SILENT
+             setup.bd_srclistrad, do_i, tab_i, OPTION=1, /SPHERICAL, /SILENT
            
 ; print indices in to file to be read in next time (much faster)
 ; This has to be done here and not when cutting the postage stamps,
 ; because the order of objects is different, so indices would be wrong
-           save, tab_i, filename=setup.outdir+'primary_list_bd.sav'
+           save, tab_i, filename=setup.outdir+'primary_list_'+bd_srclist_name+'.sav'
        ENDIF ELSE BEGIN
            print, 'source correlation has already been done, simply reading result!'
-           restore, setup.outdir+'primary_list_bd.sav'
+           restore, setup.outdir+'primary_list_'+bd_srclist_name+'.sav'
        ENDELSE
-       
+
 ; if sav file exists and is newer than sextractor table, simply read
 ; in the indices from there!
        table[tab_i].do_list_bd = 1
        delvarx, tab_i
    ENDELSE
-
 
     IF keyword_set(logfile) THEN $
       update_log, logfile, 'Beginning Bulge_Disk_decomposition ...'
@@ -4309,10 +4321,7 @@ IF setup.dobd THEN BEGIN
 ;****************************************************************************** 
 ;calculate sky for the brightest objects
 ;current object (will be used and overwritten by the new, optimized, queue)
-    save, /all, filename = setup.outdir+'before_'+setup.bd_label+'.sav'
-jump_over_this:
 
-    restore, setup.outdir+'before_'+setup.bd_label+'.sav'
 ;; adapt setup
 ; setup.bd_hpc = 1
 ; setup.cheb_d = [0,0,8,0,-1,0,0]
