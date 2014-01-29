@@ -3671,6 +3671,7 @@ IF setup.dostamps THEN BEGIN
    
    done_cnt=0
    i=0
+;stop
    REPEAT BEGIN
 ;get status of bridge elements
       FOR l=0, setup.max_proc-1 <max_proc-1 DO post_bridge_use[l] = post_bridge_arr[l]->status()
@@ -3685,10 +3686,10 @@ IF setup.dostamps THEN BEGIN
          save, i, images, outpath_file, setup, outpath_file_no_band, outpath_band, $
                outpre, nband, filename=outpath_file_no_band[i,0]+setup.stampfile+'.sav'
          IF setup.max_proc <max_proc GT 1 THEN BEGIN
-            post_bridge_arr[free[0]]->execute, $
+             post_bridge_arr[free[0]]->execute, $
                'stamp_file_bridge, "'+outpath_file_no_band[i,0]+setup.stampfile+'.sav"', /nowait
          ENDIF ELSE BEGIN
-            stamp_file_bridge, outpath_file_no_band[i,0]+setup.stampfile+'.sav'
+             stamp_file_bridge, outpath_file_no_band[i,0]+setup.stampfile+'.sav'
          ENDELSE
          done_cnt = done_cnt+1
          i=i+1
