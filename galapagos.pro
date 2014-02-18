@@ -3658,7 +3658,7 @@ IF setup.dostamps THEN BEGIN
 ;create object array for child processes 
 ; create maximum max_proc parallels. Anything more blocks the harddrive,
 ; limiting factor seems to be writing speed of disk.
-   max_proc = 4
+   max_proc = 6
    post_bridge_arr = objarr(setup.max_proc <max_proc)
 ;allow main to see which process is free
    post_bridge_use = bytarr(setup.max_proc <max_proc)
@@ -3719,6 +3719,7 @@ IF setup.dostamps THEN BEGIN
 ;       ENDFOR
    
 ; kill bridge, make new one!
+   print, 'finished cutting postage stamps, now killing bridge: '+systime(0)
    IF n_elements(post_bridge_arr) GT 0 THEN obj_destroy, post_bridge_arr
 
    post_bridge_arr = objarr(setup.max_proc)
@@ -3735,6 +3736,7 @@ IF setup.dostamps THEN BEGIN
 ;create skymap files using bridge
    done_cnt=0
    i=0
+   print, 'starting skymaps: '+systime(0)
    REPEAT BEGIN
 ;get status of bridge elements
       FOR l=0, setup.max_proc-1 DO post_bridge_use[l] = post_bridge_arr[l]->status()
@@ -3779,7 +3781,7 @@ IF setup.dostamps THEN BEGIN
 ;           ENDFOR
 ;       ENDFOR
    
-   
+   print, 'finished writing skymaps, now killing bridge: '+systime(0)
    IF n_elements(post_bridge_arr) GT 0 THEN obj_destroy, post_bridge_arr
    
    IF keyword_set(logfile) THEN $
@@ -3842,7 +3844,7 @@ delvarx, fittab
 
 save, sexcat, table, nbr, filename = setup.outdir+'table_before_start.sav'
 jump_over_this_1:
-restore, setup.outdir+'table_before_start.sav'
+if keyword_set(jump1) then restore, setup.outdir+'table_before_start.sav'
 
 orgim = setup.images
 orgwht = setup.weights
@@ -3902,6 +3904,7 @@ IF setup.dosky or setup.dobd  THEN BEGIN
        table[tab_i].do_list = 1
        delvarx, tab_i
    ENDELSE
+
 ENDIF
 
 ;==============================================================================
@@ -3952,9 +3955,31 @@ IF setup.dosky THEN BEGIN
         plot, table.alpha_j2000, table.delta_j2000, psym=3, ystyle=1, xstyle=1
     endif
     
+; set up batch mode! (has to be done for single-sersic and B/D
+; independently, otherwise '/jump2' will not work
+    add_tag, table, 'do_batch', 0, table_new
+    table = table_new
+    delvarx, table_new
+    table[*].do_batch = 0
+
+;loop over all batch frames and set do_batch =1
+    IF file_test(setup.batch) AND strlen(setup.batch) GT 0 THEN BEGIN
+        readcol, setup.batch, batch, format = 'A', comment = '#', /silent
+        print, 'batch file detected, only doing the following image:'
+        IF n_elements(batch) GT 0 THEN BEGIN
+            
+            FOR f=0ul, n_elements(batch)-1 DO BEGIN
+                print, batch[f]
+                dum = where(table.frame[0] EQ batch[f], ct)
+                IF ct EQ 0 THEN CONTINUE
+                table[dum].do_batch = 1
+            ENDFOR
+        ENDIF
+        
+    ENDIF ELSE table[*].do_batch = 1
+
 ;loop over all objects
     loop = 0l
-    
     REPEAT BEGIN
         IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
             update_log, logfile, 'last in cue... '+strtrim(cur, 2)
@@ -3966,7 +3991,7 @@ IF setup.dosky THEN BEGIN
         
 ;figure out which object to do next
 loopstart:
-        todo=where(table.flag_galfit eq 0 AND table.do_list EQ 1, ctr)
+        todo=where(table.flag_galfit eq 0 AND table.do_list EQ 1 AND table.do_batch eq 1, ctr)
         if ctr eq 0 then begin
             FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
             goto, loopend
@@ -4170,7 +4195,13 @@ loopstart2:
 loopend:
 ;stop when all done and no bridge in use any more
     ENDREP UNTIL todo[0] eq -1 AND total(bridge_use) EQ 0
+
+;kill bridge
+   print, 'finished all fits, now killing bridge: '+systime(0)
+   IF n_elements(bridge_arr) GT 0 THEN obj_destroy, bridge_arr
     
+   print, 'bridge killed, now reading in last batch: '+systime(0)
+   
 ;have to read in the last batch of objects
     remain = where(bridge_obj ge 0, ct)
     IF ct GT 0 THEN BEGIN
@@ -4254,7 +4285,7 @@ IF setup.dobd THEN BEGIN
 jump_over_this_2:
 
 ;    restore, setup.outdir+'table_before_'+setup.bd_label+'.sav'
-    restore, setup.outdir+'table_before_bd.sav'
+    if keyword_set(jump2) then restore, setup.outdir+'table_before_bd.sav'
 
 ;=========================================================================
 ; finished reading in all single sersic results
@@ -4357,6 +4388,28 @@ jump_over_this_2:
             plot, table.alpha_j2000, table.delta_j2000, psym=3, ystyle=1, xstyle=1
         endif
         
+; set up batch mode! (has to be done for single-sersic and B/D
+; independently, otherwise '/jump2' will not work
+        table = remove_tags(table,'do_batch')
+        add_tag, table, 'do_batch', 0, table_new
+        table = table_new
+        delvarx, table_new
+        table[*].do_batch = 0
+        
+;loop over all batch frames and set do_batch =1
+        IF file_test(setup.batch) AND strlen(setup.batch) GT 0 THEN BEGIN
+            readcol, setup.batch, batch, format = 'A', comment = '#', /silent
+            
+            IF n_elements(batch) GT 0 THEN BEGIN
+                FOR f=0ul, batch-1 DO BEGIN
+                    dum = where(table.frame[0] EQ batch[f], ct)
+                    IF ct EQ 0 THEN CONTINUE
+                    table[dum].do_batch = 1
+                ENDFOR
+            ENDIF
+            
+        ENDIF ELSE table[*].do_batch = 1
+
 ;loop over all objects
         loop = 0l
         
@@ -4374,7 +4427,7 @@ loopstart_bd:
 ; todo eq flag_galfit eq 2 and flag_galfit_bd eq 0?????
 ; new source catalogue?
             
-            todo=where(table.flag_galfit_bd eq 0 AND table.do_list_bd EQ 1 and $
+            todo=where(table.flag_galfit_bd eq 0 AND table.do_list_bd EQ 1 and table.do_batch eq 1 and $
                        table.mag_galfit_band[0] gt 0 and table.mag_galfit_band[0] lt setup.bd_maglim, ctr)
             if ctr eq 0 then begin
                 FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
@@ -4619,7 +4672,12 @@ loopstart2_bd:
 loopend_bd:
 ;stop when all done and no bridge in use any more
         ENDREP UNTIL todo[0] eq -1 AND total(bridge_use) EQ 0
+
+;kill bridge
+   print, 'finished all B/D fits, now killing bridge: '+systime(0)
+   IF n_elements(bridge_arr) GT 0 THEN obj_destroy, bridge_arr
         
+   print, 'bridge killed, now reading in last batch: '+systime(0)
 ;have to read in the last batch of objects
         remain = where(bridge_obj ge 0, ct)
         IF ct GT 0 THEN BEGIN
