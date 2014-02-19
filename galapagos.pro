@@ -2481,6 +2481,8 @@ setup = create_struct('files', '', $
                       'srclist', '', $
                       'srclistrad', 0.0, $
                       'galexe', '', $ 
+                      'gal_kill_string', '',$
+                      'gal_kill_time', 0.,$
                       'batch', '', $
                       'obj', '', $
                       'galfit_out', '', $
@@ -2534,7 +2536,6 @@ setup.srclistrad = -1
 setup.galfit_out_path = ''
 
 ; check format for backwards compatibility
-limitn = 0
 block_bd = 0
 line = ''
 openr, 1, setup_file
@@ -2549,7 +2550,6 @@ WHILE NOT eof(1) DO BEGIN
     IF pos EQ -1 THEN pos = strlen(line)
     content = strtrim(strmid(line, len_num, pos-len_num), 2)
     IF strupcase(strmid(line, 0, len_num)) eq 'G00)' then block_bd = 1
-    IF strupcase(strmid(line, 0, len_num)) eq 'E19)' then limitn = 1
 ENDWHILE
 close, 1
 
@@ -2644,54 +2644,24 @@ WHILE NOT eof(1) DO BEGIN
         'E11)': setup.conmaxre = float(content)
         'E12)': setup.conminm = float(content)
         'E13)': setup.conmaxm = float(content)
-        'E14)': BEGIN
-            if limitn eq 1 then setup.conminn = float(content) $
-            else setup.nice = (content EQ 'nice') ? 1 : 0
-        END
-        'E15)': BEGIN
-            if limitn eq 1 then setup.conmaxn = float(content) $
-            else begin
-                setup.version = 1
-                IF (pos = stregex(content, '[0123456789]')) GT 0 THEN $
-                  content = strmid(content, pos, strlen(content)-pos)
-                pos = strpos(content, '.')
-                content = strrep(content, '.', ' ')
-                strput, content, '.', pos
-                content = strcompress(content, /remove_all)
-                if float(content) lt 2.1 then setup.version = 0
-                if (float(content) GE 2.1 and float(content) lt 4) then setup.version = 1
-                if float(content) GE 4.0 then setup.version = 4
-            endelse
-        END
-        'E16)': BEGIN
-            if limitn eq 1 then setup.nice = (content EQ 'nice') ? 1 : 0 $
-            else begin
-                for n=0,5 do begin
-                    pos=strpos(content, ',')
-                    setup.cheb[n]=strmid(content,0,pos)
-                    content=strmid(content,pos+1)
-                ENDFOR
-                setup.cheb[6]=content
-            endelse
-        END
+        'E14)': setup.conminn = float(content)
+        'E15)': setup.conmaxn = float(content)
+        'E16)': setup.nice = (content EQ 'nice') ? 1 : 0
         'E17)': BEGIN
-            if limitn eq 1 then begin
-                setup.version = 1
-                IF (pos = stregex(content, '[0123456789]')) GT 0 THEN $
-                  content = strmid(content, pos, strlen(content)-pos)
-                pos = strpos(content, '.')
-                content = strrep(content, '.', ' ')
-                strput, content, '.', pos
-                content = strcompress(content, /remove_all)
-                if float(content) lt 2.1 then setup.version = 0
-                if (float(content) GE 2.1 and float(content) lt 4) then setup.version = 1
-                if float(content) GE 4.0 then setup.version = 4
-            endif else begin
-                if content eq '' then setup.galfit_out_path = content
-                if content ne '' then setup.galfit_out_path = set_trailing_slash(content)
-            endelse
+            setup.version = 1
+            IF (pos = stregex(content, '[0123456789]')) GT 0 THEN $
+              content = strmid(content, pos, strlen(content)-pos)
+            pos = strpos(content, '.')
+            content = strrep(content, '.', ' ')
+            strput, content, '.', pos
+            content = strcompress(content, /remove_all)
+            if float(content) lt 2.1 then setup.version = 0
+            if (float(content) GE 2.1 and float(content) lt 4) then setup.version = 1
+            if float(content) GE 4.0 then setup.version = 4
         END
-        'E18)': BEGIN
+        'E18)': setup.gal_kill_string = content
+        'E19)': setup.gal_kill_time = content
+        'E20)': BEGIN
             for n=0,5 do begin
                 pos=strpos(content, ',')
                 setup.cheb[n]=strmid(content,0,pos)
@@ -2699,7 +2669,7 @@ WHILE NOT eof(1) DO BEGIN
             ENDFOR
             setup.cheb[6]=content
         END
-        'E19)': BEGIN
+        'E21)': BEGIN
             if content eq '' then setup.galfit_out_path = content
             if content ne '' then setup.galfit_out_path = set_trailing_slash(content)
         END
@@ -4185,11 +4155,10 @@ loopstart2:
 ; kill all processes that have been running longer than a certain
 ; time. Not fully automated yet, needs to use input value for
 ; time_limit and name of galfit task
-           time_limit = 150
-           
-           galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
-           kill_galfit, galfit_string, time_limit,mac=mac
-;            kill_galfit, 'galfitm-0.1.2.1', time_limit, mac=mac
+
+            galfit_string = setup.gal_kill_string
+            if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
         ENDELSE
         
 loopend:
@@ -4665,10 +4634,11 @@ loopstart2_bd:
 ;all bridges are busy --> wait 
                 wait, 1
             ENDELSE
-            time_limit = 240
-            galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
-            kill_galfit, galfit_string, time_limit,mac=mac 
-;            kill_galfit, 'galfitm-0.1.2.1', time_limit, mac=mac
+
+            galfit_string = setup.gal_kill_string
+            if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
+
 loopend_bd:
 ;stop when all done and no bridge in use any more
         ENDREP UNTIL todo[0] eq -1 AND total(bridge_use) EQ 0
