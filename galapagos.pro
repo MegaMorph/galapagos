@@ -3648,6 +3648,8 @@ IF setup.dostamps THEN BEGIN
          print, 'cutting postages for images '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
          save, i, images, outpath_file, setup, outpath_file_no_band, outpath_band, $
                outpre, nband, filename=outpath_file_no_band[i,0]+setup.stampfile+'.sav'
+
+stop
          IF setup.max_proc <max_proc GT 1 THEN BEGIN
              post_bridge_arr[free[0]]->execute, $
                'stamp_file_bridge, "'+outpath_file_no_band[i,0]+setup.stampfile+'.sav"', /nowait
