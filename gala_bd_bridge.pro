@@ -62,24 +62,17 @@
 ;   constr_file, constr_file_bd, no_fit=no_fit
 PRO bd_fit, filein
 restore, filein
+stop
 ;obj_fitstab_file = out_file_bd+'.fits'
 in_file = out_file+'.fits'
 
 ;   num = '21_17.346'
 ;   obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
 
-   fit_info = mrdfits(in_file, 'FIT_INFO', /silent)
-
    tab = mrdfits(in_file, 'FINAL_BAND', /silent)
 
-;   fit_info.initfile = '/home/barden/Desktop/multi/BD_objects/t'+num+'_obj'
-;   fit_info.constrnt = '/home/barden/Desktop/multi/BD_objects/t'+num+'_constr'
-   
    band_info = mrdfits(in_file, 'BAND_INFO', /silent)
    
-;   obj_file_ss = strtrim(fit_info.initfile,2)
-;   constr_file = strtrim(fit_info.constrnt,2)
-
    band_str = strupcase(strtrim(band_info.band,2))
    nband = n_elements(band_str)
    if nband eq 1 then bandstr = ' '
