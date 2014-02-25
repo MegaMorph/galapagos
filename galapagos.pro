@@ -3649,8 +3649,7 @@ IF setup.dostamps THEN BEGIN
          save, i, images, outpath_file, setup, outpath_file_no_band, outpath_band, $
                outpre, nband, filename=outpath_file_no_band[i,0]+setup.stampfile+'.sav'
 
-stop
-         IF setup.max_proc <max_proc GT 1 THEN BEGIN
+         IF setup.max_proc <max_proc GT 1 and nframes gt 1 THEN BEGIN
              post_bridge_arr[free[0]]->execute, $
                'stamp_file_bridge, "'+outpath_file_no_band[i,0]+setup.stampfile+'.sav"', /nowait
          ENDIF ELSE BEGIN
@@ -3715,7 +3714,7 @@ stop
 ;       print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
          
          save, i, weights, outpath_file, setup, outpath_file_no_band, nband, filename=outpath_file_no_band[i,0]+'skymap.sav'
-         IF setup.max_proc GT 1 THEN BEGIN
+         IF setup.max_proc GT 1 and nframes gt 1 THEN BEGIN
             print, 'starting skymap '+outpath_file_no_band[i,0]+'skymap.sav'
             post_bridge_arr[free[0]]->execute, $
                'skymap_bridge, "'+outpath_file_no_band[i,0]+'skymap.sav"', /nowait
