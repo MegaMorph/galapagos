@@ -2804,7 +2804,7 @@ if ncolf eq 4 then begin
 ; band
 endif 
 
-; if number of columns eq 3 then assume multi band survey and
+; if number of columns eq 6 then assume multi band survey and
 ; filesnames pointing to other file lists that contain all the images.
 if ncolf eq 6 then begin
     if not keyword_set(silent) then print, 'assuming multi-wavelength dataset. Assuming first line to be for SExtractor, rest for fitting!'
@@ -2855,17 +2855,46 @@ if ncolf eq 6 then begin
     add_tag, setup, 'expt', exptime, setup2
     setup=setup2
     delvarx,  setup2
-    for b=0,nband do begin
-        readcol, filelist[b], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
+
+    delvarx, hlpimages, hlpweights, hlpoutpath, hlpoutpre
+
+; read sextractor bit
+    readcol, filelist[0], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
+      format = 'A,A,A,A', comment = '#', /silent
+    cnt[0] = n_elements(hlpimages)
+    setup.images[*,0] = hlpimages
+    setup.weights[*,0] = hlpweights
+    setup.outpre[*,0] = hlpoutpre
+    setup.outpath[*,0] = set_trailing_slash(setup.outdir)+set_trailing_slash(strtrim(hlpoutpath,2))
+    setup.outpath_band[*,0] = setup.outpath[*,0]+strtrim(band[0],2)
+    delvarx, hlpimages, hlpweights, hlpoutpath, hlpoutpre
+ 
+; READ OTHER BANDS (format: 2 columns only, 3 columns when using sigma
+; image!!)
+    for b=1,nband do begin
+        readcol, filelist[b], hlpimages, hlpweights, $
           format = 'A,A,A,A', comment = '#', /silent
         cnt[b]=n_elements(hlpimages)
-        if (cnt[b] ne cnt[0]) and not keyword_set(silent) then print, 'input list '+strtrim(band[b])+' contains a wrong number of entries (tiles)'
+        if (cnt[b] ne cnt[0]) and not keyword_set(silent) then print, 'input list '+strtrim(band[b])+' contains a wrong number of entries (tiles), copared to SExtractor list'
         if (cnt[b] ne cnt[0]) and not keyword_set(silent) then stop
-        setup.images[*,b]=hlpimages
-        setup.weights[*,b]=hlpweights
-        setup.outpre[*,b]=hlpoutpre
-        setup.outpath[*,b]=set_trailing_slash(setup.outdir)+set_trailing_slash(strtrim(hlpoutpath,2))
-        setup.outpath_band[*,b]=setup.outpath[*,b]+strtrim(band[b],2)
+        setup.images[*,b] = hlpimages
+        setup.weights[*,b] = hlpweights
+        setup.outpre[*,b] = setup.outpre[*,0]
+        setup.outpath[*,b] = setup.outpath[*,0]
+        setup.outpath_band[*,b] = setup.outpath[*,0]+strtrim(band[b],2)
+        delvarx, hlpimages, hlpweights
+;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+;lineone = ''
+;openr, 1, setup.files
+;readf, 1, lineone
+;close, 1
+;lineone = strtrim(lineone, 2)
+;columnsf = strsplit(lineone, ' ', COUNT=ncolf)      
+;
+;; if number of columns eq 4 then assume 1 band survey and fits files
+;; in the table
+;if ncolf eq 4 then begin
+
     endfor 
 endif
 if ncolf ne 6 and ncolf ne 4 then message, 'Invalid Entry in '+setup.files
