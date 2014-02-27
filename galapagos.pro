@@ -3796,6 +3796,25 @@ IF setup.dostamps THEN BEGIN
    print, 'finished cutting postage stamps: '+systime(0)
 ENDIF 
 
+; check whether skymaps exist, if not, something went wrong above
+
+skymap_exist = intarr(nframes,nband)
+for t=0,nframes-1 do begin
+    for b=1,nband do begin
+        skymap_exist[t,b-1] = file_test(outpath_file_no_band[t,b]+setup.stamp_pre[b]+'.'+setup.skymap+'.fits')
+    endfor
+endfor
+if total(skymap_exist) ne nframes*nband then begin
+    print, ' '
+    print, 'WARNING'
+    print, 'The number of skymap files on your disk does not correspond to the number that should exist. It seems that your block C' + $
+      'did not finish correctly. It has been reported that when you have one frame only, you need to set D18 to "1" for this block to work.' + $
+      'I think I fixed this bug and have never seen this behaviour myself, but if you can read this, maybe give it a try.' + $
+      'This will mean that the processes crash in the "bridge", which will be hard to find given the lack of feedback. This is why I am' +$
+      'telling you here'
+    stop
+endif
+
 ;==============================================================================
 IF keyword_set(logfile) THEN $
    update_log, logfile, 'Setting up output catalogue...'
