@@ -1894,8 +1894,6 @@ printf, 1, '# sky'
 printf, 1, ''
 printf, 1, ' 0) sky'
 ; WRITE SKY
-;   printf, 1, ' 1) '+round_digit(sky, 3, /string)+'     0,       ' + $
-;           '# sky background       [ADU counts]'
 SKY_po=''
 SKY_po2=''
 FOR b=1, nband DO BEGIN
@@ -3499,9 +3497,25 @@ outpath_band = setup.outpath_band
 outpre = setup.outpre
 nband = setup.nband
 
+; correct too high degrees of freedom as galfitm would crash!
+if setup.nband lt setup.cheb[2]+1 then $
+  print,' Your degree of freedom (set by E20 +1) is higher than the number of bands you are using. This will be corrected ' + $
+  'in the code to be full freedom so GALFITM does not crash This is only a warning for you to check whether these settings ' + $
+  'are indeed what you meant to do'
+if setup.nband lt setup.cheb_b[2]+1 then $
+  print,' Your degree of freedom (set by F01 +1) is higher than the number of bands you are using. This will be corrected ' + $
+  'in the code to be full freedom so GALFITM does not crash This is only a warning for you to check whether these settings ' + $
+  'are indeed what you meant to do'
+if setup.nband lt setup.cheb_d[2]+1 then $
+  print,' Your degree of freedom (set by F02 +1) is higher than the number of bands you are using. This will be corrected ' + $
+  'in the code to be full freedom so GALFITM does not crash This is only a warning for you to check whether these settings ' + $
+  'are indeed what you meant to do'
+
 ; now that number of bands is known, correct number of additional cheb
-; combonents to nband -1
-setup.cheb=setup.cheb <(nband-1)
+; components to max nband -1
+setup.cheb = setup.cheb < (setup.nband-1)
+setup.cheb_b = setup.cheb_b < (setup.nband-1)
+setup.cheb_d = setup.cheb_d < (setup.nband-1)
 
 ;; NAMING CONVENTIONS AND EXAMPLES
 ; MULTIBAND
@@ -3942,6 +3956,7 @@ IF setup.dosky THEN BEGIN
     FOR i=0, setup.max_proc-1 DO BEGIN
        bridge_arr[i]->execute, 'astrolib'
        bridge_arr[i]->execute, '.r '+gala_pro
+       bridge_arr[i]->execute, '.r gala_bd_bridge'
     ENDFOR
     
     if keyword_set(plot) then begin
@@ -4373,6 +4388,7 @@ jump_over_this_2:
         FOR i=0, setup.max_proc-1 DO BEGIN
             bridge_arr[i]->execute, 'astrolib'
             bridge_arr[i]->execute, '.r '+gala_pro
+            bridge_arr[i]->execute, '.r gala_bd_bridge'
         ENDFOR  
         if keyword_set(plot) then begin
             loadct,39,/silent
@@ -4389,6 +4405,7 @@ jump_over_this_2:
         
 ;loop over all batch frames and set do_batch =1
         IF file_test(setup.batch) AND strlen(setup.batch) GT 0 THEN BEGIN
+            print, 'setting up batch mode for B/D fits'
             readcol, setup.batch, batch, format = 'A', comment = '#', /silent
             
             IF n_elements(batch) GT 0 THEN BEGIN
@@ -4403,7 +4420,8 @@ jump_over_this_2:
 
 ;loop over all objects
         loop = 0l
-        
+        print, 'starting B/D fits at '+systime()
+
         REPEAT BEGIN
             IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
                 update_log, logfile, 'last in cue... '+strtrim(cur, 2)
@@ -4519,7 +4537,7 @@ loopstart2_bd:
 ;check if file was done successfully or bombed and update table                  
 ;                    IF file_test(out_file+'.fits') THEN BEGIN ; to be
 ;                    used for reruns after HPC. Delete obj files, run
-;                    again. Also disable galfit in bd_fit
+;                    again. Also disable galfit in gala_bd_bridge
                     IF file_test(obj_file) THEN BEGIN
 ;                    print, obj_file+' found.'
                         print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
@@ -4627,9 +4645,9 @@ loopstart2_bd:
 ;++++++++++++++++++++++++++ MARCOS SCRIPT
                     if file_test(out_file+'.fits') then $
                       bridge_arr[free[0]]->execute, $
-                      'bd_fit, "'+out_file_bd+'.sav"',/nowait
+                      'gala_bd_bridge, "'+out_file_bd+'.sav"',/nowait
                     
-;PRO bd_fit, obj_fitstab_file, label, no_fit=no_fit
+;PRO gala_bd_bridge, obj_fitstab_file, label, no_fit=no_fit
 ;;   num = '21_17.346'
 ;;   obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
                     
@@ -4646,7 +4664,7 @@ loopstart2_bd:
 ;++++++++++++++++++++++++++ MARCOS SCRIPT
 ;                bd_fit, out_file+'.fits',setup.bd_label, setup.galexe
                     if file_test(out_file+'.fits') then $
-                      bd_fit, out_file_bd+'.sav'
+                      gala_bd_bridge, out_file_bd+'.sav'
 ;--------------------------- MARCOS SCRIPT
                     
                 ENDELSE
@@ -4745,12 +4763,12 @@ loopend_bd:
               filename=out_file_bd+'.sav'
 
             if file_test(out_file+'.fits') then $
-              bd_fit, out_file_bd+'.sav'
+              gala_bd_bridge, out_file_bd+'.sav'
 
         ENDFOR
         
 ;all feedme files exist, prepare PC files
-        bd_fit_hpc, table, setup
+        gala_bd_bridge_hpc, table, setup
 
     ENDIF
 ENDIF

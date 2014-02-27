@@ -60,9 +60,8 @@
 
 ;PRO bd_fit, out_file, out_file_bd, setup, obj_file, obj_file_bd,
 ;   constr_file, constr_file_bd, no_fit=no_fit
-PRO bd_fit, filein
+PRO gala_bd_bridge, filein
 restore, filein
-stop
 ;obj_fitstab_file = out_file_bd+'.fits'
 in_file = out_file+'.fits'
 
@@ -327,7 +326,7 @@ in_file = out_file+'.fits'
    cd, galfit_path
    IF NOT setup.bd_hpc THEN BEGIN
        IF file_test(out_file_bd+'.fits') eq 0 then begin
-           IF keyword_set(nice) THEN spawn, 'nice '+setup.galexe+' '+obj_file_bd $
+           IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file_bd $
            ELSE spawn, setup.galexe+' '+obj_file_bd
            wait, 1
        ENDIF
@@ -338,7 +337,7 @@ in_file = out_file+'.fits'
 
 END
 
-PRO bd_fit_hpc, data_table, setup
+PRO gala_bd_bridge_hpc, data_table, setup
    ;run_bd_fit, 'gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/GAMA_9_ffvqqff_gama_only.fits', '1'
    ;this must be run from the root of the gama/galapagos/... tree
    ;in order to get the paths right
