@@ -1,4 +1,3 @@
-
 pro kill_galfit, task, time_limit, mac=mac
 ; .run kill_galfit.pro
 ; kill_galfit, 'galfitm-0.1.2.1', 180
@@ -17,11 +16,10 @@ if not keyword_set(mac) then begin
       h = fix(strmid(rest, 0, strpos(rest,':')))
       rest = strtrim(strmid(rest, strpos(rest,':')+1),2)
       min = fix(strmid(rest, 0, strpos(rest,':')))
-   endfor
 
-   if h*60+min gt time_limit then print, 'process '+pid+' killed, running too long'
-   if h*60+min gt time_limit then spawn, 'kill -9 '+pid
-   
+      if h*60+min gt time_limit then print, 'process '+pid+' killed, running too long'
+      if h*60+min gt time_limit then spawn, 'kill -9 '+pid
+  endfor
 endif
 
 if keyword_set(mac) then begin
