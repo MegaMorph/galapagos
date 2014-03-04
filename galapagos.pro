@@ -3892,7 +3892,7 @@ IF setup.dosky or setup.dobd  THEN BEGIN
 ; structure used
    print, 'reading PSFs'
    readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband
-   
+
    IF keyword_set(logfile) THEN $
       update_log, logfile, 'Setting up objects list to be fit...'
 ;;==============================================================================
