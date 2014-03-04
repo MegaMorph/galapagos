@@ -1,14 +1,8 @@
-;@/home/boris/mmm/astro-megamorph/galapagos/mrd_struct.pro
-;@/home/boris/mmm/astro-megamorph/galapagos/mrdfits.pro
-;@/home/boris/mmm/astro-megamorph/galapagos/mrd_hread.pro
-;@/home/boris/mmm/astro-megamorph/galapagos/valid_num.pro
-;@/home/boris/mmm/astro-megamorph/galapagos/mwrfits.pro
-;@/home/boris/mmm/astro-megamorph/galapagos/fxaddpar.pro
-;@/home/boris/mmm/astro-megamorph/galapagos/fxposit.pro
-;@/home/boris/mmm/astro-megamorph/galapagos/fxmove.pro
-;@/home/boris/mmm/astro-megamorph/galapagos/writefits.pro
-;@/home/boris/mmm/astro-megamorph/galapagos/kill_galfit.pro
-@~/megamorph_dev/astro-megamorph/galapagos/gala_bd_bridge.pro
+;@/home/boris/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
+;@/home/boris/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
+;@/home/boris/megamorph_dev/astro-megamorph/galapagos/writefits.pro
+;@/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
+;@/home/boris/megamorph_dev/astro-megamorph/galapagos/gala_bd_bridge.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
@@ -156,7 +150,7 @@ FUNCTION read_sex_table, file, param, add_column = add_column
 ;add_column: 2d string array: [[label0, value0],[label1, value1],...]
 ;tab = read_sex_table(setup.outdir+'outcat', $
 ;outpath_pre[0]+setup.outparam, add_col = ['FILE', '" "'])
-;<-- additional column of type string with label 'FILE'
+;<-- additional colum of type string with label 'FILE'
 
 ;identify number of lines in sextractor table
 ;lines beginning with '#' are treated as comments
@@ -1900,8 +1894,6 @@ printf, 1, '# sky'
 printf, 1, ''
 printf, 1, ' 0) sky'
 ; WRITE SKY
-;   printf, 1, ' 1) '+round_digit(sky, 3, /string)+'     0,       ' + $
-;           '# sky background       [ADU counts]'
 SKY_po=''
 SKY_po2=''
 FOR b=1, nband DO BEGIN
@@ -2468,7 +2460,6 @@ setup = create_struct('files', '', $
                       'cut', 0.0, $
                       'nobj_max', 0, $
                       'power', 0.0, $
-                      'bright', 0.0, $
                       'nslope', 0, $
                       'stel_slope', 0.0, $
                       'stel_zp', 0.0, $
@@ -2616,19 +2607,18 @@ WHILE NOT eof(1) DO BEGIN
         'D09)': setup.cut = float(content)
         'D10)': setup.nobj_max = fix(content)
         'D11)': setup.power = float(content)
-        'D12)': setup.bright = float(content)
-        'D13)': setup.nslope = fix(content)
-        'D14)': setup.stel_slope = float(content)
-        'D15)': setup.stel_zp = float(content)
-        'D16)': setup.maglim_gal = float(content)
-        'D17)': setup.maglim_star = float(content)
-        'D18)': setup.nneighb = fix(content)
-        'D19)': setup.max_proc = fix(content)
-        'D20)': setup.min_dist = float(content)
-        'D21)': setup.min_dist_block = float(content)
-        'D22)': IF content EQ 'none' OR content EQ '' THEN setup.srclist = '' $
+        'D12)': setup.nslope = fix(content)
+        'D13)': setup.stel_slope = float(content)
+        'D14)': setup.stel_zp = float(content)
+        'D15)': setup.maglim_gal = float(content)
+        'D16)': setup.maglim_star = float(content)
+        'D17)': setup.nneighb = fix(content)
+        'D18)': setup.max_proc = fix(content)
+        'D19)': setup.min_dist = float(content)
+        'D20)': setup.min_dist_block = float(content)
+        'D21)': IF content EQ 'none' OR content EQ '' THEN setup.srclist = '' $
         ELSE setup.srclist = content
-        'D23)': setup.srclistrad = float(content)
+        'D22)': setup.srclistrad = float(content)
         
         'E00)': setup.galexe = content
         'E01)': setup.batch = content
@@ -2785,10 +2775,10 @@ if ncolf eq 4 then begin
 ; doubling the arrays to get [*,0] SExtractor images and [*,1] fitting images
     setup.images = [[images],[images]]
     setup.weights = [[weights],[weights]]
-    setup.outpath = [[outpath],[outpath]]
-    setup.outpath_band = setup.outpath
     setup.outpre = [[outpre],[outpre]]
-    
+    setup.outpath = set_trailing_slash(setup.outdir)+[[outpath],[outpath]]
+    setup.outpath_band = setup.outpath
+
 ; define additional parameters
     add_tag, setup, 'wavelength', [0,0], setup2
     setup=setup2
@@ -2812,23 +2802,23 @@ if ncolf eq 4 then begin
 ; band
 endif 
 
-; if number of columns eq 3 then assume multi band survey and
+; if number of columns eq 6 then assume multi band survey and
 ; filesnames pointing to other file lists that contain all the images.
 if ncolf eq 6 then begin
     if not keyword_set(silent) then print, 'assuming multi-wavelength dataset. Assuming first line to be for SExtractor, rest for fitting!'
     if setup.version lt 4 then BEGIN
         print, 'you seem to be using mulit-wavelength data, but the GALFIT version you have specified only supports one-band data'
-        print, 'This version of galapagos needs GALFIT4 in order to be able to read out the fitting parameters (output has to be in a fits table)'
+        print, 'Multi-band fitting needs GALFITM in order to be able to read out the fitting parameters (output has to be in a fits table)'
         stop
     ENDIF
     readcol, setup.files, band, wavelength, mag_offset, filelist, zeropoint, exptime, $
       format = 'A,I,F,A,F,F', comment = '#', /silent      
-
+    
 ; copy the setup files to the folder
     for f = 0, n_elements(filelist)-1 do spawn, 'cp '+filelist[f]+' '+save_folder
     
     nband=fix(n_elements(band)-1)
-; read first file to get number of images...
+; read first (sextractor) file to get number of images...
     readcol, filelist[0], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
       format = 'A,A,A,A', comment = '#', /silent
     cnt=intarr(nband+1)
@@ -2863,17 +2853,46 @@ if ncolf eq 6 then begin
     add_tag, setup, 'expt', exptime, setup2
     setup=setup2
     delvarx,  setup2
-    for b=0,nband do begin
-        readcol, filelist[b], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
+
+    delvarx, hlpimages, hlpweights, hlpoutpath, hlpoutpre
+
+; read sextractor bit
+    readcol, filelist[0], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
+      format = 'A,A,A,A', comment = '#', /silent
+    cnt[0] = n_elements(hlpimages)
+    setup.images[*,0] = hlpimages
+    setup.weights[*,0] = hlpweights
+    setup.outpre[*,0] = hlpoutpre
+    setup.outpath[*,0] = set_trailing_slash(setup.outdir)+set_trailing_slash(strtrim(hlpoutpath,2))
+    setup.outpath_band[*,0] = setup.outpath[*,0]+strtrim(band[0],2)
+    delvarx, hlpimages, hlpweights, hlpoutpath, hlpoutpre
+ 
+; READ OTHER BANDS (format: 2 columns only, 3 columns when using sigma
+; image!!)
+    for b=1,nband do begin
+        readcol, filelist[b], hlpimages, hlpweights, $
           format = 'A,A,A,A', comment = '#', /silent
         cnt[b]=n_elements(hlpimages)
-        if (cnt[b] ne cnt[0]) and not keyword_set(silent) then print, 'input list '+strtrim(band[b])+' contains a wrong number of entries (tiles)'
+        if (cnt[b] ne cnt[0]) and not keyword_set(silent) then print, 'input list '+strtrim(band[b])+' contains a wrong number of entries (tiles), copared to SExtractor list'
         if (cnt[b] ne cnt[0]) and not keyword_set(silent) then stop
-        setup.images[*,b]=hlpimages
-        setup.weights[*,b]=hlpweights
-        setup.outpre[*,b]=hlpoutpre
-        setup.outpath[*,b]=set_trailing_slash(setup.outdir)+set_trailing_slash(strtrim(hlpoutpath,2))
-        setup.outpath_band[*,b]=setup.outpath[*,b]+strtrim(band[b],2)
+        setup.images[*,b] = hlpimages
+        setup.weights[*,b] = hlpweights
+        setup.outpre[*,b] = setup.outpre[*,0]
+        setup.outpath[*,b] = setup.outpath[*,0]
+        setup.outpath_band[*,b] = setup.outpath[*,0]+strtrim(band[b],2)
+        delvarx, hlpimages, hlpweights
+;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+;lineone = ''
+;openr, 1, setup.files
+;readf, 1, lineone
+;close, 1
+;lineone = strtrim(lineone, 2)
+;columnsf = strsplit(lineone, ' ', COUNT=ncolf)      
+;
+;; if number of columns eq 4 then assume 1 band survey and fits files
+;; in the table
+;if ncolf eq 4 then begin
+
     endfor 
 endif
 if ncolf ne 6 and ncolf ne 4 then message, 'Invalid Entry in '+setup.files
@@ -3478,9 +3497,25 @@ outpath_band = setup.outpath_band
 outpre = setup.outpre
 nband = setup.nband
 
+; correct too high degrees of freedom as galfitm would crash!
+if setup.nband lt setup.cheb[2]+1 then $
+  print,' Your degree of freedom (set by E20 +1) is higher than the number of bands you are using. This will be corrected ' + $
+  'in the code to be full freedom so GALFITM does not crash This is only a warning for you to check whether these settings ' + $
+  'are indeed what you meant to do'
+if setup.nband lt setup.cheb_b[2]+1 then $
+  print,' Your degree of freedom (set by F01 +1) is higher than the number of bands you are using. This will be corrected ' + $
+  'in the code to be full freedom so GALFITM does not crash This is only a warning for you to check whether these settings ' + $
+  'are indeed what you meant to do'
+if setup.nband lt setup.cheb_d[2]+1 then $
+  print,' Your degree of freedom (set by F02 +1) is higher than the number of bands you are using. This will be corrected ' + $
+  'in the code to be full freedom so GALFITM does not crash This is only a warning for you to check whether these settings ' + $
+  'are indeed what you meant to do'
+
 ; now that number of bands is known, correct number of additional cheb
-; combonents to nband -1
-setup.cheb=setup.cheb <(nband-1)
+; components to max nband -1
+setup.cheb = setup.cheb < (setup.nband-1)
+setup.cheb_b = setup.cheb_b < (setup.nband-1)
+setup.cheb_d = setup.cheb_d < (setup.nband-1)
 
 ;; NAMING CONVENTIONS AND EXAMPLES
 ; MULTIBAND
@@ -3491,11 +3526,11 @@ setup.cheb=setup.cheb <(nband-1)
 ; outpath_file[0]:      /data/gama/galapagos_multi_wl/tile10_5/sex/t10_5.sex.
 ; outpath_file_no_band: /data/gama/galapagos_multi_wl/tile10_5/t10_5.
 ; 1 BAND
-; outpath:              /data/gama/galapagos_multi_wl_test_3.2/tile10_5/
+; outpath:              /data/gama/galapagos_multi_wl/tile10_5/
 ; outpath_galfit:       /data/gama/galapagos_multi_wl/tile10_5/
-; outpath_band:         /data/gama/galapagos_multi_wl_test_3.2/tile10_5/
-; outpath_pre:          /data/gama/galapagos_multi_wl_test_3.2/tile10_5/t10_5.
-; outpath_file:         /data/gama/galapagos_multi_wl_test_3.2/tile10_5/t10_5.v.
+; outpath_band:         /data/gama/galapagos_multi_wl/tile10_5/
+; outpath_pre:          /data/gama/galapagos_multi_wl/tile10_5/t10_5.
+; outpath_file:         /data/gama/galapagos_multi_wl/tile10_5/t10_5.v.
 outpath = set_trailing_slash(outpath)
 outpath_galfit = strtrim(outpath[*,0]+setup.galfit_out_path,2)
 outpath_band = set_trailing_slash(outpath_band)
@@ -3505,6 +3540,7 @@ for q=0,nband do outpath_file[*,q]=outpath_pre[*,q]+strtrim(setup.stamp_pre[q],2
 outpath_file_no_band = outpath
 for q=0,nband do outpath_file_no_band[*,q]=outpath[*,q]+outpre[*,q]
 ;total number of frames
+
 nframes = n_elements(images[*,0])
 ;calculate image centres
 dec_cnt = (ra_cnt = dblarr(nframes))
@@ -3527,7 +3563,7 @@ FOR i=0ul, nframes-1 DO BEGIN
     IF n GT 0 THEN neighbours[0:n-1, i] = images[ord[1:n]]
 ENDFOR
 ;==============================================================================
-;check if output path exists
+;check if output path exists, if not create them
 IF NOT file_test(setup.outdir) THEN $
   spawn, 'mkdir -p '+setup.outdir
 FOR i=0ul, n_elements(outpath_band)-1 DO IF NOT file_test(outpath_band[i]) THEN $
@@ -3655,7 +3691,8 @@ IF setup.dostamps THEN BEGIN
          print, 'cutting postages for images '+strtrim(outpath_file_no_band[i,0],2)+' and similar'
          save, i, images, outpath_file, setup, outpath_file_no_band, outpath_band, $
                outpre, nband, filename=outpath_file_no_band[i,0]+setup.stampfile+'.sav'
-         IF setup.max_proc <max_proc GT 1 THEN BEGIN
+
+         IF setup.max_proc <max_proc GT 1 and nframes gt 1 THEN BEGIN
              post_bridge_arr[free[0]]->execute, $
                'stamp_file_bridge, "'+outpath_file_no_band[i,0]+setup.stampfile+'.sav"', /nowait
          ENDIF ELSE BEGIN
@@ -3720,7 +3757,7 @@ IF setup.dostamps THEN BEGIN
 ;       print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
          
          save, i, weights, outpath_file, setup, outpath_file_no_band, nband, filename=outpath_file_no_band[i,0]+'skymap.sav'
-         IF setup.max_proc GT 1 THEN BEGIN
+         IF setup.max_proc GT 1 and nframes gt 1 THEN BEGIN
             print, 'starting skymap '+outpath_file_no_band[i,0]+'skymap.sav'
             post_bridge_arr[free[0]]->execute, $
                'skymap_bridge, "'+outpath_file_no_band[i,0]+'skymap.sav"', /nowait
@@ -3759,6 +3796,25 @@ IF setup.dostamps THEN BEGIN
    print, 'finished cutting postage stamps: '+systime(0)
 ENDIF 
 
+; check whether skymaps exist, if not, something went wrong above
+
+skymap_exist = intarr(nframes,nband)
+for t=0,nframes-1 do begin
+    for b=1,nband do begin
+        skymap_exist[t,b-1] = file_test(outpath_file_no_band[t,b]+setup.stamp_pre[b]+'.'+setup.skymap+'.fits')
+    endfor
+endfor
+if total(skymap_exist) ne nframes*nband then begin
+    print, ' '
+    print, 'WARNING'
+    print, 'The number of skymap files on your disk does not correspond to the number that should exist. It seems that your block C' + $
+      'did not finish correctly. It has been reported that when you have one frame only, you need to set D18 to "1" for this block to work.' + $
+      'I think I fixed this bug and have never seen this behaviour myself, but if you can read this, maybe give it a try.' + $
+      'This will mean that the processes crash in the "bridge", which will be hard to find given the lack of feedback. This is why I am' +$
+      'telling you here'
+    stop
+endif
+
 ;==============================================================================
 IF keyword_set(logfile) THEN $
    update_log, logfile, 'Setting up output catalogue...'
@@ -3773,7 +3829,6 @@ sexcat = read_sex_table(setup.outdir+setup.sexcomb, $
 ;sort the total catalogue by magnitude and select the brightest BRIGHT percent
 print, 'setting up table'
 br = sort(sexcat.mag_best)
-nbr = round(n_elements(sexcat.mag_best)*setup.bright/100.)
 
 ; reordering objects to be in brightness order
 table = sexcat[br]
@@ -3812,9 +3867,11 @@ struct_assign, table, fittab
 table = fittab
 delvarx, fittab
 
-save, sexcat, table, nbr, filename = setup.outdir+'table_before_start.sav'
+save, sexcat, table, filename = setup.outdir+'table_before_start.sav'
 jump_over_this_1:
 if keyword_set(jump1) then restore, setup.outdir+'table_before_start.sav'
+
+nbr = n_elements(sexcat.mag_best)
 
 orgim = setup.images
 orgwht = setup.weights
@@ -3918,6 +3975,7 @@ IF setup.dosky THEN BEGIN
     FOR i=0, setup.max_proc-1 DO BEGIN
        bridge_arr[i]->execute, 'astrolib'
        bridge_arr[i]->execute, '.r '+gala_pro
+       bridge_arr[i]->execute, '.r gala_bd_bridge'
     ENDFOR
     
     if keyword_set(plot) then begin
@@ -3975,13 +4033,11 @@ loopstart2:
 ;check for free bridges
         free = where(bridge_use eq 0, ct)
         
-;         IF ct GT 0 AND cur LT nbr THEN BEGIN
         IF ct GT 0 AND todo[0] ne -1 THEN BEGIN
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
             
 ;at least one bridge is free --> start newobject
 ;the available bridge is free[0]
-            
+
 ;treat finished objects first
             IF bridge_obj[free[0]] GE 0 THEN BEGIN
 ;read in feedback data
@@ -4041,7 +4097,7 @@ loopstart2:
 ; check whether this object has already been done, if so, read in
 ; result
             ct = 0 
-            IF cur LT nbr THEN idx = where(table[cur].frame[0] EQ orgim[*,0], ct)
+            idx = where(table[cur].frame[0] EQ orgim[*,0], ct)
             IF ct GT 0 THEN BEGIN
                 objnum = round_digit(table[cur].number, 0, /str)
                 obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
@@ -4351,6 +4407,7 @@ jump_over_this_2:
         FOR i=0, setup.max_proc-1 DO BEGIN
             bridge_arr[i]->execute, 'astrolib'
             bridge_arr[i]->execute, '.r '+gala_pro
+            bridge_arr[i]->execute, '.r gala_bd_bridge'
         ENDFOR  
         if keyword_set(plot) then begin
             loadct,39,/silent
@@ -4367,6 +4424,7 @@ jump_over_this_2:
         
 ;loop over all batch frames and set do_batch =1
         IF file_test(setup.batch) AND strlen(setup.batch) GT 0 THEN BEGIN
+            print, 'setting up batch mode for B/D fits'
             readcol, setup.batch, batch, format = 'A', comment = '#', /silent
             
             IF n_elements(batch) GT 0 THEN BEGIN
@@ -4381,7 +4439,8 @@ jump_over_this_2:
 
 ;loop over all objects
         loop = 0l
-        
+        print, 'starting B/D fits at '+systime()
+
         REPEAT BEGIN
             IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
                 update_log, logfile, 'last in cue... '+strtrim(cur, 2)
@@ -4411,7 +4470,6 @@ loopstart2_bd:
 ;check for free bridges
             free = where(bridge_use eq 0, ct)
             
-;         IF ct GT 0 AND cur LT nbr THEN BEGIN
             IF ct GT 0 AND todo[0] ne -1 THEN BEGIN
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                 
@@ -4487,7 +4545,7 @@ loopstart2_bd:
 ; check whether this object has already been done, if so, read in
 ; result and restart
                 ct = 0 
-                IF cur LT nbr THEN idx = where(table[cur].frame[0] EQ orgim[*,0], ct)
+                idx = where(table[cur].frame[0] EQ orgim[*,0], ct)
                 IF ct GT 0 THEN BEGIN
                     objnum = round_digit(table[cur].number, 0, /str)
                     obj_file = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
@@ -4498,7 +4556,7 @@ loopstart2_bd:
 ;check if file was done successfully or bombed and update table                  
 ;                    IF file_test(out_file+'.fits') THEN BEGIN ; to be
 ;                    used for reruns after HPC. Delete obj files, run
-;                    again. Also disable galfit in bd_fit
+;                    again. Also disable galfit in gala_bd_bridge
                     IF file_test(obj_file) THEN BEGIN
 ;                    print, obj_file+' found.'
                         print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
@@ -4606,9 +4664,9 @@ loopstart2_bd:
 ;++++++++++++++++++++++++++ MARCOS SCRIPT
                     if file_test(out_file+'.fits') then $
                       bridge_arr[free[0]]->execute, $
-                      'bd_fit, "'+out_file_bd+'.sav"',/nowait
+                      'gala_bd_bridge, "'+out_file_bd+'.sav"',/nowait
                     
-;PRO bd_fit, obj_fitstab_file, label, no_fit=no_fit
+;PRO gala_bd_bridge, obj_fitstab_file, label, no_fit=no_fit
 ;;   num = '21_17.346'
 ;;   obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
                     
@@ -4625,7 +4683,7 @@ loopstart2_bd:
 ;++++++++++++++++++++++++++ MARCOS SCRIPT
 ;                bd_fit, out_file+'.fits',setup.bd_label, setup.galexe
                     if file_test(out_file+'.fits') then $
-                      bd_fit, out_file_bd+'.sav'
+                      gala_bd_bridge, out_file_bd+'.sav'
 ;--------------------------- MARCOS SCRIPT
                     
                 ENDELSE
@@ -4724,12 +4782,12 @@ loopend_bd:
               filename=out_file_bd+'.sav'
 
             if file_test(out_file+'.fits') then $
-              bd_fit, out_file_bd+'.sav'
+              gala_bd_bridge, out_file_bd+'.sav'
 
         ENDFOR
         
 ;all feedme files exist, prepare PC files
-        bd_fit_hpc, table, setup
+        gala_bd_bridge_hpc, table, setup
 
     ENDIF
 ENDIF

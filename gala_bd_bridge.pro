@@ -60,7 +60,7 @@
 
 ;PRO bd_fit, out_file, out_file_bd, setup, obj_file, obj_file_bd,
 ;   constr_file, constr_file_bd, no_fit=no_fit
-PRO bd_fit, filein
+PRO gala_bd_bridge, filein
 restore, filein
 ;obj_fitstab_file = out_file_bd+'.fits'
 in_file = out_file+'.fits'
@@ -68,18 +68,10 @@ in_file = out_file+'.fits'
 ;   num = '21_17.346'
 ;   obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
 
-   fit_info = mrdfits(in_file, 'FIT_INFO', /silent)
-
    tab = mrdfits(in_file, 'FINAL_BAND', /silent)
 
-;   fit_info.initfile = '/home/barden/Desktop/multi/BD_objects/t'+num+'_obj'
-;   fit_info.constrnt = '/home/barden/Desktop/multi/BD_objects/t'+num+'_constr'
-   
    band_info = mrdfits(in_file, 'BAND_INFO', /silent)
    
-;   obj_file_ss = strtrim(fit_info.initfile,2)
-;   constr_file = strtrim(fit_info.constrnt,2)
-
    band_str = strupcase(strtrim(band_info.band,2))
    nband = n_elements(band_str)
    if nband eq 1 then bandstr = ' '
@@ -334,7 +326,7 @@ in_file = out_file+'.fits'
    cd, galfit_path
    IF NOT setup.bd_hpc THEN BEGIN
        IF file_test(out_file_bd+'.fits') eq 0 then begin
-           IF keyword_set(nice) THEN spawn, 'nice '+setup.galexe+' '+obj_file_bd $
+           IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file_bd $
            ELSE spawn, setup.galexe+' '+obj_file_bd
            wait, 1
        ENDIF
@@ -345,7 +337,7 @@ in_file = out_file+'.fits'
 
 END
 
-PRO bd_fit_hpc, data_table, setup
+PRO gala_bd_bridge_hpc, data_table, setup
    ;run_bd_fit, 'gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/GAMA_9_ffvqqff_gama_only.fits', '1'
    ;this must be run from the root of the gama/galapagos/... tree
    ;in order to get the paths right
