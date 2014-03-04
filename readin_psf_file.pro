@@ -66,6 +66,8 @@ for b=1,nband do begin
 ;        create_struct, psf_struct, 'single', ['type','psffile'],'A,A',dimen=1
         psf_struct[0].type[b] = 'single'
         psf_struct[0].psffile[b] = strtrim(file[b],2)
+        if file_test(strtrim(file[b],2)) ne 1 then print, 'file '+strtrim(file[b],2)+' does not exist'
+        if file_test(strtrim(file[b],2)) ne 1 then stop
     endif else begin
 
 ; check how many input columns
@@ -110,6 +112,10 @@ try_again:
              stop
          endif
          if check eq 0 then print, 'All tiles have an assigned PSF file'
+         for p=0,n_elements(psf)-1 do begin
+             if file_test(strtrim(psf[p],2)) ne 1 then print, 'file '+strtrim(psf[p],2)+' (and maybe others) does not exist, is your path in the PSF files set correctly?'
+             if file_test(strtrim(psf[p],2)) ne 1 then stop
+         endfor
      endif
      
 ; if 3 columns, choose closest PSF
@@ -122,6 +128,10 @@ try_again:
          psf_struct[0:n_elements(ra)-1].dec[b] = dec
          psf_struct[0:n_elements(ra)-1].psffile[b] = psf        
 ;         print, n_elements(ra)
+         for p=0,n_elements(psf)-1 do begin
+             if file_test(strtrim(psf[p],2)) ne 1 then print, 'file '+strtrim(psf[p],2)+' (and maybe others) does not exist, is your path in the PSF files set correctly?'
+             if file_test(strtrim(psf[p],2)) ne 1 then stop
+         endfor
      endif
      
 ; if 4 columns, choose PSF box-wise
@@ -153,7 +163,12 @@ try_again:
          if checkn ne 0 then begin
              print, 'WARNING, not all objects lie within the defined boxes, for the ones outside, the closest psf (defined by box-center) will be chosen'
          endif
+         for p=0,n_elements(psf)-1 do begin
+             if file_test(strtrim(psf[p],2)) ne 1 then print, 'file '+strtrim(psf[p],2)+' (and maybe others) does not exist, is your path in the PSF files set correctly?'
+             if file_test(strtrim(psf[p],2)) ne 1 then stop
+         endfor
      endif
  endelse
+
 endfor 
 end
