@@ -117,7 +117,7 @@ endfor
 
 ;if not keyword_set(bd_fit) then $
 prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
-                im_file, constr_file, mask_file, chosen_psf_file, $
+                im_file, sigma_file, constr_file, mask_file, chosen_psf_file, $
                 out_file, sky_file, setup.convbox, setup.zp, $
                 setup.platescl, save_nums, save_frames, cur, $
                 setup.outcat, setup.outparam, setup.stampfile, $
