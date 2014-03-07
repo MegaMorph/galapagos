@@ -1,0 +1,4 @@
+/path/to/image_sex_1_1.fits /path/to/weight_sex_1_1.fits tile1_1/ t1_1.
+/path/to/image_sex_1_2.fits /path/to/weight_sex_1_2.fits tile1_2/ t1_2.
+/path/to/image_sex_2_1.fits /path/to/weight_sex_2_1.fits tile2_1/ t2_1.
+/path/to/image_sex_2_2.fits /path/to/weight_sex_2_2.fits tile2_2/ t2_2.
