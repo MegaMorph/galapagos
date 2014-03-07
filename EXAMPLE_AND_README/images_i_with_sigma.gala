@@ -1,0 +1,4 @@
+/path/to/image_i_1_1.fits /path/to/weight_i_1_1.fits /path/to/sigma_i_1_1.fits
+/path/to/image_i_1_2.fits /path/to/weight_i_1_2.fits /path/to/sigma_i_1_2.fits
+/path/to/image_i_2_1.fits /path/to/weight_i_2_1.fits /path/to/sigma_i_2_1.fits
+/path/to/image_i_2_2.fits /path/to/weight_i_2_2.fits /path/to/sigma_i_2_2.fits
