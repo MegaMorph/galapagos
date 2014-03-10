@@ -3521,6 +3521,7 @@ IF n_params() LT 1 THEN BEGIN
 ENDIF
 ;==============================================================================
 ;read in the setup file
+print, 'THIS IS GALAPAGOS-v2.1.0'
 read_setup, setup_file, setup
 
 ;copy setup file to output folder for future reference
