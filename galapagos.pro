@@ -3410,22 +3410,23 @@ for j=0,n_elements(name_res)-1 do begin
     IF ct GT 0 THEN BEGIN
         type=size(res.(j))
 ; if keyword is INT
-        if type[-2] eq 2 or type[-2] eq 3 then begin
+        ntype = n_elements(type)
+        if type[ntype-2] eq 2 or type[ntype-2] eq 3 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=-99999
         ENDIF
 ; if keyword is FLOAT
-        if type[-2] eq 4 then begin
+        if type[ntype-2] eq 4 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=-99999.
         ENDIF
 ; if keyword is DOUBLE
-        if type[-2] eq 5 then begin
+        if type[ntype-2] eq 5 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=double(-99999.)
         ENDIF
 ; if keyword is STRING
-        if type[-2] eq 7 then begin
+        if type[ntype-2] eq 7 then begin
             wh=where(res.(j) eq ' ', ct)
             if ct gt 0 then res[wh].(j)='null'
         ENDIF
@@ -4221,14 +4222,18 @@ loopend:
                 tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
                   table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, col=0,/data
             ENDIF
-            bridge_obj[remain[i]] = -1
-            bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
+;            bridge_obj[remain[i]] = -1
+;            bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
             
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
             update_table, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
+
+; overwrite indices
+            bridge_obj[remain[i]] = -1
+            bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
         ENDFOR
     ENDIF
 ENDIF
@@ -4706,8 +4711,8 @@ loopend_bd:
                     tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
                       table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, col=0,/data
                 ENDIF
-                bridge_obj[remain[i]] = -1
-                bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
+;                bridge_obj[remain[i]] = -1
+;                bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
                 
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
@@ -4715,6 +4720,10 @@ loopend_bd:
                 update_table, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup, /bd
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
+
+;overwrite indices
+                bridge_obj[remain[i]] = -1
+                bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
             ENDFOR
         ENDIF
     ENDIF
