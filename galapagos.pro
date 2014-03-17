@@ -217,11 +217,7 @@ ENDFOR
 close, 1
 END
 
-PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
-                    cold, coldcat, coldseg, $
-                    hot, hotcat, hotseg, enlarge, $
-                    outcat, outseg, outparam, check, chktype, exclude, rad, $
-                    outonly = outonly
+PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
 ;run SExtractor (SEXEXE path to the executable) using a given
 ;parameter file (SEXPARAM), a HOT setup file, a COLD setup file and a
 ;ZEROPOINT on an IMAGE and accompanying WEIGHT. On output one gets a
@@ -232,6 +228,18 @@ PRO run_sextractor, sexexe, sexparam, zeropoint, image, weight, $
 ;catalogues and segmentation maps (filename EXCLUDE). The matching
 ;radius for this exclusion is given by RAD.
 ;OUTONLY: if set remove hot/cold cat and seg after combining.
+image = images[tile,0]
+weight = weights[tile,0]
+cold = setup.cold
+coldcat = outpath_file[tile,0]+setup.coldcat
+coldseg = outpath_file[tile,0]+setup.coldseg
+hot = setup.hot
+hotcat = outpath_file[tile,0]+setup.hotcat
+hotseg = outpath_file[tile,0]+setup.hotseg
+outcat = outpath_file[tile,0]+setup.outcat
+outseg = outpath_file[tile,0]+setup.outseg
+outparam = outpath_file[tile,0]+setup.outparam
+check = outpath_file[tile,0]+setup.check
 
 ;create a temporary parameter file with the minimum set of sextractor
 ;parameters
@@ -246,12 +254,13 @@ IF multi EQ 1 THEN BEGIN
    coldseg = hotseg
    multi = 2
 ENDIF
+IF setup.sex_rms EQ 1 THEN print, 'RMS map used for SExtractor step'
 
 path = strmid(outcat, 0, strpos(outcat, '/', /reverse_search)+1)
 label = required_entries()
 openw, 1, outparam
 FOR i=0ul, n_elements(label)-1 DO printf, 1, strupcase(label[i])
-openr, 2, sexparam
+openr, 2, setup.sexout
 line = ''
 WHILE NOT eof(2) DO BEGIN
     readf, 2, line
@@ -265,29 +274,40 @@ close, 2
 ;read image header and calculate sextractor magnitude zeropoint
 header = headfits(image)
 exptime = double(sxpar(header, 'EXPTIME'))
-zp_eff = strtrim(zeropoint+2.5*alog10(exptime), 2)
+zp_eff = strtrim(setup.zp[0]+2.5*alog10(exptime), 2)
 
 print, '---using exptime: '+strtrim(exptime[0], 2)+'s (zp='+zp_eff[0]+') for: '+ $
   image
 
+IF setup.sex_rms EQ 0 THEN weight_type = 'MAP_WEIGHT'
+IF setup.sex_rms EQ 1 THEN weight_type = 'MAP_RMS'
+
 ;this will produce a checkimage with all the ellipses
-IF chktype NE 'none' THEN BEGIN
+IF setup.chktype NE 'none' THEN BEGIN
+
+;from Arjen, to be put in: dual-image mode
+;    spawn, sexexe+' '+detimage+','+image+' -c '+cold+ $
+;      ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
+;      ' -PARAMETERS_NAME '+outparam+ $
+;      ' -WEIGHT_IMAGE '+detweight+','+weight+ $
+;      ' -WEIGHT_TYPE MAP_RMS,MAP_RMS -MAG_ZEROPOINT '+zp_eff+ $
+
     print, 'starting cold sex check image on image '+image+' '
-    spawn, sexexe+' '+image+' -c '+cold+ $
+    spawn, setup.sexexe+' '+image+' -c '+cold+ $
       ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
       ' -PARAMETERS_NAME '+outparam+ $
       ' -WEIGHT_IMAGE '+weight+ $
-      ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
-      ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
+      ' -WEIGHT_TYPE '+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
+      ' -CHECKIMAGE_TYPE '+setup.chktype+' -CHECKIMAGE_NAME '+ $
       file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
     IF multi EQ 3 THEN BEGIN
         print, 'starting hot sex check image'
-        spawn, sexexe+' '+image+' -c '+hot+ $
+        spawn, setup.sexexe+' '+image+' -c '+hot+ $
           ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
           ' -PARAMETERS_NAME '+outparam+ $
           ' -WEIGHT_IMAGE '+weight+ $
-          ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
-          ' -CHECKIMAGE_TYPE '+chktype+' -CHECKIMAGE_NAME '+ $
+          ' -WEIGHT_TYPE '+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
+          ' -CHECKIMAGE_TYPE '+setup.chktype+' -CHECKIMAGE_NAME '+ $
           file_dirname(check)+'/'+file_basename(check, '.fits')+ $
           '.hot.fits'
     ENDIF
@@ -295,19 +315,19 @@ ENDIF
 
 ;now start sextractor to create hotcat and coldcat
 print, 'starting cold sex'
-spawn, sexexe+' '+image+' -c '+cold+ $
+spawn, setup.sexexe+' '+image+' -c '+cold+ $
   ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
   ' -PARAMETERS_NAME '+outparam+ $
   ' -WEIGHT_IMAGE '+weight+ $
-  ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
+  ' -WEIGHT_TYPE '+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
   ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
 IF multi EQ 3 THEN BEGIN
     print, 'starting hot sex'
-    spawn, sexexe+' '+image+' -c '+hot+ $
+    spawn, setup.sexexe+' '+image+' -c '+hot+ $
       ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
       ' -PARAMETERS_NAME '+outparam+ $
       ' -WEIGHT_IMAGE '+weight+ $
-      ' -WEIGHT_TYPE MAP_WEIGHT -MAG_ZEROPOINT '+zp_eff[0]+ $
+      ' -WEIGHT_TYPE '+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
       ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+hotseg
 ENDIF
 
@@ -353,7 +373,7 @@ IF cold_table[0].number NE 0 THEN BEGIN
                      cold_cyy[i]*(hot_table.y_image- $
                                   cold_table[i].y_image)^2.+ $
                      cold_cxy[i]*(hot_table.x_image-cold_table[i].x_image)* $
-                     (hot_table.y_image-cold_table[i].y_image) GT enlarge^2., $
+                     (hot_table.y_image-cold_table[i].y_image) GT setup.enlarge^2., $
                      ct)
          IF ct GT 0 THEN BEGIN
             hot_table = hot_table[idx]
@@ -393,7 +413,7 @@ IF cold_table[0].number NE 0 THEN BEGIN
       x = reform(exclude[0, *])
       y = reform(exclude[1, *])
       
-      srccor, x, y, table_all.x_image, table_all.y_image, rad, l, e, $
+      srccor, x, y, table_all.x_image, table_all.y_image, setup.exclude_rad, l, e, $
               option = 1, /silent
 ; can invert_index be replaced with a_not_b.pro????  inv2=a_not_b(arr1,arr2)
       hlpind = lindgen(n_elements(table_all.number))
@@ -424,7 +444,7 @@ ENDIF ELSE BEGIN
    spawn, 'cp '+hotseg+' '+outseg+' '
 ENDELSE
 
-IF keyword_set(outonly) THEN $
+IF setup.outonly THEN $
   file_delete, hotcat, coldcat, hotseg, coldseg, /quiet, /allow_nonexistent, /noexpand_path
 END
 
@@ -591,6 +611,7 @@ ny = sxpar(hd, 'NAXIS2')
 ;lines beginning with '#' are treated as comments
 nobj = n_lines(param)
 
+
 cat = mrd_struct(['id', 'x', 'y', 'xlo', 'xhi', 'ylo', 'yhi'], $
                  ['0L', '0.d0', '0.d0', '0L', '0L', '0L', '0L'], $
                  nobj, /no_execute)
@@ -631,6 +652,10 @@ PRO create_skymap, whtfile, segfile, sex, sexparam, mapfile, scale, offset
 ;   fits_read, segfile, seg, hd
 wht = readfits(whtfile, hd,/silent)
 seg = readfits(segfile, hd,/silent)
+
+;stop
+;rms=wht
+;wht=1/(wht*wht)
 
 nx = n_elements(wht[*, 0])
 ny = n_elements(wht[0, *])
@@ -1787,7 +1812,7 @@ writefits, mask_file+'.fits', mask, headfits(im_file+'.fits')
 corner = [pxlo, pylo]
 END
 
-PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, $
+PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, sigma_file, $
                     constr_file, mask_file, psf_file, out_file, sky_file, $
                     conv_box, zero_pt, plate_scl, num_contrib, frame_contrib, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
@@ -1827,7 +1852,8 @@ ymax = sxpar(hdr, 'NAXIS2')
 openw, 1, obj_file, width=1000
 ; WRITE FILES & STUFF
 printf, 1, '# IMAGE PARAMETERS'
-;   printf, 1, 'A) '+im_file+'.fits'
+
+; INPUT IMAGE
 A_po=''
 FOR b=1,nband DO BEGIN
     A_po=A_po+strtrim(im_file[b],2)+'.fits'
@@ -1840,31 +1866,38 @@ if setup.version ge 4 then begin
         A1_po=A1_po+strtrim(setup.stamp_pre[b],2)
         if b lt nband then A1_po=A1_po+','
     ENDFOR
-    printf, 1, 'A1) '+A1_po+ $
-      '             # Band labels (can be omitted if fitting a single band)'
+    printf, 1, 'A1) '+A1_po+'     # Band labels (can be omitted if fitting a single band)'
     A2_po=''
     FOR b=1,nband DO BEGIN
         A2_po=A2_po+strtrim(setup.wavelength[b],2)
         if b lt nband then A2_po=A2_po+','
     ENDFOR
-    printf, 1, 'A2) '+A2_po+ $
-      '             # Band wavelengths (choice of wavelength units is arbitrary, as long as consistent)'
+    printf, 1, 'A2) '+A2_po+'     # Band wavelengths (choice of wavelength units is arbitrary, as long as consistent)'
 ENDIF
+
+; OUTPUT image
 printf, 1, 'B) '+out_file+'.fits    # output file name'
-printf, 1, 'C) none                # Noise image name ' + $
-  '(made from data if blank or "none")'
-;   printf, 1, 'D) '+psf_file+' kernel' + $
-;           ' # Input PSF image and (optional) diffusion kernel'
+
+; noise image.
+C_po=''
+FOR b=1,nband DO BEGIN
+    if strtrim(sigma_file[b],2) ne 'none' then addition = strtrim(sigma_file[b],2)+'.fits'
+    if strtrim(sigma_file[b],2) eq 'none' then addition = 'none'
+    C_po=C_po+addition
+    if b lt nband then C_po=C_po+','
+ENDFOR
+printf, 1, 'C) '+C_po+'           # Noise image name (made from data if blank or "none")'
+
+; PSFs
 D_po=''
 FOR b=1,nband DO BEGIN
     D_po=D_po+strtrim(psf_file[b],2)
     if b lt nband then D_po=D_po+','
 ENDFOR
-printf, 1, 'D) '+D_po+' kernel' + $
-  ' # Input PSF image and (optional) diffusion kernel'
-printf, 1, 'E) 1                   ' + $
-  ' # PSF oversampling factor relative to data'
-;   printf, 1, 'F) '+mask_file+'.fits'
+printf, 1, 'D) '+D_po+' kernel  # Input PSF image and (optional) diffusion kernel'
+printf, 1, 'E) 1           # PSF oversampling factor relative to data'
+
+; mask image
 F_po=''
 FOR b=1,nband DO BEGIN
     F_po=F_po+strtrim(mask_file[b],2)+'.fits'
@@ -1872,27 +1905,17 @@ FOR b=1,nband DO BEGIN
 ENDFOR
 printf, 1, 'F) '+F_po
 printf, 1, 'G) '+constr_file
-printf, 1, 'H) 1 '+strtrim(xmax, 2)+' 1 '+strtrim(ymax, 2)+ $
-  '       # Image region to fit (xmin xmax ' + $
-  'ymin ymax)'
-printf, 1, 'I) '+round_digit(conv_box, 0, /str)+'   '+ $
-  round_digit(conv_box, 0, /str)+ $
-  '         # Size of convolution box (x y)'
-;   printf, 1, 'J) '+round_digit(zero_pt, 4, /str)+ $
-;           '              # Magnitude photometric zeropoint'
+printf, 1, 'H) 1 '+strtrim(xmax, 2)+' 1 '+strtrim(ymax, 2)+'       # Image region to fit (xmin xmax ymin ymax)'
+printf, 1, 'I) '+round_digit(conv_box, 0, /str)+'   '+round_digit(conv_box, 0, /str)+'         # Size of convolution box (x y)'
 J_po=''
 FOR b=1,nband DO BEGIN
     J_po=J_po+strtrim(round_digit(setup.zp[b],4,/str),2)
     if b lt nband then J_po=J_po+','
 ENDFOR
-printf, 1, 'J) '+J_po+ $
-  '              # Magnitude photometric zeropoint'
-printf, 1, 'K) '+round_digit(plate_scl, 5, /str)+' '+ $
-  round_digit(plate_scl, 5, /str)+'           # Plate scale (dx dy).'
-printf, 1, 'O) regular             # Display type (regular, ' + $
-  'curses, both)'
-printf, 1, 'P) 0                   # Create ouput only? (1=yes; ' + $
-  '0=optimize)'
+printf, 1, 'J) '+J_po+'     # Magnitude photometric zeropoint'
+printf, 1, 'K) '+round_digit(plate_scl, 5, /str)+' '+round_digit(plate_scl, 5, /str)+'           # Plate scale (dx dy).'
+printf, 1, 'O) regular             # Display type (regular, curses, both)'
+printf, 1, 'P) 0                   # Create ouput only? (1=yes; 0=optimize)'
 printf, 1, 'S) 0                   # Modify/create objects interactively?'
 printf, 1, ''
 printf, 1, ''
@@ -2045,7 +2068,7 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
 ;;;;;;;;;;;; CONSTRAINTS
 ; check some constraints and set starting values accordingly if neccessary
     IF finite(par.re_galfit) NE 1 THEN begin
-        par.re_galfit = table[objects[i]].flux_radius > 3
+        par.re_galfit = table[objects[i]].flux_rdaius > 3
         par.re_galfit_band = fltarr(nband)+(table[objects[i]].flux_radius > 3)
     ENDIF
     
@@ -2445,6 +2468,7 @@ setup = create_struct('files', '', $
                       'outparam', '', $
                       'check', '', $
                       'chktype', '', $
+                      'sex_rms', 0, $
                       'exclude', '', $
                       'exclude_rad', -1., $
                       'outonly', 0, $
@@ -2557,7 +2581,8 @@ WHILE NOT eof(1) DO BEGIN
     
 ;get rid of leading and trailing blanks
     line = strtrim(line, 2)
-;    print, line
+;    print, linestop
+
     
 ;comment or empty line encountered?
     IF strmid(line, 0, 1) EQ '#' OR strlen(line) EQ 0 THEN CONTINUE
@@ -2590,11 +2615,12 @@ WHILE NOT eof(1) DO BEGIN
         'B13)': IF content EQ 'none' OR content EQ '' THEN setup.check = '' $
         ELSE setup.check = content
         'B14)': setup.chktype = content
-        'B15)': setup.exclude = content
-        'B16)': setup.exclude_rad = float(content)
-        'B17)': setup.outonly = (content EQ 'outonly') ? 1 : 0
-        'B18)': setup.bad = content
-        'B19)': setup.sexcomb = content
+        'B15)': setup.sex_rms = (content EQ 'rms') ? 1 : 0
+        'B16)': setup.exclude = content
+        'B17)': setup.exclude_rad = float(content)
+        'B18)': setup.outonly = (content EQ 'outonly') ? 1 : 0
+        'B19)': setup.bad = content
+        'B20)': setup.sexcomb = content
         
         'C00)': setup.dostamps = (content EQ 'execute') ? 1 : 0
         'C01)': setup.stampfile = content
@@ -2754,20 +2780,26 @@ columnsf = strsplit(lineone, ' ', COUNT=ncolf)
 
 ; if number of columns eq 4 then assume 1 band survey and fits files
 ; in the table
-if ncolf eq 4 then begin
+if (ncolf eq 4) or (ncolf eq 5) then begin
     if not keyword_set(silent) then print, 'assuming one band dataset. Are all files within A00) fits images?'
     
 ; read the image names and data like zeropoints, mag_offsets,...
 ; stored in setup structure
-    readcol, setup.files, images, weights, outpath, outpre, $
+if ncolf eq 4 then readcol, setup.files, images, weights, outpath, outpre, $
       format = 'A,A,A,A', comment = '#', /silent
+if ncolf eq 5 then readcol, setup.files, images, weights, sigmaps, outpath, outpre, $
+      format = 'A,A,A,A,A', comment = '#', /silent
     
     nband=1
     images = strtrim(images,2)
-; create arrays in setup needed to store all the data
+; create arrays in setup needed to store all the data 
     add_tag, setup, 'images', strarr(n_elements(images),nband+1), setup2
     setup=setup2
     add_tag, setup, 'weights', strarr(n_elements(images),nband+1), setup2
+    setup=setup2
+    add_tag, setup, 'sigmaps', strarr(n_elements(images),nband+1), setup2
+    setup=setup2
+    add_tag, setup, 'sigflags', intarr(nband+1), setup2
     setup=setup2
     add_tag, setup, 'outpath', strarr(n_elements(images),nband+1), setup2
     setup=setup2
@@ -2778,9 +2810,16 @@ if ncolf eq 4 then begin
     add_tag, setup, 'nband', nband, setup2
     setup=setup2
     
+    hlpsigmaps = 'none'
+    hlpsigflags = 0
+    if ncolf eq 5 then hlpsigmaps = sigmaps
+    if ncolf eq 5 then hlpsigflags = 1
+    if ncolf eq 5 then print, 'sigma maps handed over to galfit'
 ; doubling the arrays to get [*,0] SExtractor images and [*,1] fitting images
     setup.images = [[images],[images]]
     setup.weights = [[weights],[weights]]
+    setup.sigmaps = [[hlpsigmaps],[hlpsigmaps]]
+    setup.sigflags = [[hlpsigflags],[hlpsigflags]]
     setup.outpre = [[outpre],[outpre]]
     setup.outpath = set_trailing_slash(setup.outdir)+[[outpath],[outpath]]
     setup.outpath_band = setup.outpath
@@ -2818,22 +2857,27 @@ if ncolf eq 6 then begin
         stop
     ENDIF
     readcol, setup.files, band, wavelength, mag_offset, filelist, zeropoint, exptime, $
-      format = 'A,I,F,A,F,F', comment = '#', /silent      
+      format = 'A,I,F,A,F,F', comment = '#', /silent
     
 ; copy the setup files to the folder
     for f = 0, n_elements(filelist)-1 do spawn, 'cp '+filelist[f]+' '+save_folder
     
     nband=fix(n_elements(band)-1)
+
 ; read first (sextractor) file to get number of images...
     readcol, filelist[0], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
       format = 'A,A,A,A', comment = '#', /silent
     cnt=intarr(nband+1)
-    
+
     hlpimages = strtrim(hlpimages,2)
 ; create arrays in setup needed to store all the data
     add_tag, setup, 'images', strarr(n_elements(hlpimages),nband+1), setup2
     setup=setup2
     add_tag, setup, 'weights', strarr(n_elements(hlpimages),nband+1), setup2
+    setup=setup2
+    add_tag, setup, 'sigmaps', strarr(n_elements(hlpimages),nband+1), setup2
+    setup=setup2
+    add_tag, setup, 'sigflags', intarr(nband+1), setup2
     setup=setup2
     add_tag, setup, 'outpath', strarr(n_elements(hlpimages),nband+1), setup2
     setup=setup2
@@ -2865,9 +2909,12 @@ if ncolf eq 6 then begin
 ; read sextractor bit
     readcol, filelist[0], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
       format = 'A,A,A,A', comment = '#', /silent
+
     cnt[0] = n_elements(hlpimages)
     setup.images[*,0] = hlpimages
     setup.weights[*,0] = hlpweights
+    setup.sigmaps[*,0] = 'none'    ; SExtractor with sigma map does not makes sense in multi-band setup
+    setup.sigflags[0] = 0          ; SExtractor with sigma map does not makes sense in multi-band setup
     setup.outpre[*,0] = hlpoutpre
     setup.outpath[*,0] = set_trailing_slash(setup.outdir)+set_trailing_slash(strtrim(hlpoutpath,2))
     setup.outpath_band[*,0] = setup.outpath[*,0]+strtrim(band[0],2)
@@ -2876,32 +2923,35 @@ if ncolf eq 6 then begin
 ; READ OTHER BANDS (format: 2 columns only, 3 columns when using sigma
 ; image!!)
     for b=1,nband do begin
-        readcol, filelist[b], hlpimages, hlpweights, $
-          format = 'A,A,A,A', comment = '#', /silent
+        ncolfb = 0
+        lineone = ''
+        openr, 1, filelist[b]
+        readf, 1, lineone
+        close, 1
+        lineone = strtrim(lineone, 2)
+        columnsf = strsplit(lineone, ' ', COUNT=ncolfb)
+        if ncolfb eq 2 then readcol, filelist[b], hlpimages, hlpweights, $
+          format = 'A,A', comment = '#', /silent
+        if ncolfb eq 3 then readcol, filelist[b], hlpimages, hlpweights, hlpsigmaps, $
+          format = 'A,A,A', comment = '#', /silent
         cnt[b]=n_elements(hlpimages)
         if (cnt[b] ne cnt[0]) and not keyword_set(silent) then print, 'input list '+strtrim(band[b])+' contains a wrong number of entries (tiles), copared to SExtractor list'
         if (cnt[b] ne cnt[0]) and not keyword_set(silent) then stop
         setup.images[*,b] = hlpimages
         setup.weights[*,b] = hlpweights
+        setup.sigmaps[*,b] = 'none'
+        setup.sigflags[b] = 0
+        if ncolfb eq 3 then setup.sigmaps[*,b] = hlpsigmaps 
+        if ncolfb eq 3 then setup.sigflags[b] = 1
+        if ncolfb eq 3 then print, 'sigma maps used for band '+strtrim(band[b])
         setup.outpre[*,b] = setup.outpre[*,0]
         setup.outpath[*,b] = setup.outpath[*,0]
         setup.outpath_band[*,b] = setup.outpath[*,0]+strtrim(band[b],2)
         delvarx, hlpimages, hlpweights
-;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-;lineone = ''
-;openr, 1, setup.files
-;readf, 1, lineone
-;close, 1
-;lineone = strtrim(lineone, 2)
-;columnsf = strsplit(lineone, ' ', COUNT=ncolf)      
-;
-;; if number of columns eq 4 then assume 1 band survey and fits files
-;; in the table
-;if ncolf eq 4 then begin
-
+        if ncolfb ne 2 and ncolfb ne 3 then message, 'Invalid Entry in '+filelist[b]
     endfor 
 endif
-if ncolf ne 6 and ncolf ne 4 then message, 'Invalid Entry in '+setup.files
+if ncolf ne 6 and ncolf ne 5 and ncolf ne 4 then message, 'Invalid Entry in '+setup.files
 END
 
 FUNCTION read_sersic_results, obj, nband, bd=bd
@@ -3366,22 +3416,23 @@ for j=0,n_elements(name_res)-1 do begin
     IF ct GT 0 THEN BEGIN
         type=size(res.(j))
 ; if keyword is INT
-        if type[-2] eq 2 or type[-2] eq 3 then begin
+        ntype = n_elements(type)
+        if type[ntype-2] eq 2 or type[ntype-2] eq 3 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=-99999
         ENDIF
 ; if keyword is FLOAT
-        if type[-2] eq 4 then begin
+        if type[ntype-2] eq 4 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=-99999.
         ENDIF
 ; if keyword is DOUBLE
-        if type[-2] eq 5 then begin
+        if type[ntype-2] eq 5 then begin
             wh=where(finite(res.(j)) ne 1, ct)
             if ct gt 0 then res[wh].(j)=double(-99999.)
         ENDIF
 ; if keyword is STRING
-        if type[-2] eq 7 then begin
+        if type[ntype-2] eq 7 then begin
             wh=where(res.(j) eq ' ', ct)
             if ct gt 0 then res[wh].(j)='null'
         ENDIF
@@ -3477,6 +3528,7 @@ IF n_params() LT 1 THEN BEGIN
 ENDIF
 ;==============================================================================
 ;read in the setup file
+print, 'THIS IS GALAPAGOS-v2.1.0'
 read_setup, setup_file, setup
 
 ;copy setup file to output folder for future reference
@@ -3599,70 +3651,24 @@ IF setup.dosex THEN BEGIN
         IF ct GT 0 THEN begin
            exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] 
         endif Else exclude = [[-1, -1]]
-        
-        run_sextractor, setup.sexexe, setup.sexout, setup.zp, $
-          images[i,0], weights[i,0], $
-          setup.cold, $
-          outpath_file[i,0]+setup.coldcat, $
-          outpath_file[i,0]+setup.coldseg, $
-          setup.hot, $
-          outpath_file[i,0]+setup.hotcat, $
-          outpath_file[i,0]+setup.hotseg, $
-          setup.enlarge, $
-          outpath_file[i,0]+setup.outcat, $
-          outpath_file[i,0]+setup.outseg, $
-          outpath_file[i,0]+setup.outparam, $
-          outpath_file[i,0]+setup.check, $
-          setup.chktype, exclude, setup.exclude_rad, $
-          outonly = setup.outonly
-;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-;         sex2ds9reg, outpath_pre[i]+setup.outcat, outpath_pre[i]+ $
-;                     setup.outparam, outpath_pre[i]+'reg', 0.5, tag = outpre[i]
-;         sex2ds9reg, outpath_pre[i]+setup.outcat, outpath_pre[i]+ $
-;                     setup.outparam, outpath_pre[i]+'num.reg', 0.5, $
-;                     tag = outpre[i]+'num', /num
-;         sex2ds9reg, outpath_pre[i]+setup.coldcat, outpath_pre[i]+ $
-;                     setup.outparam, outpath_pre[i]+'cold.reg', 0.5, $
-;                     tag = outpre[i]+'cold'
-;         sex2ds9reg, outpath_pre[i]+setup.hotcat, outpath_pre[i]+ $
-;                     setup.outparam, outpath_pre[i]+'hot.reg', 0.5, $
-;                     tag = outpre[i]+'hot'
-;
-;         cat = read_sex_table(outpath_pre[i]+setup.outcat, $
-;                              outpath_pre[i]+setup.outparam)
-;         hot = cat[where(cat.mag_best GE 23)]
-;         forprint, 'circle('+strtrim(hot.x_image, 2)+','+ $
-;                   strtrim(hot.y_image, 2)+',20) # color=red', $
-;                   /nocomment, textout=outpath_pre[i]+'red.reg'
-;         cold = cat[where(cat.mag_best LT 23)]
-;         forprint, 'circle('+strtrim(cold.x_image, 2)+','+ $
-;                   strtrim(cold.y_image, 2)+',20)', $
-;                   /nocomment, textout=outpath_pre[i]+'green.reg'
-;         openw, 1, outpath_pre[i]+'head.reg'
-;         printf, 1, '# Region file format: DS9 version 4.0'
-;         printf, 1, 'global color=green font="helvetica 10 normal" ' + $
-;                 'select=1 highlite=1 edit=1 move=1 delete=1 include=1 ' + $
-;                 'fixed=0 source'
-;         printf, 1, 'image'
-;         close, 1
-;         spawn, 'cat '+outpath_pre[i]+'head.reg '+outpath_pre[i]+ $
-;                'green.reg '+ outpath_pre[i]+'red.reg > '+outpath_pre[i]+ $
-;                'check.reg'
-;         print, 'Number of green sources: ', ncold
-;         print, 'Number of  red  sources: ', nhot
-;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+        run_sextractor, setup, images, weights, outpath_file, i, exclude
+
     ENDFOR
-    
+
 ;combine all SExtractor catalogues
     merge_sex_catalogues, outpath_file[*,0]+setup.outcat, $
       outpath_file[*,0]+setup.outparam, images[*,0], neighbours, $
       setup.outdir+setup.sexcomb
+
+;creare ds9 region file for all detections
     sex2ds9reg, setup.outdir+setup.sexcomb, outpath_file[0,0]+setup.outparam, $
       setup.outdir+'sexcomb.reg', 10, color='green', tag = 'comb'
     IF keyword_set(logfile) THEN $
       update_log, logfile, 'SExtraction... done!'
     print, 'finished SExtractor: '+systime(0)
 ENDIF
+
 ;==============================================================================
 ;create postage stamp description files 
 IF setup.dostamps THEN BEGIN
@@ -3670,23 +3676,23 @@ IF setup.dostamps THEN BEGIN
 ;create object array for child processes 
 ; create maximum max_proc parallels. Anything more blocks the harddrive,
 ; limiting factor seems to be writing speed of disk.
-   max_proc = 6
+   max_proc = 6 < nframes
    post_bridge_arr = objarr(setup.max_proc <max_proc)
 ;allow main to see which process is free
    post_bridge_use = bytarr(setup.max_proc <max_proc)
 ;initialise every bridge (specify output property to allow debugging)
-   FOR i=0, setup.max_proc-1 <max_proc-1 DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
-   FOR i=0, setup.max_proc-1 <max_proc-1 DO BEGIN
+   FOR i=0, setup.max_proc-1 <max_proc DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+   FOR i=0, setup.max_proc-1 <max_proc DO BEGIN
       post_bridge_arr[i]->execute, 'astrolib'
       post_bridge_arr[i]->execute, '.r '+gala_pro
    ENDFOR
    
    done_cnt=0
    i=0
-;stop
+
    REPEAT BEGIN
 ;get status of bridge elements
-      FOR l=0, setup.max_proc-1 <max_proc-1 DO post_bridge_use[l] = post_bridge_arr[l]->status()
+      FOR l=0, setup.max_proc-1 < (max_proc-1) DO post_bridge_use[l] = post_bridge_arr[l]->status()
       
 ;check for free bridges
       free = where(post_bridge_use eq 0, ct)
@@ -3698,8 +3704,8 @@ IF setup.dostamps THEN BEGIN
          save, i, images, outpath_file, setup, outpath_file_no_band, outpath_band, $
                outpre, nband, filename=outpath_file_no_band[i,0]+setup.stampfile+'.sav'
 
-         IF setup.max_proc <max_proc GT 1 and nframes gt 1 THEN BEGIN
-             post_bridge_arr[free[0]]->execute, $
+         IF setup.max_proc <max_proc GT 1 THEN BEGIN
+            post_bridge_arr[free[0]]->execute, $
                'stamp_file_bridge, "'+outpath_file_no_band[i,0]+setup.stampfile+'.sav"', /nowait
          ENDIF ELSE BEGIN
              stamp_file_bridge, outpath_file_no_band[i,0]+setup.stampfile+'.sav'
@@ -3715,37 +3721,20 @@ IF setup.dostamps THEN BEGIN
 ;stop when all done and no bridge in use any more
    ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
   
-; original instead of bridge mode
-;               create_stamp_file, images[i,0], $
-;                 outpath_file[i,0]+setup.outcat, $
-;                 outpath_file[i,0]+setup.outparam, $
-;                 outpath_file_no_band[i,0]+setup.stampfile, $
-;                 setup.stampsize, setup
-;               FOR b=1,nband do begin
-;;               print, 'cutting postage stamps for '+strtrim(setup.stamp_pre[b],2)+'-band'
-;                   cut_stamps, images[i,b], $
-;                     outpath_file_no_band[i,0]+setup.stampfile, $
-;                     outpath_band[i,b], $
-;                     outpre[i,b], '_'+setup.stamp_pre[b]
-;               ENDFOR
-;           ENDIF
-;       ENDFOR
-   
 ; kill bridge, make new one!
    print, 'finished cutting postage stamps, now killing bridge: '+systime(0)
    IF n_elements(post_bridge_arr) GT 0 THEN obj_destroy, post_bridge_arr
 
-   post_bridge_arr = objarr(setup.max_proc)
+   post_bridge_arr = objarr(setup.max_proc < nframes)
 ;allow main to see which process is free
-   post_bridge_use = bytarr(setup.max_proc)
+   post_bridge_use = bytarr(setup.max_proc < nframes)
 ;initialise every bridge (specify output property to allow debugging)
-   FOR i=0, setup.max_proc-1 DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
-   FOR i=0, setup.max_proc-1 DO BEGIN
+   FOR i=0, setup.max_proc-1 < (nframes-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+   FOR i=0, setup.max_proc-1 < (nframes-1) DO BEGIN
       post_bridge_arr[i]->execute, 'astrolib'
       post_bridge_arr[i]->execute, '.r '+gala_pro
    ENDFOR
    
-;create skymap files 
 ;create skymap files using bridge
    done_cnt=0
    i=0
@@ -3779,38 +3768,23 @@ IF setup.dostamps THEN BEGIN
       ENDELSE
 ;stop when all done and no bridge in use any more
    ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
-   
-;original version (no bridge used)
-;       FOR i=0ul, nframes-1 DO BEGIN
-;           print, 'creating skymaps for images '+strtrim(outpath_file_no_band[i,0],2)
-;           FOR b=1,nband do begin
-;;               print, 'creating skymap for '+strtrim(setup.stamp_pre[b],2)+'-band'
-;               create_skymap, weights[i,b], $
-;                 outpath_file[i,0]+setup.outseg, $
-;                 outpath_file[i,0]+setup.outcat, $
-;                 outpath_file[i,0]+setup.outparam, $
-;                 outpath_file_no_band[i,b]+setup.stamp_pre[b]+'.'+setup.skymap, $
-;                 setup.skyscl, setup.skyoff
-;           ENDFOR
-;       ENDFOR
-   
+      
    print, 'finished writing skymaps, now killing bridge: '+systime(0)
    IF n_elements(post_bridge_arr) GT 0 THEN obj_destroy, post_bridge_arr
    
    IF keyword_set(logfile) THEN $
-      update_log, logfile, 'Postage stamps... done!'
+     update_log, logfile, 'Postage stamps... done!'
    print, 'finished cutting postage stamps: '+systime(0)
 ENDIF 
 
 ; check whether skymaps exist, if not, something went wrong above
-
 skymap_exist = intarr(nframes,nband)
 for t=0,nframes-1 do begin
     for b=1,nband do begin
         skymap_exist[t,b-1] = file_test(outpath_file_no_band[t,b]+setup.stamp_pre[b]+'.'+setup.skymap+'.fits')
     endfor
 endfor
-if total(skymap_exist) ne nframes*nband then begin
+if (total(skymap_exist) ne nframes*nband) and (setup.dosky eq 1 or setup.dobd eq 1) then begin
     print, ' '
     print, 'WARNING'
     print, 'The number of skymap files on your disk does not correspond to the number that should exist. It seems that your block C' + $
@@ -4157,7 +4131,12 @@ loopstart2:
 ;galfit input file
             im_file = strarr(nband+1)
             for q=1,nband do im_file[q] = (orgpath_pre[idx,q]+objnum+'_'+setup.stamp_pre[q])[0]
-            
+;galfit sigma maps
+            sigma_file = strarr(nband+1)
+            for q=1,nband do sigma_file[q] = (orgpath_pre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_sigma')[0]
+            wh_no_sigma = where(setup.sigflags eq 0,cntns)
+            if cntns gt 0 then sigma_file[wh_no_sigma] = 'none'
+
 ;galfit output path
             out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
 ;sky summary file
@@ -4191,7 +4170,7 @@ loopstart2:
             save_cur = save_cur[0]
 
             save, save_cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
-                  sky_file, stamp_param_file, mask_file, im_file, obj_file, $
+                  sky_file, stamp_param_file, mask_file, im_file, sigma_file, obj_file, $
                   constr_file, out_file, save_table, nband, orgpath_pre, outpath_file, $
                   outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
                   orgpath_band, orgpath_file, seed,$
@@ -4249,14 +4228,18 @@ loopend:
                 tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
                   table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, col=0,/data
             ENDIF
-            bridge_obj[remain[i]] = -1
-            bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
+;            bridge_obj[remain[i]] = -1
+;            bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
             
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
             update_table, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
+
+; overwrite indices
+            bridge_obj[remain[i]] = -1
+            bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
         ENDFOR
     ENDIF
 ENDIF
@@ -4317,14 +4300,14 @@ jump_over_this_2:
 
 ;    restore, setup.outdir+'table_before_'+setup.bd_label+'.sav'
     if keyword_set(jump2) then restore, setup.outdir+'table_before_bd.sav'
-
+    
 ;=========================================================================
 ; finished reading in all single sersic results
 ;=========================================================================
 ;;====create BD sourcelist================================================
-   add_tag, table, 'do_list_bd', 0, table_new
-   table = table_new
-   delvarx, table_new
+    add_tag, table, 'do_list_bd', 0, table_new
+    table = table_new
+    delvarx, table_new
 
 ; get sourcelist of intereting (primary) sources and correlate to catalogue
    IF (setup.bd_srclist EQ '' OR setup.bd_srclistrad LE 0) THEN BEGIN
@@ -4393,7 +4376,7 @@ jump_over_this_2:
 ; outpath_galfit_bd = strtrim(outpath[*,0]+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)
 ; outpath_galfit_bd = set_trailing_slash(outpath_galfit_bd)
 ; FOR i=0ul, n_elements(outpath_galfit_bd)-1 DO IF NOT file_test(outpath_galfit_bd[i]) THEN spawn, 'mkdirhier '+outpath_galfit_bd[i]
-
+    
     IF NOT setup.bd_hpc THEN BEGIN
         cur = 0l
         delvarx, todo, bridge_arr, bridge_use, bridge_obj, bridge_pos, blocked
@@ -4596,6 +4579,7 @@ loopstart2_bd:
                     for q=0,n_elements(bridge_pos[0,*])-1 do tvellipse, setup.min_dist/3600., setup.min_dist/3600., bridge_pos[0,q], bridge_pos[1,q], col=235,/data,thick=2
                 ENDIF
                 
+; SOME OF THESE FILE NAMES NOT CURRENTLY USED
 ;find the matching filenames
                 idx = where(table[cur].frame[0] EQ orgim[*,0])
 ;define the file names for the:
@@ -4614,7 +4598,12 @@ loopstart2_bd:
 ;galfit input file
                 im_file = strarr(nband+1)
                 for q=1,nband do im_file[q] = (orgpath_pre[idx,q]+objnum+'_'+setup.stamp_pre[q])[0]
-                
+;galfit sigma maps
+                sigma_file = strarr(nband+1)
+                for q=1,nband do sigma_file[q] = (orgpath_pre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_sigma')[0]
+                wh_no_sigma = where(setup.sigflags eq 0,cntns)
+                if cntns gt 0 then sigma_file[wh_no_sigma] = 'none'
+
 ;galfit output path
                 out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
                 out_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.galfit_out)[0]
@@ -4728,8 +4717,8 @@ loopend_bd:
                     tvellipse, setup.min_dist/3600., setup.min_dist/3600., $
                       table[bridge_obj[remain[i]]].alpha_J2000,table[bridge_obj[remain[i]]].delta_J2000, col=0,/data
                 ENDIF
-                bridge_obj[remain[i]] = -1
-                bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
+;                bridge_obj[remain[i]] = -1
+;                bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
                 
 ;check if file was done successfully or bombed
 ; if succesfully, fill fitting parameters into fittab
@@ -4737,6 +4726,10 @@ loopend_bd:
                 update_table, table, bridge_obj[remain[i]], out_file, obj_file, sky_file, nband, setup, /bd
 ;print, 'out file exists -- fittab updated'
 ;else output file does not exist --> bombed
+
+;overwrite indices
+                bridge_obj[remain[i]] = -1
+                bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
             ENDFOR
         ENDIF
     ENDIF
