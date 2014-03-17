@@ -1,14 +1,14 @@
-@~/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
-@~/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
-@~/megamorph_dev/astro-megamorph/galapagos/mrd_hread.pro
-@~/megamorph_dev/astro-megamorph/galapagos/valid_num.pro
-@~/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
-@~/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
-@~/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
-@~/megamorph_dev/astro-megamorph/galapagos/fxmove.pro
-@~/megamorph_dev/astro-megamorph/galapagos/writefits.pro
-@~/megamorph_dev/astro-megamorph/galapagos/kill_galfit.pro
-@~/megamorph_dev/astro-megamorph/galapagos/gala_bd_bridge.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/mrd_hread.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/valid_num.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/fxmove.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/writefits.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/kill_galfit.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/gala_bd_bridge.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
