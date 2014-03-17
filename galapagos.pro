@@ -3761,6 +3761,7 @@ IF setup.dostamps THEN BEGIN
          ENDELSE
          done_cnt = done_cnt+1
          i=i+1
+         wait, 1
 ;switch to next object
       ENDIF ELSE BEGIN
 ;all bridges are busy --> wait
@@ -4069,7 +4070,7 @@ loopstart2:
                     ob++
                     if ob eq n_elements(todo) and $
                       (min(dist) lt setup.min_dist or min(dist_block) lt setup.min_dist_block) then begin
-                        wait, 3
+                        wait, 1
                         ob=0l
 ;                        print, 'starting over'
                         goto, loopstart2
@@ -4196,6 +4197,7 @@ loopstart2:
                file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
                             /allow_nonexistent, /noexpand_path
             ENDELSE
+            wait, 1
 ;switch to next object
         ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
@@ -4522,7 +4524,7 @@ loopstart2_bd:
                         ob++
                         if ob eq n_elements(todo) and $
                           (min(dist) lt setup.min_dist or min(dist_block) lt setup.min_dist_block) then begin
-                            wait, 3
+                            wait, 1
                             ob=0l
 ;                        print, 'starting over'
                             goto, loopstart2_bd
@@ -4693,6 +4695,7 @@ loopstart2_bd:
 ;--------------------------- MARCOS SCRIPT
                     
                 ENDELSE
+                wait, 1
 ;switch to next object
             ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
