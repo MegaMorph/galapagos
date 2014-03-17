@@ -3675,8 +3675,8 @@ IF setup.dostamps THEN BEGIN
 ;allow main to see which process is free
    post_bridge_use = bytarr(setup.max_proc <max_proc)
 ;initialise every bridge (specify output property to allow debugging)
-   FOR i=0, setup.max_proc-1 <max_proc DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
-   FOR i=0, setup.max_proc-1 <max_proc DO BEGIN
+   FOR i=0, setup.max_proc-1 <(max_proc-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+   FOR i=0, setup.max_proc-1 <(max_proc-1) DO BEGIN
       post_bridge_arr[i]->execute, 'astrolib'
       post_bridge_arr[i]->execute, '.r '+gala_pro
    ENDFOR
@@ -3735,7 +3735,7 @@ IF setup.dostamps THEN BEGIN
    print, 'starting skymaps: '+systime(0)
    REPEAT BEGIN
 ;get status of bridge elements
-      FOR l=0, setup.max_proc-1 DO post_bridge_use[l] = post_bridge_arr[l]->status()
+      FOR l=0, setup.max_proc-1 < (nframes-1) DO post_bridge_use[l] = post_bridge_arr[l]->status()
       
 ;check for free bridges
       free = where(post_bridge_use eq 0, ct)
