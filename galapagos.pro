@@ -3988,6 +3988,9 @@ IF setup.dosky THEN BEGIN
 
 ;loop over all objects
     loop = 0l
+    galfit_string = setup.gal_kill_string
+    if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+    
     REPEAT BEGIN
         IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
             update_log, logfile, 'last in cue... '+strtrim(cur, 2)
@@ -3996,6 +3999,10 @@ IF setup.dosky THEN BEGIN
               strtrim(bridge_arr[i]->status(), 2)
         ENDIF
         loop++
+        
+; kill all galfit processes that have been running longer than a
+; certain time.
+        if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
         
 ;figure out which object to do next
 loopstart:
@@ -4194,12 +4201,10 @@ loopstart2:
 ;all bridges are busy --> wait 
            wait, 3
 ; kill all processes that have been running longer than a certain
-; time. Not fully automated yet, needs to use input value for
-; time_limit and name of galfit task
-
-            galfit_string = setup.gal_kill_string
-            if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
-            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
+; time.
+;            galfit_string = setup.gal_kill_string
+;            if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+;            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
         ENDELSE
         
 loopend:
@@ -4429,6 +4434,8 @@ jump_over_this_2:
 ;loop over all objects
         loop = 0l
         print, 'starting B/D fits at '+systime()
+        galfit_string = setup.gal_kill_string
+        if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
 
         REPEAT BEGIN
             IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
@@ -4438,6 +4445,10 @@ jump_over_this_2:
                   strtrim(bridge_arr[i]->status(), 2)
             ENDIF
             loop++
+            
+; kill all galfit processes that have been running longer than a certain
+; time.
+            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
             
 loopstart_bd:
 ; only successful single sersic object??
@@ -4688,9 +4699,9 @@ loopstart2_bd:
                 wait, 3
             ENDELSE
 
-            galfit_string = setup.gal_kill_string
-            if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
-            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
+;            galfit_string = setup.gal_kill_string
+;            if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+;            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
 
 loopend_bd:
 ;stop when all done and no bridge in use any more
