@@ -1,8 +1,14 @@
-;@/home/boris/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
-;@/home/boris/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
-;@/home/boris/megamorph_dev/astro-megamorph/galapagos/writefits.pro
-;@/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
-;@/home/boris/megamorph_dev/astro-megamorph/galapagos/gala_bd_bridge.pro
+@~/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
+@~/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
+@~/megamorph_dev/astro-megamorph/galapagos/mrd_hread.pro
+@~/megamorph_dev/astro-megamorph/galapagos/valid_num.pro
+@~/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
+@~/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
+@~/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
+@~/megamorph_dev/astro-megamorph/galapagos/fxmove.pro
+@~/megamorph_dev/astro-megamorph/galapagos/writefits.pro
+@~/megamorph_dev/astro-megamorph/galapagos/kill_galfit.pro
+@~/megamorph_dev/astro-megamorph/galapagos/gala_bd_bridge.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
@@ -3704,7 +3710,7 @@ IF setup.dostamps THEN BEGIN
 ;switch to next object
       ENDIF ELSE BEGIN
 ;all bridges are busy --> wait
-         wait, 1
+         wait, 5
       ENDELSE
 ;stop when all done and no bridge in use any more
    ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
@@ -3769,7 +3775,7 @@ IF setup.dostamps THEN BEGIN
 ;switch to next object
       ENDIF ELSE BEGIN
 ;all bridges are busy --> wait
-         wait, 1
+         wait, 5
       ENDELSE
 ;stop when all done and no bridge in use any more
    ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
@@ -4082,7 +4088,7 @@ loopstart2:
                     ob++
                     if ob eq n_elements(todo) and $
                       (min(dist) lt setup.min_dist or min(dist_block) lt setup.min_dist_block) then begin
-                        wait, 1
+                        wait, 3
                         ob=0l
 ;                        print, 'starting over'
                         goto, loopstart2
@@ -4207,7 +4213,7 @@ loopstart2:
 ;switch to next object
         ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
-           wait, 2
+           wait, 3
 ; kill all processes that have been running longer than a certain
 ; time. Not fully automated yet, needs to use input value for
 ; time_limit and name of galfit task
@@ -4522,7 +4528,7 @@ loopstart2_bd:
                         ob++
                         if ob eq n_elements(todo) and $
                           (min(dist) lt setup.min_dist or min(dist_block) lt setup.min_dist_block) then begin
-                            wait, 1
+                            wait, 3
                             ob=0l
 ;                        print, 'starting over'
                             goto, loopstart2_bd
@@ -4690,7 +4696,7 @@ loopstart2_bd:
 ;switch to next object
             ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
-                wait, 1
+                wait, 3
             ENDELSE
 
             galfit_string = setup.gal_kill_string
