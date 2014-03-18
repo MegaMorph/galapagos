@@ -1,4 +1,4 @@
-GALAPAGOS-2 README (v.2.1.0)
+GALAPAGOS-2 README (v.2.1.1)
 
 Please read this file for details on input format and new features off the code.
 Especially read this file regarding your image normalisation and how to set up and run galapagos in the most efficient way.
@@ -42,7 +42,7 @@ The input files might have changed (e.g. v2.0.7, v2.1.0) compared to what you ar
 
 
 *******************************************
-A) NEW FEATURES IN GALAPAGOS-2 (as of v.2.1.0)
+A) MAJOR NEW FEATURES IN GALAPAGOS-2 (as of ~v.2.1.0) COMPARED TO STANDARD GALFIT
 *******************************************
 - Galapagos can now use multi-band data simultaneously
 - Galapagos can now do Bulge-Disk decomposition
@@ -182,9 +182,9 @@ images_i_sigma
      Note on SIGMA images:
         In Galapagos-2 (from version 2.1.0) it is possible to give sigma_maps for some bands, and not for others, but the entire band 
         has to be consistent, e.g. ALL g-band images need sigma_maps, or none
-        HOWEVER: As of galfitm-1.1.3 (most recent version at the time of writing) this is NOT supported by GalfitM. 
-                 GalfitM requires either ALL or NONE of the bands to have sigma images provided.
-                 This might (maybe) be fixed in a later version, right now, this is not possible! Galapagos-2 does either.
+        HOWEVER: galfitm-version < 1.1.3 do NOT support this feature, either ALL or NO images have to have SIGMA images
+	         This has been changed in galfitm-1.1.4 , which now also allows a mixture of images with and without sigma map.
+	         For Galapagos, the entire BAND has to be consistent, though.
 
   - Please note that any provided WEIGHT image does NOT get handed over to GalfitM! 
       It is mostly used to create the mask image used in the fit  (and source detection in SExtractor step)
@@ -469,7 +469,8 @@ artificially redshifted images as explained in Vika 2014, in prep.
 They seem to work in Galapagos-2, too. Slightly different starting values did not seem to have big effects on the output values 
 (Haeussler et al 2014, in prep)
 
-While writing this README, I have noticed that technically different parameters are handled slightly differently (e.g. pa and q do not use MEDIAN(ss_values). Every offset from the single-sérsic fitting — if present — will be carried over to the starting values, SEE IMPLICATIONS AT E20))
+While writing this README, I have noticed that technically different parameters are handled slightly differently (e.g. pa and q do not use MEDIAN(ss_values). 
+Every offset from the single-sérsic fitting — if present — will be carried over to the starting values, SEE IMPLICATIONS AT E20))
 This might be corrected at some point, but has not yet been an issue due to the degrees of freedom we use (and we would advice to be used).
 
 Please note that both the bulge and the disk are started using the SAME MAGNITUDES (and hence the same SED) !!
@@ -630,7 +631,13 @@ V2.0.7
 v2.1.0
 B15) RMS map now allowed for SExtractor
    (FROM Sextractor manual:)
-   - MAP RMS: the FITS image specified by the WEIGHT IMAGE file name must contain a weightmap     in units of absolute standard deviations (in ADUs per pixel).   - MAP WEIGHT: the FITS image specified by the WEIGHT IMAGE file name must contain a     weight-map in units of relative weights. The data are converted to variance units (by definition     variance ∝ 1/weight), and scaled as for MAP VAR. MAP WEIGHT is the most commonly     used type of weight-map: a flat-field, for example, is generally a good approximation to a     perfect weight-map.
+   - MAP RMS: the FITS image specified by the WEIGHT IMAGE file name must contain a weightmap
+     in units of absolute standard deviations (in ADUs per pixel).
+   - MAP WEIGHT: the FITS image specified by the WEIGHT IMAGE file name must contain a
+     weight-map in units of relative weights. The data are converted to variance units (by definition
+     variance ∝ 1/weight), and scaled as for MAP VAR. MAP WEIGHT is the most commonly
+     used type of weight-map: a flat-field, for example, is generally a good approximation to a
+     perfect weight-map.
 - passing on SIGMA images to galfit now, if user specifies them. They have to be EXTERNALLY created!
   For SExtractor:
      Format as before, but ‘weight’ image can now be ‘rms’ image (indicate at B15) )
@@ -644,6 +651,14 @@ B15) RMS map now allowed for SExtractor
      It is possible to give sigma_map for some bands, and not for others, but the entire band has to be consistent,
       e.g. ALL g-band images need sigma_maps, or none
      CORRECTION:
-        As of galfitm-1.1.3 this is NOT supported by GalfitM. GalfitM requires either ALL or NONE of the bands to have sigma images provided.
-        This might (maybe) be fixed in a later version, but right now, this is not possible! Galapagos-2 does either.
+          galfitm-version < 1.1.3 do NOT support this feature, either ALL or NO images have to have SIGMA images
+	  This has been changed in galfitm-1.1.4 , which now also allows a mixture of images with and without sigma map.
+	  For Galapagos, the entire BAND has to be consistent, though.
 
+v2.1.1
+- Now backwards compatible to IDL7.x , instead of requiring IDL 8, possibly even works for older version. 
+   IDL 6.3, introducing IDL_IDLBRIDGE, IS strictly required!!
+- some minor bug fixes that could make the code crash (results unaffected, if produced)
+   only internal book-keeping at a position where it didn't really matter
+- kill_galfit actually works reliably now.
+- bug fix, B/D fitting now works in batch mode

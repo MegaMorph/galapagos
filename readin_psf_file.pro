@@ -171,5 +171,5 @@ try_again:
     endelse
 
 endfor 
-print, 'ALL PSFs SUCCESFULLY READ IN'
+print, 'ALL PSFs SUCCESFULLY READ IN (and checked to exist)'
 end

@@ -3512,8 +3512,10 @@ free_lun, lun
 END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
+print, 'THIS IS GALAPAGOS-v2.1.1'
+print, ''
 start=systime(0)
-print, 'start: '+start
+print, 'start time: '+start
 IF n_params() LE 1 THEN gala_pro = 'galapagos'
 ;   gala_pro = '/home/boris/IDL/gala/galapagos.pro'
 ;   logfile = '/data/gama/galapagos_multi_wl_galapagos.log'
@@ -3523,12 +3525,14 @@ IF n_params() LE 1 THEN gala_pro = 'galapagos'
 ;==============================================================================
 ;main input: location of the setup file
 IF n_params() LT 1 THEN BEGIN
+    print, 'start galapagos by typing: '
+    print, 'galapagos, "\path\to\setup_file"'
+    print, ''
     setup_file = ''
     read, prompt = 'Location of setup file: ', setup_file
 ENDIF
 ;==============================================================================
 ;read in the setup file
-print, 'THIS IS GALAPAGOS-v2.1.0'
 read_setup, setup_file, setup
 
 ;copy setup file to output folder for future reference
@@ -3991,6 +3995,7 @@ IF setup.dosky THEN BEGIN
     loop = 0l
     galfit_string = setup.gal_kill_string
     if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+    print, 'starting fitting at '+systime()
     
     REPEAT BEGIN
         IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
@@ -4424,7 +4429,7 @@ jump_over_this_2:
             readcol, setup.batch, batch, format = 'A', comment = '#', /silent
             
             IF n_elements(batch) GT 0 THEN BEGIN
-                FOR f=0ul, batch-1 DO BEGIN
+                FOR f=0ul, n_elements(batch)-1 DO BEGIN
                     dum = where(table.frame[0] EQ batch[f], ct)
                     IF ct EQ 0 THEN CONTINUE
                     table[dum].do_batch = 1
@@ -4438,6 +4443,7 @@ jump_over_this_2:
         print, 'starting B/D fits at '+systime()
         galfit_string = setup.gal_kill_string
         if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+        print, 'starting B/D fitting at '+systime()
 
         REPEAT BEGIN
             IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
