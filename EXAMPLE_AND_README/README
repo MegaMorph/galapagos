@@ -662,3 +662,7 @@ v2.1.1
    only internal book-keeping at a position where it didn't really matter
 - kill_galfit actually works reliably now.
 - bug fix, B/D fitting now works in batch mode
+- effectively disabled fancy queuing system for B/D fits as these fits are independent anyway (at the moment)
+  This is done by automatically setting the blocking radii to 0, so some unneccessary calculations are still done.
+  The code is not as effective as it could be. However, most of the time is still spent on the actual GALFIT fit, 
+  so the impact of this is probably small.

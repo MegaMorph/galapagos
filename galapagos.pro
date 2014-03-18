@@ -4266,6 +4266,11 @@ ENDIF
 ; ?? d) Neighbours will only be deblended as single sersics!
 
 IF setup.dobd THEN BEGIN
+; FOR NOW !!! DISABLE QUEUEING SYSTEM
+    setup.min_dist = 0
+    setup.min_dist_block = 0
+; TO BE TAKEN OUT EVENTUALLY WHEN B/D FITS DEPEND ON EACH OTHER
+
    outpath_galfit_bd = strtrim(outpath[*,0]+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)
    outpath_galfit_bd = set_trailing_slash(outpath_galfit_bd)
    FOR i=0ul, n_elements(outpath_galfit_bd)-1 DO IF NOT file_test(outpath_galfit_bd[i]) THEN $
@@ -4506,7 +4511,7 @@ loopstart2_bd:
                 ENDIF
 ; only run the loop when the fit is actually done, everything else
 ; doesn't make sense
-;check if current position is far enough from bridge positions
+; check if current position is far enough from bridge positions
                 filled = where(finite(bridge_pos[0, *]) EQ 1 AND $
                                bridge_use GT 0, ct)
                 ob=0l
