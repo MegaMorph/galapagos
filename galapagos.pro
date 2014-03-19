@@ -2062,7 +2062,7 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
 ;;;;;;;;;;;; CONSTRAINTS
 ; check some constraints and set starting values accordingly if neccessary
     IF finite(par.re_galfit) NE 1 THEN begin
-        par.re_galfit = table[objects[i]].flux_rdaius > 3
+        par.re_galfit = table[objects[i]].flux_radius > 3
         par.re_galfit_band = fltarr(nband)+(table[objects[i]].flux_radius > 3)
     ENDIF
     
