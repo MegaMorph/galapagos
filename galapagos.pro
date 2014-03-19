@@ -3560,18 +3560,21 @@ outpre = setup.outpre
 nband = setup.nband
 
 ; correct too high degrees of freedom as galfitm would crash!
-if setup.nband lt setup.cheb[2]+1 then $
-  print,' Your degree of freedom (set by E20 +1) is higher than the number of bands you are using. This will be corrected ' + $
-  'in the code to be full freedom so GALFITM does not crash This is only a warning for you to check whether these settings ' + $
-  'are indeed what you meant to do'
-if setup.nband lt setup.cheb_b[2]+1 then $
-  print,' Your degree of freedom (set by F01 +1) is higher than the number of bands you are using. This will be corrected ' + $
-  'in the code to be full freedom so GALFITM does not crash This is only a warning for you to check whether these settings ' + $
-  'are indeed what you meant to do'
-if setup.nband lt setup.cheb_d[2]+1 then $
-  print,' Your degree of freedom (set by F02 +1) is higher than the number of bands you are using. This will be corrected ' + $
-  'in the code to be full freedom so GALFITM does not crash This is only a warning for you to check whether these settings ' + $
-  'are indeed what you meant to do'
+if setup.nband lt setup.cheb[2]+1 then begin
+    print, '**Your degree of freedom (set by E20 +1) is higher than the number of bands you are using.' 
+    print, 'This will be corrected in the code to be full freedom so GALFITM does not crash'
+    print, 'This is only a warning for you to check whether these settings are indeed what you meant to do'
+endif
+if setup.nband lt setup.cheb_b[2]+1 then begin
+    print, '**Your degree of freedom (set by F01 +1) is higher than the number of bands you are using.' 
+    print, 'This will be corrected in the code to be full freedom so GALFITM does not crash'
+    print, 'This is only a warning for you to check whether these settings are indeed what you meant to do'
+endif
+if setup.nband lt setup.cheb_d[2]+1 then begin
+    print, '**Your degree of freedom (set by F02 +1) is higher than the number of bands you are using.' 
+    print, 'This will be corrected in the code to be full freedom so GALFITM does not crash'
+    print, 'This is only a warning for you to check whether these settings are indeed what you meant to do'
+endif
 
 ; now that number of bands is known, correct number of additional cheb
 ; components to max nband -1
