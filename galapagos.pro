@@ -1,8 +1,14 @@
-;@/home/boris/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
-;@/home/boris/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
-;@/home/boris/megamorph_dev/astro-megamorph/galapagos/writefits.pro
-;@/home/boris/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
-;@/home/boris/megamorph_dev/astro-megamorph/galapagos/gala_bd_bridge.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/mrd_hread.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/valid_num.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/fxmove.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/writefits.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/kill_galfit.pro
+;@~/megamorph_dev/astro-megamorph/galapagos/gala_bd_bridge.pro
 ;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
 ;Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
@@ -3506,8 +3512,10 @@ free_lun, lun
 END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
+print, 'THIS IS GALAPAGOS-v2.1.1'
+print, ''
 start=systime(0)
-print, 'start: '+start
+print, 'start time: '+start
 IF n_params() LE 1 THEN gala_pro = 'galapagos'
 ;   gala_pro = '/home/boris/IDL/gala/galapagos.pro'
 ;   logfile = '/data/gama/galapagos_multi_wl_galapagos.log'
@@ -3517,12 +3525,14 @@ IF n_params() LE 1 THEN gala_pro = 'galapagos'
 ;==============================================================================
 ;main input: location of the setup file
 IF n_params() LT 1 THEN BEGIN
+    print, 'start galapagos by typing: '
+    print, 'galapagos, "\path\to\setup_file"'
+    print, ''
     setup_file = ''
     read, prompt = 'Location of setup file: ', setup_file
 ENDIF
 ;==============================================================================
 ;read in the setup file
-print, 'THIS IS GALAPAGOS-v2.1.0'
 read_setup, setup_file, setup
 
 ;copy setup file to output folder for future reference
@@ -3550,18 +3560,21 @@ outpre = setup.outpre
 nband = setup.nband
 
 ; correct too high degrees of freedom as galfitm would crash!
-if setup.nband lt setup.cheb[2]+1 then $
-  print,' Your degree of freedom (set by E20 +1) is higher than the number of bands you are using. This will be corrected ' + $
-  'in the code to be full freedom so GALFITM does not crash This is only a warning for you to check whether these settings ' + $
-  'are indeed what you meant to do'
-if setup.nband lt setup.cheb_b[2]+1 then $
-  print,' Your degree of freedom (set by F01 +1) is higher than the number of bands you are using. This will be corrected ' + $
-  'in the code to be full freedom so GALFITM does not crash This is only a warning for you to check whether these settings ' + $
-  'are indeed what you meant to do'
-if setup.nband lt setup.cheb_d[2]+1 then $
-  print,' Your degree of freedom (set by F02 +1) is higher than the number of bands you are using. This will be corrected ' + $
-  'in the code to be full freedom so GALFITM does not crash This is only a warning for you to check whether these settings ' + $
-  'are indeed what you meant to do'
+if setup.nband lt setup.cheb[2]+1 then begin
+    print, '**Your degree of freedom (set by E20 +1) is higher than the number of bands you are using.' 
+    print, 'This will be corrected in the code to be full freedom so GALFITM does not crash'
+    print, 'This is only a warning for you to check whether these settings are indeed what you meant to do'
+endif
+if setup.nband lt setup.cheb_b[2]+1 then begin
+    print, '**Your degree of freedom (set by F01 +1) is higher than the number of bands you are using.' 
+    print, 'This will be corrected in the code to be full freedom so GALFITM does not crash'
+    print, 'This is only a warning for you to check whether these settings are indeed what you meant to do'
+endif
+if setup.nband lt setup.cheb_d[2]+1 then begin
+    print, '**Your degree of freedom (set by F02 +1) is higher than the number of bands you are using.' 
+    print, 'This will be corrected in the code to be full freedom so GALFITM does not crash'
+    print, 'This is only a warning for you to check whether these settings are indeed what you meant to do'
+endif
 
 ; now that number of bands is known, correct number of additional cheb
 ; components to max nband -1
@@ -3675,8 +3688,8 @@ IF setup.dostamps THEN BEGIN
 ;allow main to see which process is free
    post_bridge_use = bytarr(setup.max_proc <max_proc)
 ;initialise every bridge (specify output property to allow debugging)
-   FOR i=0, setup.max_proc-1 <max_proc DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
-   FOR i=0, setup.max_proc-1 <max_proc DO BEGIN
+   FOR i=0, setup.max_proc-1 <(max_proc-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+   FOR i=0, setup.max_proc-1 <(max_proc-1) DO BEGIN
       post_bridge_arr[i]->execute, 'astrolib'
       post_bridge_arr[i]->execute, '.r '+gala_pro
    ENDFOR
@@ -3710,7 +3723,7 @@ IF setup.dostamps THEN BEGIN
 ;switch to next object
       ENDIF ELSE BEGIN
 ;all bridges are busy --> wait
-         wait, 1
+         wait, 5
       ENDELSE
 ;stop when all done and no bridge in use any more
    ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
@@ -3735,7 +3748,7 @@ IF setup.dostamps THEN BEGIN
    print, 'starting skymaps: '+systime(0)
    REPEAT BEGIN
 ;get status of bridge elements
-      FOR l=0, setup.max_proc-1 DO post_bridge_use[l] = post_bridge_arr[l]->status()
+      FOR l=0, setup.max_proc-1 < (nframes-1) DO post_bridge_use[l] = post_bridge_arr[l]->status()
       
 ;check for free bridges
       free = where(post_bridge_use eq 0, ct)
@@ -3755,10 +3768,11 @@ IF setup.dostamps THEN BEGIN
          ENDELSE
          done_cnt = done_cnt+1
          i=i+1
+         wait, 1
 ;switch to next object
       ENDIF ELSE BEGIN
 ;all bridges are busy --> wait
-         wait, 1
+         wait, 5
       ENDELSE
 ;stop when all done and no bridge in use any more
    ENDREP UNTIL done_cnt eq nframes and total(post_bridge_use) EQ 0
@@ -3982,6 +3996,10 @@ IF setup.dosky THEN BEGIN
 
 ;loop over all objects
     loop = 0l
+    galfit_string = setup.gal_kill_string
+    if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+    print, 'starting fitting at '+systime()
+    
     REPEAT BEGIN
         IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
             update_log, logfile, 'last in cue... '+strtrim(cur, 2)
@@ -3990,6 +4008,10 @@ IF setup.dosky THEN BEGIN
               strtrim(bridge_arr[i]->status(), 2)
         ENDIF
         loop++
+        
+; kill all galfit processes that have been running longer than a
+; certain time.
+        if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
         
 ;figure out which object to do next
 loopstart:
@@ -4183,17 +4205,16 @@ loopstart2:
                file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
                             /allow_nonexistent, /noexpand_path
             ENDELSE
+            wait, 1
 ;switch to next object
         ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
-           wait, 2
+           wait, 3
 ; kill all processes that have been running longer than a certain
-; time. Not fully automated yet, needs to use input value for
-; time_limit and name of galfit task
-
-            galfit_string = setup.gal_kill_string
-            if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
-            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
+; time.
+;            galfit_string = setup.gal_kill_string
+;            if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+;            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
         ENDELSE
         
 loopend:
@@ -4248,6 +4269,11 @@ ENDIF
 ; ?? d) Neighbours will only be deblended as single sersics!
 
 IF setup.dobd THEN BEGIN
+; FOR NOW !!! DISABLE QUEUEING SYSTEM
+    setup.min_dist = 0
+    setup.min_dist_block = 0
+; TO BE TAKEN OUT EVENTUALLY WHEN B/D FITS DEPEND ON EACH OTHER
+
    outpath_galfit_bd = strtrim(outpath[*,0]+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)
    outpath_galfit_bd = set_trailing_slash(outpath_galfit_bd)
    FOR i=0ul, n_elements(outpath_galfit_bd)-1 DO IF NOT file_test(outpath_galfit_bd[i]) THEN $
@@ -4411,7 +4437,7 @@ jump_over_this_2:
             readcol, setup.batch, batch, format = 'A', comment = '#', /silent
             
             IF n_elements(batch) GT 0 THEN BEGIN
-                FOR f=0ul, batch-1 DO BEGIN
+                FOR f=0ul, n_elements(batch)-1 DO BEGIN
                     dum = where(table.frame[0] EQ batch[f], ct)
                     IF ct EQ 0 THEN CONTINUE
                     table[dum].do_batch = 1
@@ -4423,6 +4449,9 @@ jump_over_this_2:
 ;loop over all objects
         loop = 0l
         print, 'starting B/D fits at '+systime()
+        galfit_string = setup.gal_kill_string
+        if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+        print, 'starting B/D fitting at '+systime()
 
         REPEAT BEGIN
             IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
@@ -4432,6 +4461,10 @@ jump_over_this_2:
                   strtrim(bridge_arr[i]->status(), 2)
             ENDIF
             loop++
+            
+; kill all galfit processes that have been running longer than a certain
+; time.
+            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
             
 loopstart_bd:
 ; only successful single sersic object??
@@ -4481,7 +4514,7 @@ loopstart2_bd:
                 ENDIF
 ; only run the loop when the fit is actually done, everything else
 ; doesn't make sense
-;check if current position is far enough from bridge positions
+; check if current position is far enough from bridge positions
                 filled = where(finite(bridge_pos[0, *]) EQ 1 AND $
                                bridge_use GT 0, ct)
                 ob=0l
@@ -4676,15 +4709,16 @@ loopstart2_bd:
 ;--------------------------- MARCOS SCRIPT
                     
                 ENDELSE
+                wait, 1
 ;switch to next object
             ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
-                wait, 1
+                wait, 3
             ENDELSE
 
-            galfit_string = setup.gal_kill_string
-            if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
-            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
+;            galfit_string = setup.gal_kill_string
+;            if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
+;            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
 
 loopend_bd:
 ;stop when all done and no bridge in use any more

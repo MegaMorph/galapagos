@@ -19,6 +19,7 @@ if not keyword_set(mac) then begin
 
       if h*60+min gt time_limit then print, 'process '+pid+' killed, running too long'
       if h*60+min gt time_limit then spawn, 'kill -9 '+pid
+
   endfor
 endif
 
