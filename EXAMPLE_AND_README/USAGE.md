@@ -1,4 +1,4 @@
-##GALAPAGOS-2 README (v.2.1.1)
+##GALAPAGOS-2 README (v.2.1.2)
 
 Please read this file for details on input format and new features off the code.  
 Especially read this file regarding your image normalisation and how to set up and run galapagos in the most efficient way.  
@@ -644,3 +644,8 @@ For Galapagos, the entire BAND has to be consistent, though.
 - effectively disabled fancy queuing system for B/D fits as these fits are independent anyway (at the moment)  
 This is done by automatically setting the blocking radii to 0, so some unneccessary calculations are still done.
 The code is not as effective as it could be. However, most of the time is still spent on the actual GALFIT fit.
+
+**v2.1.2**  
+- slight change in the selection of postage stamps to create. Which objects are cut has now no influence on rest of the code   
+- The ENTIRE setup is now sopied to a setup folder in the output folder, including sextractor setup files  
+- code now comes with a LICENSE and a top level README
