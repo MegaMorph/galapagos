@@ -517,33 +517,33 @@ hd = headfits(image)
 nx = sxpar(hd, 'NAXIS1')
 ny = sxpar(hd, 'NAXIS2')
 
-; correlate with object list to create a flag that enables cut_stamp
-; to only cut scientific targets
-add_tag, cat, 'cut_list', 0, cat_new
-cat=cat_new
-delvarx, cat_new
-
-IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
-   cat.cut_list = 1
-ENDIF ELSE BEGIN
-   if file_test(setup.srclist) eq 0 then print, 'supplied object file does not exist'
-   if file_test(setup.srclist) eq 0 then stop
-   readcol, setup.srclist, cut_ra, cut_dec, format='F,F', comment='#', /SILENT
-   
-; or is the other way around faster??? NEESSARILY USE FASTER METHOD!
-; Make this dynamic! Usually, in big surveys, srclist would have
-; more objects that a tile, but not always true, e.g. when interested
-; in a very special subsample
-;if n_elements(cat.alpha_j2000/15.) ne 0 then stop
-   if n_elements(cat.alpha_j2000) le n_elements(cut_ra) THEN $
-      srccor, cat.alpha_j2000/15., cat.delta_j2000, cut_ra/15., cut_dec, $
-              setup.srclistrad, cat_i, cut_i, OPTION=1, /SPHERICAL, /SILENT
-   if n_elements(cat.alpha_j2000) gt n_elements(cut_ra) THEN $
-      srccor, cut_ra/15., cut_dec, cat.alpha_j2000/15., cat.delta_j2000, $
-              setup.srclistrad, cut_i, cat_i, OPTION=1, /SPHERICAL, /SILENT
-   
-   if cat_i[0] ne -1 then cat[cat_i].cut_list = 1
-ENDELSE
+;; correlate with object list to create a flag that enables cut_stamp
+;; to only cut scientific targets
+;add_tag, cat, 'cut_list', 0, cat_new
+;cat=cat_new
+;delvarx, cat_new
+;
+;IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
+;   cat.cut_list = 1
+;ENDIF ELSE BEGIN
+;   if file_test(setup.srclist) eq 0 then print, 'supplied object file does not exist'
+;   if file_test(setup.srclist) eq 0 then stop
+;   readcol, setup.srclist, cut_ra, cut_dec, format='F,F', comment='#', /SILENT
+;   
+;; or is the other way around faster??? NEESSARILY USE FASTER METHOD!
+;; Make this dynamic! Usually, in big surveys, srclist would have
+;; more objects that a tile, but not always true, e.g. when interested
+;; in a very special subsample
+;;if n_elements(cat.alpha_j2000/15.) ne 0 then stop
+;   if n_elements(cat.alpha_j2000) le n_elements(cut_ra) THEN $
+;      srccor, cat.alpha_j2000/15., cat.delta_j2000, cut_ra/15., cut_dec, $
+;              setup.srclistrad, cat_i, cut_i, OPTION=1, /SPHERICAL, /SILENT
+;   if n_elements(cat.alpha_j2000) gt n_elements(cut_ra) THEN $
+;      srccor, cut_ra/15., cut_dec, cat.alpha_j2000/15., cat.delta_j2000, $
+;              setup.srclistrad, cut_i, cat_i, OPTION=1, /SPHERICAL, /SILENT
+;   
+;   if cat_i[0] ne -1 then cat[cat_i].cut_list = 1
+;ENDELSE
 
 openw, 1, outparam
 ;loop over objects and calculate postage stamp sizes
@@ -587,16 +587,16 @@ FOR i=0ul, n_elements(cat)-1 DO BEGIN
 ; srclist
 ; in case of an empty catalogue, 0s have to be written out (if the file
 ; doesn't exist, galapapos crases) The check is in the cut_stamps
-    if (cat[i].cut_list eq 1) then begin
+;    if (cat[i].cut_list eq 1) then begin
        printf, 1, cat[i].number, cat[i].x_image, cat[i].y_image, $
                xlo, xhi, ylo, yhi, format = '(I,2(F),4(I))'
-    endif
+;    endif
  ENDFOR
 close, 1
 
 END
 
-PRO cut_stamps, image, param, outpath, pre, post
+PRO cut_stamps, image, param, outpath, pre, post, cut_list
 ;cut postage stamps given an IMAGE (string, including path) and a
 ;PARAM file (string, including path, created by
 ;create_stamp_file). Output postage stamps are written into the
@@ -623,11 +623,14 @@ fill_struct, cat, param
 if cat[0].id ne 0 then begin
 ;  ndigits = fix(alog10(max(cat.id)))+1
    FOR i=0ul, nobj-1 DO BEGIN
-      hextract, im, hd, out, outhd, $
-                cat[i].xlo, cat[i].xhi, cat[i].ylo, cat[i].yhi, /silent
-      num = strtrim(cat[i].id, 2)
+; postage stamp only cut when required.
+       IF cut_list[i] EQ 1 THEN BEGIN
+           hextract, im, hd, out, outhd, $
+             cat[i].xlo, cat[i].xhi, cat[i].ylo, cat[i].yhi, /silent
+           num = strtrim(cat[i].id, 2)
 ;    WHILE strlen(num) LT ndigits DO num = '0'+num
-      writefits, outpath+pre+num+post+'.fits', out, outhd
+           writefits, outpath+pre+num+post+'.fits', out, outhd
+       ENDIF
    ENDFOR
 ENDIF
 END
@@ -2762,6 +2765,12 @@ IF setup.min_dist_block EQ -1 THEN setup.min_dist_block = setup.min_dist/3.
 IF setup.cheb[0] EQ -1 THEN for n=0,n_elements(setup.cheb)-1 do setup.cheb[n] = 0
 ;IF setup.cheb_b[0] EQ -1 THEN for n=0,n_elements(setup.cheb_b)-1 do setup.cheb_b[n] = 0
 ;IF setup.cheb_d[0] EQ -1 THEN for n=0,n_elements(setup.cheb_d)-1 do setup.cheb_d[n] = 0
+
+; check whether executables exist
+
+if file_test(setup.sexexe) ne 1 and setup.dosex eq 1 then message, 'SExtractor executable does not exist'
+if file_test(setup.galexe) ne 1 and (setup.dosky eq 1 or setup.dobd eq 1) then message, 'Galfit executable does not exist'
+
 return
 
 bad_input:
@@ -3512,7 +3521,7 @@ free_lun, lun
 END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
-print, 'THIS IS GALAPAGOS-v2.1.1'
+print, 'THIS IS GALAPAGOS-v2.1.2'
 print, ''
 start=systime(0)
 print, 'start time: '+start
@@ -3543,6 +3552,13 @@ IF NOT file_test(save_folder) THEN $
   spawn, 'mkdir -p '+save_folder
 spawn, 'cp '+setup_file+' '+save_folder
 spawn, 'cp '+setup.files+' '+save_folder
+spawn, 'cp '+setup.sexout+' '+save_folder
+if file_test(setup.cold) then spawn, 'cp '+setup.cold+' '+save_folder
+if file_test(setup.hot) then spawn, 'cp '+setup.hot+' '+save_folder
+if file_test(setup.exclude) then spawn, 'cp '+setup.exclude+' '+save_folder
+if file_test(setup.bad) then spawn, 'cp '+setup.bad+' '+save_folder
+if file_test(setup.srclist) then spawn, 'cp '+setup.srclist+' '+save_folder
+if file_test(setup.bd_srclist) then spawn, 'cp '+setup.bd_srclist+' '+save_folder
 
 IF keyword_set(logfile) THEN $
   start_log, logfile, 'Reading setup file... done!'
@@ -3879,7 +3895,7 @@ IF setup.dosky or setup.dobd  THEN BEGIN
 ; check if psf in setup file is an image or a list and read into
 ; structure used
    print, 'reading PSFs'
-   readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband
+   readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband, save_folder
 
    IF keyword_set(logfile) THEN $
       update_log, logfile, 'Setting up objects list to be fit...'
@@ -4451,7 +4467,6 @@ jump_over_this_2:
         print, 'starting B/D fits at '+systime()
         galfit_string = setup.gal_kill_string
         if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
-        print, 'starting B/D fitting at '+systime()
 
         REPEAT BEGIN
             IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN

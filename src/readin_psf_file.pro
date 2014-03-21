@@ -1,4 +1,4 @@
-pro readin_psf_file, files, sex_ra, sex_dec, images, psf_struct, nband
+pro readin_psf_file, files, sex_ra, sex_dec, images, psf_struct, nband, save_folder
 ; for each band individually:
 ; 4 possibilities (for now)
 ; fits name: sinfilif file[0] eq ' ' then file=file[1:n_elements(file)-1]
@@ -61,6 +61,7 @@ create_struct, psf_struct, 'psfstruct', $
 ; now loop over all bands and read_in
 for b=1,nband do begin
 ; in case the psf given is an actual psf image
+    for f = 1, n_elements(file)-1 do spawn, 'cp '+file[f]+' '+save_folder
     if strmid(file[b], 4,/reverse) eq '.fits' then begin
         print, 'PSF: One single PSF was given, this will be used for the entire survey in this band'
 ;        create_struct, psf_struct, 'single', ['type','psffile'],'A,A',dimen=1
