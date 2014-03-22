@@ -285,7 +285,7 @@ However, as objects are identified with the SExtractor number, changing the orde
 Ideal solution (though requires more disk space [**Again, not neccessary in version 2.1.2 onwards]**):  
 - create postage stamps for ALL objects (no target list used)  
 - then carry out the fits for your target list   
-This way ALL objects can be ‘contributing’ objects.  
+This way ALL objects can be primary objects.  
 As this is how I always ran my codes, I have only just noticed this when I ran it a different way for a very large survey.  
 **(Fixed in galapagos-2.1.2 onwards)**
 
