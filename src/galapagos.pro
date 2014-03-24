@@ -14,7 +14,7 @@
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
 ; Backwards compatible to work with Galfit3 on 1-band data
 ;==============================================================================
-
+test
 FUNCTION required_entries
 return, ['number', 'x_image', 'y_image', 'cxx_image', 'cyy_image', $
          'cxy_image', 'theta_image', 'theta_world', 'ellipticity', $
