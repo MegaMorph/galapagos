@@ -4,7 +4,6 @@ pro readin_psf_file, files, sex_ra, sex_dec, images, psf_struct, nband, save_fol
 ; fits name: sinfilif file[0] eq ' ' then file=file[1:n_elements(file)-1]
 ; 2 columns: tile: one psf per tile, input list has tilename and psf_file
 ; 3 columns: closest: file with RA, DEC, psf_file
-; 5 columns: box: defined boxes in which to use a psf, file with re_min, ra_max, dec_min, dec_max, pwf_file
 
 ; split up input into individual files
 ; then run procedure for each band, putting everything in ONE structure
@@ -48,7 +47,6 @@ try_again1:
         
         if ncol eq 2 then readcol, strtrim(file[b],2), tile, psf, format='A,A', comment='#',/silent
         if ncol eq 3 then readcol, strtrim(file[b],2), ra, dec, psf, comment='#', format='D,D,A',/silent
-        if ncol eq 5 then readcol, strtrim(file[b],2), ra_min, ra_max, dec_min, dec_max, psf, format='D,D,D,D,A', comment='#',/silent   
         if n_elements(psf) gt maxdimen then maxdimen=n_elements(psf)
     ENDELSE
 ENDFOR
@@ -69,8 +67,8 @@ for b=1,nband do begin
     if strmid(file[b], 4,/reverse) eq '.fits' then begin
         print, 'PSF: One single PSF was given, this will be used for the entire survey in this band'
 ;        create_struct, psf_struct, 'single', ['type','psffile'],'A,A',dimen=1
-        psf_struct[0].type[b] = 'single'
-        psf_struct[0].psffile[b] = strtrim(file[b],2)
+        psf_struct.type[b] = 'single'
+        psf_struct.psffile[b,0] = strtrim(file[b],2)
         if file_test(strtrim(file[b],2)) ne 1 then print, 'file '+strtrim(file[b],2)+' does not exist'
         if file_test(strtrim(file[b],2)) ne 1 then stop
     endif else begin
@@ -98,9 +96,9 @@ try_again:
             print, 'You have chosen to use one PSF per input tile, now checking whether all PSFs are defined'
             readcol, strtrim(file[b],2), tile, psf, format='A,A', comment='#',/silent
 ;        create_struct, psf_struct, 'tile', ['type','tile', 'psffile'],'A,A,A',dimen=n_elements(psf)
-            psf_struct[0:n_elements(tile)-1].type[b] = 'tile'
-            psf_struct[0:n_elements(tile)-1].tile[b] = tile
-            psf_struct[0:n_elements(tile)-1].psffile[b] = psf
+            psf_struct.type[b] = 'tile'
+            psf_struct.tile[b,0:n_elements(tile)-1] = tile
+            psf_struct.psffile[b,0:n_elements(tile)-1] = psf
 ; security check for tile that all tiles have a PSF
 ; use images[i] to check whether each tile has a PSF
             check=0
@@ -139,40 +137,6 @@ try_again:
             endfor
         endif
         
-; if 4 columns, choose PSF box-wise
-        if ncol eq 5 then begin
-            print, 'You have chosen to use a PSF per defined box. Now checking whether all areas are covered'
-            readcol, strtrim(file[b],2), ra_min, ra_max, dec_min, dec_max, psf, format='D,D,D,D,A', comment='#',/silent
-;        create_struct, psf_struct, 'box', ['type','ra_min', 'ra_max', 'dec_min', 'dec_max', 'psffile'],'A,D,D,D,D,A',dimen=n_elements(psf)
-            psf_struct[0:n_elements(ra)-1].type = 'box'
-            psf_struct[0:n_elements(ra)-1].ra_min[b] = ra_min
-            psf_struct[0:n_elements(ra)-1].ra_max[b] = ra_max
-            psf_struct[0:n_elements(ra)-1].dec_min[b] = dec_min
-            psf_struct[0:n_elements(ra)-1].dec_max[b] = dec_max
-            psf_struct[0:n_elements(ra)-1].psffile[b] = psf
-; security check for box that all areas are covered
-; use sexcat to check whether all objects lie within one of these boxes
-            check = intarr(n_elements(sex_ra))
-            for i = 0, n_elements(psf_struct.ra_min[b])-1 do begin
-                wh = where(sex_ra ge psf_struct[i].ra_min[b] and sex_ra lt psf_struct[i].ra_max[b] and $
-                           sex_dec ge psf_struct[i].dec_min[b] and sex_dec lt psf_struct[i].dec_max[b],cnt)
-                if cnt ne 0 then check[wh] = check[wh]+1
-            endfor 
-            checkhelp = where(check ge 2, checkn)
-            if checkn ge 1 then begin
-                print, 'some objects have 2 PSFs defined, for these, the closer one will be chosen'
-            endif
-            checkhelp = where(check ne 1, checkn)
-            if checkn eq 0 then print, 'All objects lie within the defined PSF boxes'
-            checkhelp = where(check eq 0, checkn)
-            if checkn ne 0 then begin
-                print, 'WARNING, not all objects lie within the defined boxes, for the ones outside, the closest psf (defined by box-center) will be chosen'
-            endif
-            for p=0,n_elements(psf)-1 do begin
-                if file_test(strtrim(psf[p],2)) ne 1 then print, 'file '+strtrim(psf[p],2)+' (and maybe others) does not exist, is your path in the PSF files set correctly?'
-                if file_test(strtrim(psf[p],2)) ne 1 then stop
-            endfor
-        endif
     endelse
 
 endfor 
