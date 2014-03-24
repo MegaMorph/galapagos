@@ -4178,7 +4178,8 @@ loopstart2:
 ; read in chosen_psf into 'psf', filename in chosen_psf_file   
             choose_psf, table[cur].alpha_j2000, table[cur].delta_j2000, $
               psf_struct, table[cur].frame, chosen_psf_file, nband
-stop        
+            print, cur, chosen_psf_file
+
 ; change seed for random in getsky_loop
             seed=table[cur].number
 ; create sav file for gala_bridge to read in
