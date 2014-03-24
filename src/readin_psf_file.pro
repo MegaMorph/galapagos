@@ -52,11 +52,15 @@ try_again1:
         if n_elements(psf) gt maxdimen then maxdimen=n_elements(psf)
     ENDELSE
 ENDFOR
-create_struct, psf_struct, 'psfstruct', $
-  ['type','tile','ra','dec','ra_min','ra_max','dec_min','dec_max','psffile'], $
-  'A('+strtrim(nband+1,2)+'),A('+strtrim(nband+1,2)+'),D('+strtrim(nband+1,2)+'),' + $
-  'D('+strtrim(nband+1,2)+'),D('+strtrim(nband+1,2)+'),D('+strtrim(nband+1,2)+'),' + $
-  'D('+strtrim(nband+1,2)+'),D('+strtrim(nband+1,2)+'),A('+strtrim(nband+1,2)+')',dimen=maxdimen
+psf_struct = create_struct('type', strarr(nband+1),'tile', strarr(nband+1,maxdimen),'ra',dblarr(nband+1,maxdimen), $
+                           'dec',dblarr(nband+1,maxdimen), 'ra_min',dblarr(nband+1,maxdimen),'ra_max',dblarr(nband+1,maxdimen),'' + $
+                           'dec_min',dblarr(nband+1,maxdimen),'dec_max',dblarr(nband+1,maxdimen), 'psffile', strarr(nband+1,maxdimen))
+
+;create_struct, psf_struct, 'psfstruct', $
+;  ['type','tile','ra','dec','ra_min','ra_max','dec_min','dec_max','psffile'], $
+;  'A('+strtrim(nband+1,2)+'),A('+strtrim(nband+1,2)+'),D('+strtrim(nband+1,2)+'),' + $
+;  'D('+strtrim(nband+1,2)+'),D('+strtrim(nband+1,2)+'),D('+strtrim(nband+1,2)+'),' + $
+;  'D('+strtrim(nband+1,2)+'),D('+strtrim(nband+1,2)+'),A('+strtrim(nband+1,2)+')',dimen=maxdimen
 
 ; now loop over all bands and read_in
 for b=1,nband do begin
@@ -124,10 +128,10 @@ try_again:
             print, 'You have chosen to use a series of PSFs and the closest PSF to an object is chosen'
             readcol, strtrim(file[b],2), ra, dec, psf, comment='#', format='D,D,A',/silent
 ;        create_struct, psf_struct, 'closest', ['type','ra', 'dec', 'psffile'],'A,D,D,A',dimen=n_elements(psf)
-            psf_struct[0:n_elements(ra)-1].type[b] = 'closest'
-            psf_struct[0:n_elements(ra)-1].ra[b] = ra
-            psf_struct[0:n_elements(ra)-1].dec[b] = dec
-            psf_struct[0:n_elements(ra)-1].psffile[b] = psf        
+            psf_struct.type[b] = 'closest'
+            psf_struct.ra[b,0:n_elements(ra)-1] = ra
+            psf_struct.dec[b,0:n_elements(ra)-1] = dec
+            psf_struct.psffile[b,0:n_elements(ra)-1] = psf        
 ;         print, n_elements(ra)
             for p=0,n_elements(psf)-1 do begin
                 if file_test(strtrim(psf[p],2)) ne 1 then print, 'file '+strtrim(psf[p],2)+' (and maybe others) does not exist, is your path in the PSF files set correctly?'

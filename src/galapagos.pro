@@ -14,7 +14,6 @@
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
 ; Backwards compatible to work with Galfit3 on 1-band data
 ;==============================================================================
-test
 FUNCTION required_entries
 return, ['number', 'x_image', 'y_image', 'cxx_image', 'cyy_image', $
          'cxy_image', 'theta_image', 'theta_world', 'ellipticity', $
@@ -4179,7 +4178,7 @@ loopstart2:
 ; read in chosen_psf into 'psf', filename in chosen_psf_file   
             choose_psf, table[cur].alpha_j2000, table[cur].delta_j2000, $
               psf_struct, table[cur].frame, chosen_psf_file, nband
-            
+stop        
 ; change seed for random in getsky_loop
             seed=table[cur].number
 ; create sav file for gala_bridge to read in
