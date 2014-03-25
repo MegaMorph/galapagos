@@ -51,8 +51,7 @@ try_again1:
     ENDELSE
 ENDFOR
 psf_struct = create_struct('type', strarr(nband+1),'tile', strarr(nband+1,maxdimen),'ra',dblarr(nband+1,maxdimen), $
-                           'dec',dblarr(nband+1,maxdimen), 'ra_min',dblarr(nband+1,maxdimen),'ra_max',dblarr(nband+1,maxdimen),'' + $
-                           'dec_min',dblarr(nband+1,maxdimen),'dec_max',dblarr(nband+1,maxdimen), 'psffile', strarr(nband+1,maxdimen))
+                           'dec',dblarr(nband+1,maxdimen), 'psffile', strarr(nband+1,maxdimen))
 
 ;create_struct, psf_struct, 'psfstruct', $
 ;  ['type','tile','ra','dec','ra_min','ra_max','dec_min','dec_max','psffile'], $
