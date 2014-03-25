@@ -22,6 +22,11 @@ pro choose_psf, obj_ra, obj_dec, psf_struct, tile, chosen_psf_file, nband
           gcirc, 1, psf_struct.ra[q,valid]/15., psf_struct.dec[q,valid], obj_ra/15., obj_dec, dist
           ord = sort(dist)
           chosen_psf_file[q] = strtrim(psf_struct.psffile[q,valid[ord[0]]],2)
+;          chosen_psf_file[q] = strtrim(psf_struct.psffile[q,0],2)
+
+;          valid = where(strtrim(psf_struct.psffile[q,*],2) ne '')
+;          srccor, obj_ra/15., obj_dec,  psf_struct.ra[q,valid]/15., psf_struct.dec[q,valid],1, ob_i, psf_i, OPTION=2, /SPHERICAL, /SILENT
+;          chosen_psf_file[q] = strtrim(psf_struct.psffile[q,valid[psf_i]],2)
       endif
       
   ENDFOR

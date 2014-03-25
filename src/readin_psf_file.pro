@@ -53,12 +53,6 @@ ENDFOR
 psf_struct = create_struct('type', strarr(nband+1),'tile', strarr(nband+1,maxdimen),'ra',dblarr(nband+1,maxdimen), $
                            'dec',dblarr(nband+1,maxdimen), 'psffile', strarr(nband+1,maxdimen))
 
-;create_struct, psf_struct, 'psfstruct', $
-;  ['type','tile','ra','dec','ra_min','ra_max','dec_min','dec_max','psffile'], $
-;  'A('+strtrim(nband+1,2)+'),A('+strtrim(nband+1,2)+'),D('+strtrim(nband+1,2)+'),' + $
-;  'D('+strtrim(nband+1,2)+'),D('+strtrim(nband+1,2)+'),D('+strtrim(nband+1,2)+'),' + $
-;  'D('+strtrim(nband+1,2)+'),D('+strtrim(nband+1,2)+'),A('+strtrim(nband+1,2)+')',dimen=maxdimen
-
 ; now loop over all bands and read_in
 for b=1,nband do begin
 ; in case the psf given is an actual psf image
