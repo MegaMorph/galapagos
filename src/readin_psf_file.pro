@@ -59,7 +59,6 @@ for b=1,nband do begin
     for f = 1, n_elements(file)-1 do spawn, 'cp '+file[f]+' '+save_folder
     if strmid(file[b], 4,/reverse) eq '.fits' then begin
         print, 'PSF: One single PSF was given, this will be used for the entire survey in this band'
-;        create_struct, psf_struct, 'single', ['type','psffile'],'A,A',dimen=1
         psf_struct.type[b] = 'single'
         psf_struct.psffile[b,0] = strtrim(file[b],2)
         if file_test(strtrim(file[b],2)) ne 1 then print, 'file '+strtrim(file[b],2)+' does not exist'
@@ -88,7 +87,6 @@ try_again:
         if ncol eq 2 then begin
             print, 'You have chosen to use one PSF per input tile, now checking whether all PSFs are defined'
             readcol, strtrim(file[b],2), tile, psf, format='A,A', comment='#',/silent
-;        create_struct, psf_struct, 'tile', ['type','tile', 'psffile'],'A,A,A',dimen=n_elements(psf)
             psf_struct.type[b] = 'tile'
             psf_struct.tile[b,0:n_elements(tile)-1] = tile
             psf_struct.psffile[b,0:n_elements(tile)-1] = psf
@@ -118,7 +116,6 @@ try_again:
         if ncol eq 3 then begin
             print, 'You have chosen to use a series of PSFs and the closest PSF to an object is chosen'
             readcol, strtrim(file[b],2), ra, dec, psf, comment='#', format='D,D,A',/silent
-;        create_struct, psf_struct, 'closest', ['type','ra', 'dec', 'psffile'],'A,D,D,A',dimen=n_elements(psf)
             psf_struct.type[b] = 'closest'
             psf_struct.ra[b,0:n_elements(ra)-1] = ra
             psf_struct.dec[b,0:n_elements(ra)-1] = dec
