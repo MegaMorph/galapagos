@@ -1,4 +1,4 @@
-##GALAPAGOS-2 README (v.2.1.2)
+##GALAPAGOS-2 README (v.2.1.3)
 
 Please read this file for details on input format and new features off the code.  
 Especially read this file regarding your image normalisation and how to set up and run galapagos in the most efficient way.  
@@ -649,3 +649,6 @@ The code is not as effective as it could be. However, most of the time is still 
 - slight change in the selection of postage stamps to create. Which objects are cut has now no influence on rest of the code   
 - The ENTIRE setup is now sopied to a setup folder in the output folder, including sextractor setup files  
 - code now comes with a LICENSE and a top level README
+
+**v2.1.3**  
+- replaced routine create_struct with function create_struct. Does not need compilation and should be better for running in IDL runtime mode
