@@ -3520,7 +3520,9 @@ free_lun, lun
 END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
-print, 'THIS IS GALAPAGOS-v2.1.3 (March 26th, 2014)'
+galapagos_version = 'GALAPAGOS-v2.1.3'
+galapagos_date = '(March 26th, 2014)'
+print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
 print, ''
 start=systime(0)
 print, 'start time: '+start
@@ -4917,6 +4919,16 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
       IF ct EQ 0 THEN message, 'No objects in output catalogue left' $
       ELSE out = out[good]
    ENDIF 
+
+; write galapagos and galfit version into catalogue
+   stop
+
+
+   add_tag, out, 'galapagos_version', galapagos_version, out2
+   out = out2
+   out2 = reorder_tags(out, ['galapagos_version'])
+   out = out2
+
    mwrfits, out, setup.outdir+setup.cat, /silent, /create
 ENDIF
 d = check_math()
