@@ -4921,14 +4921,10 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
    ENDIF 
 
 ; write galapagos and galfit version into catalogue
-   stop
-
-
    add_tag, out, 'galapagos_version', galapagos_version, out2
    out = out2
    out2 = reorder_tags(out, ['galapagos_version'])
    out = out2
-
    mwrfits, out, setup.outdir+setup.cat, /silent, /create
 ENDIF
 d = check_math()
