@@ -3520,7 +3520,7 @@ free_lun, lun
 END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
-print, 'THIS IS GALAPAGOS-v2.1.2'
+print, 'THIS IS GALAPAGOS-v2.1.3'
 print, ''
 start=systime(0)
 print, 'start time: '+start
@@ -4178,7 +4178,6 @@ loopstart2:
 ; read in chosen_psf into 'psf', filename in chosen_psf_file   
             choose_psf, table[cur].alpha_j2000, table[cur].delta_j2000, $
               psf_struct, table[cur].frame, chosen_psf_file, nband
-            print, cur, chosen_psf_file
 
 ; change seed for random in getsky_loop
             seed=table[cur].number
