@@ -3520,7 +3520,7 @@ free_lun, lun
 END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
-print, 'THIS IS GALAPAGOS-v2.1.3'
+print, 'THIS IS GALAPAGOS-v2.1.3 (March 26th, 2014)'
 print, ''
 start=systime(0)
 print, 'start time: '+start
