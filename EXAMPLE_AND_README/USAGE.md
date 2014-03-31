@@ -647,7 +647,7 @@ The code is not as effective as it could be. However, most of the time is still 
 
 **v2.1.2**  
 - slight change in the selection of postage stamps to create. Which objects are cut has now no influence on rest of the code   
-- The ENTIRE setup is now sopied to a setup folder in the output folder, including sextractor setup files  
+- The ENTIRE setup is now copied to a setup folder in the output folder, including sextractor setup files  
 - code now comes with a LICENSE and a top level README
 
 **v2.1.3**  
