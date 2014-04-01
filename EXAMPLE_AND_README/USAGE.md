@@ -216,6 +216,21 @@ E.g. see  http://users.obs.carnegiescience.edu/peng/work/galfit/CHI2.html
 SIGMA maps have to be created externally by the user. Galapagos-2 only cuts them and passes them on to Galfit/GalfitM. It does NOT tamper with them.
 While some users might prefer other handling, this is overall the most flexible.
 
+(From private communication)
+SIGMA images can be created from an RMS and the image itself, similar to the following way.
+The trick here is to normalize images properly and adding the poisson noise of the objects themselves on top of the RMS images. This can be done in approximation using:
+
+    sigma = sqrt{rms^2 + ( sqrt[abs(img)/EXTIME*2.5] )^2}    (sqrt of absolute image values and rms are added in quadrature)
+
+'img' in this case is normalized to 1 second (which is not preferred by Galapagos/Galfit, but easier to explain here! If you have your image normalized to please adapt accordingly!)
+
+If the wht and rms image are correct (i.e., taking the pixel scale and gain into account) then the correct formula to add Poisson noise is rms_total ^ 2 = rms^2 + (sci / exp)^2.  
+Here, sci is the science mosaic, and exp the exposure time mosaic. 
+
+In this context it is important that exp is normalized to the right pixel scale!  
+Usually, an exposure time map gives the actual number of seconds that the drizzled image has been exposed, but this doesn't correspond to the number of photons it has seen.  
+For this to be correct one needs to multiply exp by the change in pixel area when drizzling. To put it simply, conserve the total number of photons in the mosaic. 
+
  ---
 #####===========SEXTRACTOR SETUP===========
 **Introduced new setup parameter** to be able to use rms weighting in the SExtractor step.  
@@ -542,7 +557,7 @@ I have so far only tried Xvfb for this purpose. As has been reported, some users
 
     or using fits copy (part of cfitsio which comes with Chien Pengs galfit package which most of you will have anyway, but which also can be downloaded and installed manually)
     ./fitscopy large_tile.fits[0:2000,0:2000] image_1_1.fits    (or similar)
-       	
+           
   I cut my images into 2000x2000 tiles with 500 pixels overlap. The overlap should be defined by the size of the largest object in the survey
 
 3. Set up your masks/weights/rms/SIGMA images  
