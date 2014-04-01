@@ -6,7 +6,7 @@ This is the multi-band Galapagos version.
 
 See [here](http://astro-staff.uibk.ac.at/~m.barden/galapagos/) for details of the original version, described in this paper: [Barden, Häußler et al, 2012, MNRAS,422,449](http://adsabs.harvard.edu/abs/2012MNRAS.422..449B)
 
-The MegaMorph project (specifically Bamford, Häußler and Vika) has added many new features to this code: (selection)
+The MegaMorph project (specifically Häußler, Bamford and Vika) has added many new features to this code: (selection)
 - Galapagos can now use multi-band data simultaneously  
 - Galapagos can now do Bulge-Disk decomposition  
 - Galapagos can now deal with more than one PSF for a survey, making it more usable for ground-based surveys  
