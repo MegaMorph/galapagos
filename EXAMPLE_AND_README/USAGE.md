@@ -53,11 +53,14 @@ Some procedures (e.g. mrd_struct.pro) have changed in the astrolib and some even
 Galapagos requires particular versions of all files (e.g. because it uses additional parameters that don’t exist in all versions), so please make sure your IDL uses the files provided in all cases.  
 THESE are the tested procedures and using other ones can and will cause problems. Related to this: If you find a script is missing in the galapagos distribution, please let us know. We would like the Galapagos-2 package to be as complete as possible
 
-2) Make sure your images are calibrated correctly! Galfit/GalfitM, when creating an internal sigma map for the fitting, required images to be in COUNTS, not counts/sec! When using your own sigma map, this is not important, but Galapagos does not (yet) allow this. (see tip 3!)
+2) Make sure your images are calibrated correctly! Galfit/GalfitM, when creating an internal sigma map for the fitting, required images to be in COUNTS, not counts/sec! When using your own sigma map, this is not important, but Galapagos does not (yet) allow this. (see tip 3!)  
 
-3) Please read http://users.obs.carnegiescience.edu/peng/work/galfit/TOP10.html  for top 10 tips for galfit, most of which are also true for Galapagos-2, e.g. image calibration,…
+3) All images for GalfitM must contain some data. GalfitM will crash (segfault) when one of the images in entirely blank or entirely masked out. Hence, Galapagos-2 will only work where ti can cut these postages stamps accordingly, e.g. NOT where one filter has a huge gap while others do not.  
+If you have such a dataset, I would recommend 2 independent runs, e.g. one where all data is available, one in which only a subset of filters are available (e.g. when your different wavelength images have different sky coverage).
 
-4) Please make sure you can actually RUN Galapagos/Galapagos-2 on your computer. E.g. IDL (at least v6.4, I think) has to be installed properly, including (and especially) IDL\_IDLBRIDGE  
+4) Please read http://users.obs.carnegiescience.edu/peng/work/galfit/TOP10.html  for top 10 tips for galfit, most of which are also true for Galapagos-2, e.g. image calibration,…
+
+5) Please make sure you can actually RUN Galapagos/Galapagos-2 on your computer. E.g. IDL (at least v6.4, I think) has to be installed properly, including (and especially) IDL\_IDLBRIDGE  
 (the error message  
 % Attempt to call undefined method: 'IDL\_IDLBRIDGE::ExecuteTimer'  
 seems to be connected to this)  
@@ -73,7 +76,7 @@ If this worked, delete it and run:
 If the file pops up in your home directory again, then your bridge is installed correctly and you're ready to go.  
 If not, it seems your IDL installation does not support the IDL\_BRIDGE. Ask your IT department to fix this.
 
-5) Please make sure you use an appropriate number for D18. It is explained below, how to find and set this number.
+6) Please make sure you use an appropriate number for D18. It is explained below, how to find and set this number.
 
 #### C)  SETUP AND EXAMPLE SETUP FILE
  
@@ -197,6 +200,8 @@ IMAGES (more on this, see GALFIT webpage):
 If no sigma map is given, Galfit/GalfitM creates it’s own sigma map internally. In this case the image normalisation is very important.  
 Galfit/GalfitM then prefers images in COUNTS (NOT counts/sec), and the GAIN header keyword set correctly.   
 Only then are Galfit’s assumptions true and only then will the sigma map that it creates internally be correct.
+
+ALL images for GalfitM must contain some data. GalfitM will crash (segfault) when one of the images in entirely blank or entirely masked out (as it can not create a sigma map. Not sure whether it works when you feed one in). Hence, Galapagos-2 will only work where ti can cut these postages stamps accordingly, e.g. NOT where one filter has a huge gap while others do not.  
 
 WEIGHTS (more on this, also see SExtractor manual):  
 The weight images used in Galapagos-2 serve 2 purposes: Object detection (for the normalisation here see SExtractor manual) and masking.  
