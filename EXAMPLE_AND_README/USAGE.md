@@ -205,7 +205,7 @@ ALL images for GalfitM must contain some data. GalfitM will crash (segfault) whe
 
 WEIGHTS (more on this, also see SExtractor manual):  
 The weight images used in Galapagos-2 serve 2 purposes: Object detection (for the normalisation here see SExtractor manual) and masking.  
-For the purpose of masking, set all pixels to be ignored == 0. This way, Galapagos-2 will create MASK maps to be handed over to GalfitM which will mask out these regions (Galfit/GalfitM will NOT see them).  
+For the purpose of masking, set all pixels to be ignored == 0. This way, Galapagos-2 will create MASK maps to be handed over to GalfitM which will mask out these regions (Galfit/GalfitM will NOT see them). As of this, all areas where a band has no data, not only the image would be 0, but the mask should be set to 0 as well!! If this area is NOT masked, the image containing 0s will be handed over to Galfit for a fit, which obviously would create garbage.   
 All pixels equals 0 will be masked, all other pixels will NOT be masked.
 From the SExtractor manual:  
 _The FITS image specified by the WEIGHT IMAGE file name must contain a weight-map in units of relative weights. The data are converted to variance units (by definition variance ∝ 1/weight), and scaled as for MAP VAR. MAP WEIGHT is the most commonly used type of weight-map: a flat-field, for example, is generally a good approximation to a perfect weight-map._  
