@@ -4901,29 +4901,31 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
    ENDIF
    
    print,' '
+   read = 0
    FOR i=0ul, ntab-1 DO BEGIN
 ;      statusline, 'reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
-      print, 'reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
-      objnum = round_digit(tab[i].number, 0, /str)
-      
-      idx = where(tab[i].tile EQ orgim[*,0])
-      out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
-      
-      obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
-      sky_file = strarr(nband+1)
-      for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
-      
+       read += 1
+       print, 'reading results for object No.'+strtrim(i+1,2)+' of '+strtrim(ntab,2)+' ('+strtrim(read,2)+' already read)'
+       objnum = round_digit(tab[i].number, 0, /str)
+       
+       idx = where(tab[i].tile EQ orgim[*,0])
+       out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
+       
+       obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
+       sky_file = strarr(nband+1)
+       for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+       
 ; read in single sersic again
-      update_table, out, i, out_file, obj_file, sky_file, nband, setup, /final
-
+       update_table, out, i, out_file, obj_file, sky_file, nband, setup, /final
+       
 ; read in B/D again
-      if setup.docombinebd then begin
-         out_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.galfit_out)[0]
-         obj_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
-         update_table, out, i, out_file_bd, obj_file_bd, sky_file, nband, setup, /bd, /final
-         out[i].org_image_band = orgim[idx[0],1:nband]
-      ENDIF
-      
+       if setup.docombinebd then begin
+           out_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.galfit_out)[0]
+           obj_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
+           update_table, out, i, out_file_bd, obj_file_bd, sky_file, nband, setup, /bd, /final
+           out[i].org_image_band = orgim[idx[0],1:nband]
+       ENDIF
+       
    ENDFOR
    print, ' '
    
