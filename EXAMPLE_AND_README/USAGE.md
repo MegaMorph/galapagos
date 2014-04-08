@@ -323,7 +323,7 @@ The file ‘batch1’ (and similar) simply contains image names (SExtractor file
 By using different batch files, it is possible to run several machines and many cores on the same dataset but splitting up the survey into several areas
 (See example on how to run Galapagos-2 on a large survey at the bottom of this file).
 
-    E04) /path/to/psf_r,/path/to/psf_u,/path/to/psf_g,/path/to/psf_i,/path/to/psf_z   # PSF filename including path (ensure same order as in A00)
+    E04) /path/to/psf_r,/path/to/psf_u,/path/to/psf_g,/path/to/psf_i,/path/to/psf_z   # PSF filename including path (ensure same order as in A00)  
 Original Galapagos allowed ONE file at this point, e.g. it uses the SAME PSF for the entire survey.
 This is unfeasible for  
 a) most ground-based surveys (with changing PSF over the field)  
@@ -347,7 +347,9 @@ For any object in the survey, the CLOSEST PSF in the list is used (my preferred 
 
 I would suggest version 2b) for most surveys, but every BAND (!) can use it’s own method, e.g. when using data from different surveys with different requirements. It SHOULD be able to use different setups in different bands, but this has not been well tested!  
 PSFs have to be created by the user beforehand, Galapagos-2 does NOT do this on-the-fly (at least yet).  
-PSFs can be created by PSFEx, for example.
+PSFs can be created by PSFEx, for example.  
+
+PSFs MUST be given in the same order as the bands are given in A00) (exlcuding SExtractor), e.g. first the MAIN band, then the other bands in the same order.  
 
     E11) 400      # constraint max Re
 as information: as minimum radius 0.3 pixels is used in the code as we do not expect smaller galaxies to be fitted well. If afterwards you only believe a larger radius, please cut out in the output catalogue. The minimum size was introduced as — at very small radii — the fit iterations can take very long, due to oversampling issues (please read Barden et al. 2012 for details)
