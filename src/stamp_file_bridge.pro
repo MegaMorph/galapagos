@@ -20,12 +20,9 @@ PRO stamp_file_bridge, filein
       if file_test(setup.srclist) eq 0 then stop
       readcol, setup.srclist, cut_ra, cut_dec, format='F,F', comment='#', /SILENT
 ; correlate to sextractor list of this tile
-      if n_elements(cat.alpha_j2000) le n_elements(cut_ra) THEN $
-        srccor, cat.alpha_j2000/15., cat.delta_j2000, cut_ra/15., cut_dec, $
-        setup.srclistrad, cat_i, cut_i, OPTION=1, /SPHERICAL, /SILENT
-      if n_elements(cat.alpha_j2000) gt n_elements(cut_ra) THEN $
-        srccor, cut_ra/15., cut_dec, cat.alpha_j2000/15., cat.delta_j2000, $
-        setup.srclistrad, cut_i, cat_i, OPTION=1, /SPHERICAL, /SILENT
+
+      srccor, cat.alpha_j2000/15., cat.delta_j2000, cut_ra/15., cut_dec, $
+        setup.srclistrad, cat_i, cut_i, OPTION=0, /SPHERICAL, /SILENT
       if cat_i[0] ne -1 then cut_list[cat_i] = 1
   ENDELSE
   

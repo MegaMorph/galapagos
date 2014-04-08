@@ -3950,8 +3950,8 @@ IF setup.dosky or setup.dobd  THEN BEGIN
            print, 'correlating SExtractor catalogue to source list. Might take some time'
            readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT   
          
-           srccor, do_ra/15., do_dec, table.alpha_j2000/15., table.delta_j2000, $
-             setup.srclistrad, do_i, tab_i, OPTION=1, /SPHERICAL, /SILENT
+           srccor, table.alpha_j2000/15., table.delta_j2000, do_ra/15., do_dec, $
+             setup.srclistrad, tab_i, do_i, OPTION=0, /SPHERICAL, /SILENT
            
 ; print indices in to file to be read in next time (much faster)
 ; This has to be done here and not when cutting the postage stamps,
@@ -4391,8 +4391,8 @@ jump_over_this_2:
            print, 'correlating SExtractor catalogue to source list for B/D. Might take some time'
            readcol, setup.bd_srclist, do_ra, do_dec, format='F,F', comment='#', /silent
            
-           srccor, do_ra/15., do_dec, table.alpha_j2000/15., table.delta_j2000, $
-             setup.bd_srclistrad, do_i, tab_i, OPTION=1, /SPHERICAL, /SILENT
+           srccor, table.alpha_j2000/15., table.delta_j2000, do_ra/15., do_dec, $
+             setup.srclistrad, tab_i, do_i, OPTION=0, /SPHERICAL, /SILENT
            
 ; print indices in to file to be read in next time (much faster)
 ; This has to be done here and not when cutting the postage stamps,
