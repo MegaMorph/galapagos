@@ -4162,7 +4162,7 @@ loopstart2:
             bridge_obj[free[0]] = cur
             bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
             table[cur].flag_galfit = 1
-            if n_elements(where(table.flag_galfit)) mod 10 eq 0 then print, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(where(table.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
+            if n_elements(where(table.flag_galfit)) mod 10 eq 0 then print, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(where(table.do_list EQ 1 AND table.do_batch eq 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
 ;            if n_elements(where(table.flag_galfit)) mod 10 eq 0 then statusline, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(where(table.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
 ;              print, obj_file
             if keyword_set(plot) then begin
@@ -4636,7 +4636,7 @@ loopstart2_bd:
                 table[cur].flag_galfit_bd = 1
                 if n_elements(where(table.flag_galfit_bd)) mod 10 eq 0 then $
                   print, systime()+': starting B/D on object No. '+strtrim(n_elements(where(table.flag_galfit_bd ge 1)),2)+' of ' $
-                  +strtrim(n_elements(where(table.do_list_bd EQ 1 and table.mag_galfit_band[0] gt 0 $
+                  +strtrim(n_elements(where(table.do_list_bd EQ 1 AND table.do_batch eq 1 and table.mag_galfit_band[0] gt 0 $
                                             AND table.mag_galfit_band[0] lt setup.bd_maglim)),2)+ $
                   ' (of '+strtrim(n_elements(table),2)+' objects detected)   '
                 if keyword_set(plot) then begin
