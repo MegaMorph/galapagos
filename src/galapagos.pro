@@ -3575,6 +3575,7 @@ ENDIF
 ;==============================================================================
 ;read in the setup file
 read_setup, setup_file, setup
+print, 'using batch file '+setup.batch
 
 ;copy setup file to output folder for future reference
 date=systime(0)
