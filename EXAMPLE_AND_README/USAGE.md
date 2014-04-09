@@ -333,6 +333,7 @@ Instead, Galapagos-2 has 4 different ways to define PSFs
 1) one CAN define individual PSF images for each band here (separated by ',') if one wants to use the PSF for the entire area  (possible e.g. for HST surveys with very stable PSF). These images have to be fits files. '.fits' in the filname is how galapagos sets this feature.   
 2) one can define (ascii) PSF lists here, which contain information about the PSFs and where they should be used.  
 This can be done in 3 ways (the code decides from the number of columns in these files which way is used.  
+For this to work, make sure you use SPACES to separate the columns, not TABS or similar!
 2a) 2 columns: 1 PSF per input image
   
     format: tile_name psf_file
