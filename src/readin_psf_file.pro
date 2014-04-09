@@ -19,6 +19,14 @@ file=[file,files]
 if n_elements(file) ne nband+1 then print, 'wrong number of PSFs given in setup file'
 if n_elements(file) ne nband+1 then stop
 
+; check whether all files exist
+FOR b=1,nband DO BEGIN
+    if file_test(file[b]) eq 0 then begin
+        print, 'PSF input file '+file[b]+' not found'
+        stop
+    ENDIF
+ENDFOR
+
 ;create array, then go through individual bands and fill the structure
 ; GET MAXIUMUM NUMBERS OF ENTRIES FIRST!!!
 maxdimen=0
