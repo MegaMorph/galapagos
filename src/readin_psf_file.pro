@@ -53,6 +53,12 @@ try_again1:
         columns = strsplit(line, ' ', COUNT=ncol)      
         close,1
         
+        if ncol ne 2 or ncol ne 3 then begin
+            print, 'something wrong in your input lists. I can not count 2 or 3 columns'
+            print, 'are you sure the spaces i the list are spaces and not e.g. TABS?'
+            stop
+        endif
+        
         if ncol eq 2 then readcol, strtrim(file[b],2), tile, psf, format='A,A', comment='#',/silent
         if ncol eq 3 then readcol, strtrim(file[b],2), ra, dec, psf, comment='#', format='D,D,A',/silent
         if n_elements(psf) gt maxdimen then maxdimen=n_elements(psf)
