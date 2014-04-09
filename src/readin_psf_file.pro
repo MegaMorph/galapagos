@@ -53,7 +53,7 @@ try_again1:
         columns = strsplit(line, ' ', COUNT=ncol)      
         close,1
         
-        if ncol ne 2 or ncol ne 3 then begin
+        if NOT (ncol eq 2 or ncol eq 3) then begin
             print, 'something wrong in your input lists. I can not count 2 or 3 columns'
             print, 'are you sure the spaces i the list are spaces and not e.g. TABS?'
             stop
