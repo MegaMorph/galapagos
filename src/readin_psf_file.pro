@@ -19,6 +19,14 @@ file=[file,files]
 if n_elements(file) ne nband+1 then print, 'wrong number of PSFs given in setup file'
 if n_elements(file) ne nband+1 then stop
 
+; check whether all files exist
+FOR b=1,nband DO BEGIN
+    if file_test(file[b]) eq 0 then begin
+        print, 'PSF input file '+file[b]+' not found'
+        stop
+    ENDIF
+ENDFOR
+
 ;create array, then go through individual bands and fill the structure
 ; GET MAXIUMUM NUMBERS OF ENTRIES FIRST!!!
 maxdimen=0
@@ -44,6 +52,12 @@ try_again1:
 ; get columns and number of columns, separated by ' '      
         columns = strsplit(line, ' ', COUNT=ncol)      
         close,1
+        
+        if NOT (ncol eq 2 or ncol eq 3) then begin
+            print, 'something wrong in your input lists. I can not count 2 or 3 columns'
+            print, 'are you sure the spaces i the list are spaces and not e.g. TABS?'
+            stop
+        endif
         
         if ncol eq 2 then readcol, strtrim(file[b],2), tile, psf, format='A,A', comment='#',/silent
         if ncol eq 3 then readcol, strtrim(file[b],2), ra, dec, psf, comment='#', format='D,D,A',/silent
