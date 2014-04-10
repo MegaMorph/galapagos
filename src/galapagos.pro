@@ -4904,14 +4904,14 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
    print,' '
    read = 0
    FOR i=0ul, ntab-1 DO BEGIN
-;      statusline, 'reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
-       read += 1
-       print, 'reading results for object No.'+strtrim(i+1,2)+' of '+strtrim(ntab,2)+' ('+strtrim(read,2)+' already read)'
        objnum = round_digit(tab[i].number, 0, /str)
-       
        idx = where(tab[i].tile EQ orgim[*,0])
-       out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
-       
+       out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0] 
+
+       if file_test(out_file+'.fits') then read += 1
+       print, 'reading results for object No.'+strtrim(i+1,2)+' of '+strtrim(ntab,2)+' ('+strtrim(read,2)+' already read)' 
+;      statusline, 'reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
+     
        obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
        sky_file = strarr(nband+1)
        for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
