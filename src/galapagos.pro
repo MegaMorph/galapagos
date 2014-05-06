@@ -3460,7 +3460,7 @@ for j=0,n_elements(name_res)-1 do begin
 ENDFOR
 
 ; set galfit_flag
-if not keyword_set(bd) then table[i].flag_galfit = res.flag_galfit    
+if not keyword_set(bd) then table[i].flag_galfit = res.flag_galfit
 if keyword_set(bd) then table[i].flag_galfit_bd = res.flag_galfit_bd    
 
 ; deal with crashed objects
@@ -3472,11 +3472,17 @@ if not file_test(out_file+'.fits') then begin
 ; object has not yet been started.
       if not keyword_set(bd) then table[i].flag_galfit = 0
       if keyword_set(bd) then table[i].flag_galfit_bd = 0
-   endif else begin
+  endif else begin
 ; object has been started and crashed (or is currently doing sky determination)
-      if not keyword_set(bd) then table[i].flag_galfit = 1
-      if keyword_set(bd) then table[i].flag_galfit_bd = 1
-
+      if not keyword_set(bd) then begin
+          table[i].flag_galfit = 1
+          table[i].initfile = obj_file
+      endif
+      if keyword_set(bd) then begin
+          table[i].flag_galfit_bd = 1
+          table[i].initfile_bd = obj_file
+      endif
+      
 ;; read all sky files (for the case that the fit crashed and the output
 ;; file does not exist. Useful to find systematic crashes with sky value)
 ;      if not keyword_set(bd) then begin
@@ -3496,8 +3502,7 @@ if not file_test(out_file+'.fits') then begin
 ;            endif
 ;         endfor
 ;     ENDIF
-
-   ENDELSE
+  ENDELSE
 ENDIF ELSE BEGIN
 ; IN B/D THIS BIT WILL BE DONE IN EACH READIN, BUT RESULT IS EQUIVALENT
    if keyword_set(final) then begin
