@@ -4969,6 +4969,7 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
 ENDIF
 d = check_math()
 
+print, 'done with batch file '+setup.batch
 print, 'Start: '+start
 print, 'End  : '+systime(0)
 END
