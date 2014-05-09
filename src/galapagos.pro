@@ -4311,6 +4311,7 @@ loopend:
             bridge_pos[*, remain[i]]= [!values.F_NAN, !values.F_NAN]            
         ENDFOR
     ENDIF
+print, 'done fitting single sersic with batch file '+setup.batch
 ENDIF
 
 ;==============================================================================
@@ -4870,6 +4871,7 @@ loopend_bd:
         gala_bd_bridge_hpc, table, setup
 
     ENDIF
+print, 'done fitting with batch file '+setup.batch
 ENDIF
 
 ;==============================================================================
