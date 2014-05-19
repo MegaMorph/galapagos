@@ -4017,7 +4017,7 @@ IF setup.dosky THEN BEGIN
     FOR i=0, setup.max_proc-1 DO BEGIN
        bridge_arr[i]->execute, 'astrolib'
        bridge_arr[i]->execute, '.r '+gala_pro
-       bridge_arr[i]->execute, '.r gala_bd_bridge'
+       bridge_arr[i]->execute, '.r gala_bridge'
     ENDFOR
     
     if keyword_set(plot) then begin
