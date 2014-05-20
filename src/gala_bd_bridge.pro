@@ -62,6 +62,7 @@
 ;   constr_file, constr_file_bd, no_fit=no_fit
 PRO gala_bd_bridge, filein
 restore, filein
+
 ;obj_fitstab_file = out_file_bd+'.fits'
 in_file = out_file+'.fits'
 
@@ -330,9 +331,9 @@ in_file = out_file+'.fits'
            ELSE spawn, setup.galexe+' '+obj_file_bd
            wait, 1
        ENDIF
+       spawn, 'rm '+galfit_path+'/galfit.[0123456789]*'
+       spawn, 'rm ~/galfit.[0123456789]*'
    ENDIF
-   spawn, 'rm '+galfit_path+'/galfit.[0123456789]*'
-   spawn, 'rm ~/galfit.[0123456789]*'
    file_delete, filein
 
 END

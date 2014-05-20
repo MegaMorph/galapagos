@@ -15,7 +15,6 @@ PRO gala_bd_bridge_hpc, data_table, setup
        IF (data_table[i].do_list_bd EQ 1 and data_table[i].mag_galfit_band[0] le setup.bd_maglim) THEN BEGIN
            obj_fitstab_file = strtrim(data_table[i].file_galfit, 2)
            check_obj_file = obj_fitstab_file
-
 ;change path from boris on dator to general location
            obj_fitstab_file = strrep(obj_fitstab_file, setup.outdir, setup.bd_hpc_path)
            obj_fitstab_file = strrep(obj_fitstab_file, setup.galfit_out_path, $

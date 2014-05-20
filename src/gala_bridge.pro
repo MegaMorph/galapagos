@@ -5,13 +5,13 @@ PRO gala_bridge, filein, bd_fit = bd_fit
 ;constr_file, out_file, table, nband, outpath_file
 ;orgpath_band, orgpath_pre, orgpath_galfit, orgpath_file,
 ;orgpath_file_no_band, seed
-;stop
-;print, outpath_galfit[idx]
 
 restore, filein
 cur = save_cur
 table = save_table
 
+goodband = 0
+to_be_redone = -1
 for b=1,nband do begin
 ;read in image and weight (takes few sec)
     im=readfits(strtrim(table[cur].frame[b],2), hd,/silent)
@@ -42,15 +42,15 @@ for b=1,nband do begin
 ;; current version
 ; DAMN! HAVE TO CATCH THE CASE WHEN NO PIXELS ARE SKYPIXELS!!!! Was
 ; that what backup=backup was supposed to do in getsky_loop?
-    if ct gt 0 then begin
+   if ct gt 0 then begin
        global_sky=median(im[skypix])
        global_sigsky=stddev(im[skypix])
        if finite(global_sky) ne 1 or finite(global_sigsky) ne 1 then begin
 ;; old version
 ;   resistant_mean, im[skypix], 3, sky, sigsky, nrej
 ;   sigsky *= sqrt(ct-1-nrej)
-          global_sky=median(im[skypix],/double)
-          global_sigsky=stddev(im[skypix],/double)
+           global_sky=median(im[skypix],/double)
+           global_sigsky=stddev(im[skypix],/double)
        endif
 ;; also belonging to old version
 ;   resistant_mean, im[skypix], 3, sky, sigsky, nrej
@@ -83,6 +83,17 @@ for b=1,nband do begin
    psf = readfits(chosen_psf_file[b], psfhead,/silent)
 
 ; fix contrib_targets
+; see if current source has contributors
+; this is only done in REFERENCE band, for the other bands, num and
+; frames are input by gala_bridge/galapagos, to which they have been returned in
+; the run on the reference band.
+; !!!!!!! DON'T USE FIRST BAND, USE FIRST BAND WITH DATA!
+   if b eq 1 then BEGIN
+       contrib_targets, setup.expt[b], setup.zp[b], setup.neiscl, setup.skyoff, setup.power, table, $
+         cur, setup.cut, nums, frames
+    ENDIF 
+  
+; get sky values, while using the contributing sources
    getsky_loop, setup, cur, table, rad, im, hd, map, setup.expt, $
      setup.zp, setup.neiscl, setup.skyoff, setup.power, $
      setup.cut, setup.files, psf, setup.dstep, $
@@ -92,17 +103,11 @@ for b=1,nband do begin
      setup.convbox, nums, frames, b, $
      orgpath_pre, outpath_file, outpath_file_no_band, nband, $
      xarr, yarr, seed
-    if b eq 1 then begin
-        delvarx, save_nums,save_frames
-        save_nums = nums
-        save_frames = frames
-    ENDIF
-
-;spawn, 'touch '+filein+'.skyloop';§§§§§§§§§§§§§§§§§§§§§§
    
+ ; create mask images
     create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
                  im_file[b], table[cur].frame[b], cur, $
-                 setup.neiscl, setup.skyoff, save_nums, save_frames, $
+                 setup.neiscl, setup.skyoff, nums, frames, $
                  setup.maglim_gal, setup.maglim_star, $
                  setup.stel_slope, setup.stel_zp, objects, corner, $
                  b 
@@ -112,14 +117,13 @@ for b=1,nband do begin
         save_corner = corner
     ENDIF       
 
-;spawn, 'touch '+filein+'.mask';§§§§§§§§§§§§§§§§tile10_5/t10_5.3416_obj§§§§§§
 endfor
 
 ;if not keyword_set(bd_fit) then $
 prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
                 im_file, sigma_file, constr_file, mask_file, chosen_psf_file, $
                 out_file, sky_file, setup.convbox, setup.zp, $
-                setup.platescl, save_nums, save_frames, cur, $
+                setup.platescl, nums, frames, cur, $
                 setup.outcat, setup.outparam, setup.stampfile, $
                 setup.conmaxre, setup.conminm, setup.conmaxm, $
                 setup.version, nband, orgpre ;, n_constrained = n_constrained

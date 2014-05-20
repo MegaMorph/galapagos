@@ -1056,8 +1056,7 @@ END
 PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
                      nums, frames
 ;power: convert flux_radius to proper half-light radius of a spheroid (1.4)
-;t: sextractor table (ASSUMES THAT ALL IMAGE POSITIONS ARE ON THE SAME WCS
-;FRAME)
+;t: sextractor table (ASSUMES THAT ALL IMAGE POSITIONS ARE ON THE SAME WCS FRAME)
 ;c: idx of current object id
 ;cut: magnitude cut (4.5)
 ;nums: OUTPUT, numbers of the most contributing objects
@@ -1209,7 +1208,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;rad: a*kron radius for each object in table
 ;im0: image pixel array
 ;map: skymap pixel array
-;exptime, zero_pt, scale, offset, power, cut: parameters for contrib_targets
+;exptime, zero_pt, scale, offset, power, cut: parameters for contrib_targets (now run externally, though)
 ;files: string - file that contains info about input/output files
 ;psf: PSF pixel array
 ;dstep, wstep, gap: parameters controlling the sky annulus
@@ -1222,8 +1221,8 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;out_file: galfit output file prefix
 ;global_sky, global_sigsky: global sky value plus scatter
 ;conv_box: convolution box size for subtracting sources
-;nums, frames: object numbers and frames of potential contributing sources (for bands other than the primary (b=1) these are actually INPUT parameters!)
-;b: current band index (deblending only decided in reference band)
+;nums, frames: object numbers and frames of potential contributing sources. INPUT parameters now!
+;b: current band index
 ;compute the sky for a single source
 ;nband: numbers of bands in the data
 ;xarr, yarr: arrays needed for skymap, created outside for all bands at once to improve speed
@@ -1268,14 +1267,6 @@ IF ct GT 0 THEN BEGIN
         rad[current_obj] = 0
         sky_flag += 1
     ENDIF
-    
-;see if current source has contributors
-; this is only done in REFERENCE band, for the other bands, num and
-; frames are input by gala_bridge/galapagos, to which they have been returned in
-; the run on the reference band.
-    if b eq 1 then $
-      contrib_targets, exptime[b], zero_pt[b], scale, offset, power, table, $
-      current_obj, cut, nums, frames
     
     contrib_sky = 1e30
     
@@ -3556,8 +3547,8 @@ free_lun, lun
 END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
-galapagos_version = 'GALAPAGOS-v2.1.3c'
-galapagos_date = '(May 6th, 2014)'
+galapagos_version = 'GALAPAGOS-v2.1.3d'
+galapagos_date = '(May 20th, 2014)'
 print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
 print, ''
 start=systime(0)
@@ -4451,7 +4442,7 @@ jump_over_this_2:
 ; outpath_galfit_bd = strtrim(outpath[*,0]+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)
 ; outpath_galfit_bd = set_trailing_slash(outpath_galfit_bd)
 ; FOR i=0ul, n_elements(outpath_galfit_bd)-1 DO IF NOT file_test(outpath_galfit_bd[i]) THEN spawn, 'mkdirhier '+outpath_galfit_bd[i]
-    
+
     IF NOT setup.bd_hpc THEN BEGIN
         cur = 0l
         delvarx, todo, bridge_arr, bridge_use, bridge_obj, bridge_pos, blocked
@@ -4859,14 +4850,15 @@ loopend_bd:
               +strtrim(cntloop,2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
             
 ; create sav file for bd_fit to read in
-            save, out_file, out_file_bd, obj_file, obj_file_bd, constr_file, constr_file_bd, setup,$
+            galfit_path = outpath_galfit_bd[idx]
+            save, out_file, out_file_bd, obj_file, obj_file_bd, constr_file, constr_file_bd, setup, galfit_path, $
               filename=out_file_bd+'.sav'
 
             if file_test(out_file+'.fits') then $
               gala_bd_bridge, out_file_bd+'.sav'
 
         ENDFOR
-        
+
 ;all feedme files exist, prepare PC files
         gala_bd_bridge_hpc, table, setup
 
