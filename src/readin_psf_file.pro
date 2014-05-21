@@ -32,7 +32,7 @@ ENDFOR
 maxdimen=0
 FOR b=1,nband DO BEGIN
     ncol=0
-    if strmid(file[b], 4,/reverse) eq '.fits' and maxdimen lt 1 then BEGIN
+    if strmid(strtrim(file[b],2), 4,/reverse) eq '.fits' and maxdimen le 1 then BEGIN
         maxdimen=1
     ENDIF ELSE BEGIN
 ; check how many input columns
