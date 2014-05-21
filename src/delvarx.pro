@@ -2,47 +2,51 @@
 ; NAME: 
 ;	DELVARX
 ; PURPOSE: 
-; 	Delete variables for memory management (can call from routines) 
+; 	Delete up to 10 variables for memory management (can call from routines) 
 ; EXPLANATION:
 ;	Like intrinsic DELVAR function, but can be used from any calling level
-;
+;   
+;       Modified in January 2012 to always free memory associated with
+;       pointers/objects and remove the use of EXECUTE()
+;       Also look at 
 ; CALLING SEQUENCE:
-; 	DELVARX,  a [,b,c,d,e,f,g,h,i,j, /FREE_MEM]
+; 	DELVARX,  p0, [p1, p2......p9]
 ;
 ; INPUTS: 
 ;	p0, p1...p9 - variables to delete
 ;
-; OPTIONAL KEYWORD:
-;       /FREE_MEM - If set, then free memory associated with pointers 
-;                   and objects.   
-; RESTRICTIONS: 
-;	Can't use recursively due to EXECUTE function
-;
+; OBSOLETE KEYWORD:
+;       /FREE_MEM -  formerly freed memory associated with pointers 
+;                   and objects.  Since this is now the DELVARX default this 
+;                   keyword does nothing.   
+;           
 ; METHOD: 
-;	Uses EXECUTE and TEMPORARY function   
+;	Uses HEAP_FREE and PTR_NEW(/NO_COPY) to delete variables and free
+;       memory   
 ;
 ; REVISION HISTORY:
 ;	Copied from the Solar library, written by slf, 25-Feb-1993
 ;	Added to Astronomy Library,  September 1995
-;	Converted to IDL V5.0   W. Landsman   September 1997
 ;       Modified, 26-Mar-2003, Zarro (EER/GSFC) 26-Mar-2003
 ;       - added FREE_MEM to free pointer/objects
+;       Modified, 28-Jan-2012, E. Rykoff (SLAC), W. Landsman - 
+;               replace EXECUTE calls with SCOPE_VARFETCH.
 ;-
 
 PRO delvarx, p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,free_mem = free_mem
 
-   FOR i = 0, N_PARAMS()-1 DO BEGIN ; for each parameter
-      param = STRCOMPRESS("p" + STRING(i),/remove)
-;  only delete if defined on inpu (avoids error message)
-      exestat = execute("defined=n_elements(" + param + ")" ) 
+ npar = N_params()      ; Number of parameters
+ pp = 'p'+strtrim(indgen(npar),1)
 
-      IF defined GT 0 THEN BEGIN
-         if keyword_set(free_mem) then begin
-                  exestat = execute("heap_free," + param)
-         ENDIF
-         exestat = execute(param + "=0")
-         exestat = execute("dvar=temporary(" + param + ")" )
-      ENDIF
-   ENDFOR
-   RETURN
-END
+
+ for i=0,npar-1 do begin
+    defined = N_elements( SCOPE_VARFETCH(pp[i],LEVEL=0))
+    
+    if LOGICAL_TRUE(defined) then $
+             heap_free, ptr_new( SCOPE_VARFETCH(pp[i],LEVEL=0),/no_copy) 
+        
+ endfor
+
+ return
+ end
+
