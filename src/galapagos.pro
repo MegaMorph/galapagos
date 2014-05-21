@@ -650,14 +650,8 @@ PRO create_skymap, whtfile, segfile, sex, sexparam, mapfile, scale, offset
 ; 0 means sky
 ;>1 means number of objects
 
-;   fits_read, whtfile, wht, hd
-;   fits_read, segfile, seg, hd
 wht = readfits(whtfile, hd,/silent)
 seg = readfits(segfile, hd,/silent)
-
-;stop
-;rms=wht
-;wht=1/(wht*wht)
 
 nx = n_elements(wht[*, 0])
 ny = n_elements(wht[0, *])
@@ -3736,11 +3730,13 @@ IF setup.dostamps THEN BEGIN
    post_bridge_use = bytarr(setup.max_proc <max_proc)
 ;initialise every bridge (specify output property to allow debugging)
    FOR i=0, setup.max_proc-1 <(max_proc-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
-   FOR i=0, setup.max_proc-1 <(max_proc-1) DO BEGIN
-      post_bridge_arr[i]->execute, 'astrolib'
-      post_bridge_arr[i]->execute, '.r '+gala_pro
-   ENDFOR
-   
+
+   IF setup.max_proc <(max_proc) gt 1 THEN BEGIN
+       FOR i=0, setup.max_proc-1 <(max_proc-1) DO BEGIN
+           post_bridge_arr[i]->execute, 'astrolib'
+           post_bridge_arr[i]->execute, '.r '+gala_pro
+       ENDFOR
+   ENDIF 
    done_cnt=0
    i=0
 
@@ -3784,11 +3780,13 @@ IF setup.dostamps THEN BEGIN
    post_bridge_use = bytarr(setup.max_proc < nframes)
 ;initialise every bridge (specify output property to allow debugging)
    FOR i=0, setup.max_proc-1 < (nframes-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
-   FOR i=0, setup.max_proc-1 < (nframes-1) DO BEGIN
-      post_bridge_arr[i]->execute, 'astrolib'
-      post_bridge_arr[i]->execute, '.r '+gala_pro
-   ENDFOR
-   
+   IF setup.max_proc <(nframes) gt 1 THEN BEGIN
+       FOR i=0, setup.max_proc-1 < (nframes-1) DO BEGIN
+           post_bridge_arr[i]->execute, 'astrolib'
+           post_bridge_arr[i]->execute, '.r '+gala_pro
+       ENDFOR
+   ENDIF
+
 ;create skymap files using bridge
    done_cnt=0
    i=0
@@ -4007,12 +4005,14 @@ IF setup.dosky THEN BEGIN
     FOR i=0, setup.max_proc-1 DO $
       bridge_arr[i] = obj_new('IDL_IDLBridge')
     
-    FOR i=0, setup.max_proc-1 DO BEGIN
-       bridge_arr[i]->execute, 'astrolib'
-       bridge_arr[i]->execute, '.r '+gala_pro
-       bridge_arr[i]->execute, '.r gala_bridge'
-    ENDFOR
-    
+   IF setup.max_proc <(max_proc) gt 1 THEN BEGIN
+       FOR i=0, setup.max_proc-1 DO BEGIN
+           bridge_arr[i]->execute, 'astrolib'
+           bridge_arr[i]->execute, '.r '+gala_pro
+           bridge_arr[i]->execute, '.r gala_bridge'
+       ENDFOR
+   ENDIF
+
     if keyword_set(plot) then begin
         loadct,39,/silent
         plot, table.alpha_j2000, table.delta_j2000, psym=3, ystyle=1, xstyle=1
@@ -4461,11 +4461,13 @@ jump_over_this_2:
         FOR i=0, setup.max_proc-1 DO $
           bridge_arr[i] = obj_new('IDL_IDLBridge')
         
-        FOR i=0, setup.max_proc-1 DO BEGIN
-            bridge_arr[i]->execute, 'astrolib'
-            bridge_arr[i]->execute, '.r '+gala_pro
-            bridge_arr[i]->execute, '.r gala_bd_bridge'
-        ENDFOR  
+        IF setup.max_proc <(max_proc) gt 1 THEN BEGIN
+            FOR i=0, setup.max_proc-1 DO BEGIN
+                bridge_arr[i]->execute, 'astrolib'
+                bridge_arr[i]->execute, '.r '+gala_pro
+                bridge_arr[i]->execute, '.r gala_bd_bridge'
+            ENDFOR  
+        ENDIF
         if keyword_set(plot) then begin
             loadct,39,/silent
             plot, table.alpha_j2000, table.delta_j2000, psym=3, ystyle=1, xstyle=1
