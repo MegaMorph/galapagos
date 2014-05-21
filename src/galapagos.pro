@@ -2974,7 +2974,6 @@ IF file_test(obj[0]) THEN BEGIN
     repeat comp = comp +1 until tag_exist(result, 'COMP'+strtrim(comp,2)+'_MAG') eq 0
 ; delete feedback, just in case the format of one is different,
 ; avoiding crash
-stop
     delvarx, feedback
     if not keyword_set(bd) then begin
         feedback = create_struct('mag_galfit', result[0].COMP2_MAG, 'magerr_galfit',result[0].COMP2_MAG_ERR, $

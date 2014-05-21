@@ -87,7 +87,6 @@ for b=1,nband do begin
 ; this is only done in REFERENCE band, for the other bands, num and
 ; frames are input by gala_bridge/galapagos, to which they have been returned in
 ; the run on the reference band.
-; !!!!!!! DON'T USE FIRST BAND, USE FIRST BAND WITH DATA!
    if b eq 1 then BEGIN
        contrib_targets, setup.expt[b], setup.zp[b], setup.neiscl, setup.skyoff, setup.power, table, $
          cur, setup.cut, nums, frames
