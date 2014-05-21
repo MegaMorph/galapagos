@@ -2974,6 +2974,7 @@ IF file_test(obj[0]) THEN BEGIN
     repeat comp = comp +1 until tag_exist(result, 'COMP'+strtrim(comp,2)+'_MAG') eq 0
 ; delete feedback, just in case the format of one is different,
 ; avoiding crash
+stop
     delvarx, feedback
     if not keyword_set(bd) then begin
         feedback = create_struct('mag_galfit', result[0].COMP2_MAG, 'magerr_galfit',result[0].COMP2_MAG_ERR, $
@@ -3008,6 +3009,8 @@ IF file_test(obj[0]) THEN BEGIN
                                  'chisq_galfit', fit_info.chisq, $
                                  'ndof_galfit', fit_info.ndof, $
                                  'nfree_galfit', fit_info.nfree, $
+                                 'ngood_galfit_band', band_info.ngood, $
+                                 'nmask_galfit_band', band_info.nmask, $
                                  'nfix_galfit', fit_info.nfix, $
                                  'cputime_setup_galfit', fit_info.cputime_setup, $
                                  'cputime_fit_galfit', fit_info.cputime_fit, $

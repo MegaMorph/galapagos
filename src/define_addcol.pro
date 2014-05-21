@@ -56,6 +56,7 @@ PRO define_addcol, addcol, nband, bd_fit = bd_fit, read_bd = read_bd
             ['SKY_GALFIT_BAND', bandfloat], ['SKY_GALA_BAND', bandfloat], $
             ['SKY_SIG_BAND', bandfloat], ['SKY_RAD_BAND', bandfloat], $
             ['SKY_FLAG_BAND', bandfloat], ['SKY_GALFIT_CHEB', bandfloat], $
+            ['NGOOD_GALFIT_BAND', bandfloat], ['NMASK_GALFIT_BAND', bandfloat], $
             ['PSF_GALFIT_BAND', bandstring]]
   if keyword_set(bd_fit) or keyword_set(read_bd) then addcol=[[addcol], $
                                                               ['FLAG_GALFIT_BD', '0'], ['NITER_GALFIT_BD', '0'], $
