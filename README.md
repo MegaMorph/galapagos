@@ -18,6 +18,7 @@ The MegaMorph project (specifically Häußler, Bamford and Vika) has added many 
 
 
 IDL 6.4 (which intriduces IDL\_IDLBRIDGE) is strictly required to run this software. Recent developements have mainly been tested on IDL8, but IDL7 has been shown to work.  
+Perl is needed for one feature to work and will cause code to crash otherwise  
 For an extensive README and help of usage, please read USAGE.md in the EXAMPLE_AND_README folder!  
 
 If you have additions, reqeust or questions to/about this code, please email us under BorisHaeussler.astro@gmail.com
