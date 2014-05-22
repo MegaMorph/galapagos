@@ -460,7 +460,7 @@ The B/D fit is set up using the **single-sersic output** file. This means that :
 - B/D will only be carried out for objects where a SS fit output file already exists! Where single-sérsic fits have crashed, no B/D fit can be carried out in the current Galapagos-2 version.
 
 The starting values for the fits are also taken from the single-sersic fits following this scheme (since galapagos-2.0.6 for now, subject to change).  
-This could be changed by the user in 'gala_bd_bridge.pro if he wishes to do so, e.g. by trying his own setups:
+This could be changed by the user in "gala_bd_bridge.pro" if he wishes to do so, e.g. by trying his own setups:
 
     Disk:
     x & y : same as ss result
@@ -675,3 +675,10 @@ The code is not as effective as it could be. However, most of the time is still 
 
 **v2.1.3**  
 - replaced routine create_struct with function create_struct. Does not need compilation and should be better for running in IDL runtime mode
+
+**v2.1.3f**  
+- some minor bug fixes (if the code ran, everything was correct, but code could crash under certain circumstances)
+- Galapagos now uses a different routine (perl) to shut down galfit instead of the old kill_galfit.pro. The time limit now works even if only one core is being used. Requires perl to be installed
+- removed "execute commands" from several routines, e.g. disabled them when using only one core (e.g. on HPC in runtime mode when execute causes the code to crash otherwise as it is disabled). In the same process, replaced delvarx.pro with a version that does not need the execute command to work
+- fixed bug in PSF routine that now allows to use one PSF per band
+- Both GalfitM1.1.6 and Galapagos can now deal with entirely empty images, e.g. when the survey footprint id different in different bands (even if the 'primary' band). Added readout of NGOOD and NMASK (for each band) into the output catalogue, which give indications for empty images in the fit stack. 
