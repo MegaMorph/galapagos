@@ -139,8 +139,26 @@ prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, 
 
 ;spawn the script
    cd, outpath_galfit[idx]
-   IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file $
-   ELSE spawn, setup.galexe+' '+obj_file
+
+;; timeout version (preferred, but doesn't work on all systems, as timeout might be missing (despite being gnu routine))
+;   IF setup.nice THEN BEGIN
+;       if setup.gal_kill_time eq 0 then spawn, 'nice '+setup.galexe+' '+obj_file
+;       if setup.gal_kill_time ne 0 then spawn, 'timeout '+strtrim(60*setup.gal_kill_time,2)+' nice '+setup.galexe+' '+obj_file
+;   ENDIF
+;   IF NOT setup.nice THEN  
+;       if setup.gal_kill_time eq 0 then spawn, setup.galexe+' '+obj_file
+;       if setup.gal_kill_time ne 0 then spawn, 'timeout '+strtrim(60*setup.gal_kill_time,2)+' '+setup.galexe+' '+obj_file
+
+;; perl version
+   IF setup.nice THEN BEGIN
+       if setup.gal_kill_time eq 0 then spawn, 'nice '+setup.galexe+' '+obj_file
+       if setup.gal_kill_time ne 0 then spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "nice '+setup.galexe+' '+obj_file+'"'
+   ENDIF
+   IF NOT setup.nice THEN BEGIN
+       if setup.gal_kill_time eq 0 then spawn, setup.galexe+' '+obj_file
+       if setup.gal_kill_time ne 0 then spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "'+setup.galexe+' '+obj_file+'"'
+   ENDIF
+
    spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
    spawn, 'rm ~/galfit.[0123456789]*'
 

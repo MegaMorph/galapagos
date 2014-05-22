@@ -2966,6 +2966,8 @@ IF file_test(obj[0]) THEN BEGIN
 ;       hd = headfits(obj[0], exten = nband+1)
     comp=1
     repeat comp = comp +1 until tag_exist(result, 'COMP'+strtrim(comp,2)+'_MAG') eq 0
+    IF tag_exist(band_info, 'NGOOD') then ngood_g = band_info.ngood else ngood_g = -99
+    IF tag_exist(band_info, 'NMASK') then nmask_g = band_info.nmask else nmask_g = -99
 ; delete feedback, just in case the format of one is different,
 ; avoiding crash
     delvarx, feedback
@@ -3002,8 +3004,8 @@ IF file_test(obj[0]) THEN BEGIN
                                  'chisq_galfit', fit_info.chisq, $
                                  'ndof_galfit', fit_info.ndof, $
                                  'nfree_galfit', fit_info.nfree, $
-                                 'ngood_galfit_band', band_info.ngood, $
-                                 'nmask_galfit_band', band_info.nmask, $
+                                 'ngood_galfit_band', ngood_g, $
+                                 'nmask_galfit_band', nmask_g, $
                                  'nfix_galfit', fit_info.nfix, $
                                  'cputime_setup_galfit', fit_info.cputime_setup, $
                                  'cputime_fit_galfit', fit_info.cputime_fit, $
@@ -3543,8 +3545,8 @@ free_lun, lun
 END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
-galapagos_version = 'GALAPAGOS-v2.1.3e'
-galapagos_date = '(May 20th, 2014)'
+galapagos_version = 'GALAPAGOS-v2.1.3f'
+galapagos_date = '(May 22th, 2014)'
 print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
 print, ''
 start=systime(0)
@@ -4005,7 +4007,7 @@ IF setup.dosky THEN BEGIN
     FOR i=0, setup.max_proc-1 DO $
       bridge_arr[i] = obj_new('IDL_IDLBridge')
     
-   IF setup.max_proc <(max_proc) gt 1 THEN BEGIN
+   IF setup.max_proc gt 1 THEN BEGIN
        FOR i=0, setup.max_proc-1 DO BEGIN
            bridge_arr[i]->execute, 'astrolib'
            bridge_arr[i]->execute, '.r '+gala_pro
@@ -4043,8 +4045,6 @@ IF setup.dosky THEN BEGIN
 
 ;loop over all objects
     loop = 0l
-    galfit_string = setup.gal_kill_string
-    if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
     print, 'starting fitting at '+systime()
     
     REPEAT BEGIN
@@ -4055,10 +4055,6 @@ IF setup.dosky THEN BEGIN
               strtrim(bridge_arr[i]->status(), 2)
         ENDIF
         loop++
-        
-; kill all galfit processes that have been running longer than a
-; certain time.
-        if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
         
 ;figure out which object to do next
 loopstart:
@@ -4256,12 +4252,7 @@ loopstart2:
 ;switch to next object
         ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
-           wait, 3
-; kill all processes that have been running longer than a certain
-; time.
-;            galfit_string = setup.gal_kill_string
-;            if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
-;            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
+           wait, 1
         ENDELSE
         
 loopend:
@@ -4461,7 +4452,7 @@ jump_over_this_2:
         FOR i=0, setup.max_proc-1 DO $
           bridge_arr[i] = obj_new('IDL_IDLBridge')
         
-        IF setup.max_proc <(max_proc) gt 1 THEN BEGIN
+        IF setup.max_proc gt 1 THEN BEGIN
             FOR i=0, setup.max_proc-1 DO BEGIN
                 bridge_arr[i]->execute, 'astrolib'
                 bridge_arr[i]->execute, '.r '+gala_pro
@@ -4499,8 +4490,6 @@ jump_over_this_2:
 ;loop over all objects
         loop = 0l
         print, 'starting B/D fits at '+systime()
-        galfit_string = setup.gal_kill_string
-        if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
 
         REPEAT BEGIN
             IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
@@ -4510,10 +4499,6 @@ jump_over_this_2:
                   strtrim(bridge_arr[i]->status(), 2)
             ENDIF
             loop++
-            
-; kill all galfit processes that have been running longer than a certain
-; time.
-            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
             
 loopstart_bd:
 ; only successful single sersic object??
@@ -4762,12 +4747,8 @@ loopstart2_bd:
 ;switch to next object
             ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
-                wait, 3
+                wait, 1
             ENDELSE
-
-;            galfit_string = setup.gal_kill_string
-;            if setup.gal_kill_string eq '' then galfit_string = strtrim(strmid(setup.galexe,strpos(setup.galexe,'/',/reverse_search)+1),2)
-;            if setup.gal_kill_time ne 0 then kill_galfit, galfit_string, setup.gal_kill_time, mac=mac
 
 loopend_bd:
 ;stop when all done and no bridge in use any more
