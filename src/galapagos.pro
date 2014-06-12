@@ -295,8 +295,8 @@ IF setup.chktype NE 'none' THEN BEGIN
     spawn, setup.sexexe+' '+image+','+image+' -c '+cold+ $
       ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
       ' -PARAMETERS_NAME '+outparam+ $
-      ' -WEIGHT_IMAGE '+weight+ $
-      ' -WEIGHT_TYPE '+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
+      ' -WEIGHT_IMAGE '+weight+','+weight+ $
+      ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
       ' -CHECKIMAGE_TYPE '+setup.chktype+' -CHECKIMAGE_NAME '+ $
       file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
     IF multi EQ 3 THEN BEGIN
@@ -304,8 +304,8 @@ IF setup.chktype NE 'none' THEN BEGIN
         spawn, setup.sexexe+' '+image+','+image+' -c '+hot+ $
           ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
           ' -PARAMETERS_NAME '+outparam+ $
-          ' -WEIGHT_IMAGE '+weight+ $
-          ' -WEIGHT_TYPE '+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
+          ' -WEIGHT_IMAGE '+weight+','+weight+ $
+          ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
           ' -CHECKIMAGE_TYPE '+setup.chktype+' -CHECKIMAGE_NAME '+ $
           file_dirname(check)+'/'+file_basename(check, '.fits')+ $
           '.hot.fits'
@@ -317,16 +317,16 @@ print, 'starting cold sex'
 spawn, setup.sexexe+' '+image+','+image+' -c '+cold+ $
   ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
   ' -PARAMETERS_NAME '+outparam+ $
-  ' -WEIGHT_IMAGE '+weight+ $
-  ' -WEIGHT_TYPE '+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
+  ' -WEIGHT_IMAGE '+weight+','+weight+ $
+  ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
   ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
 IF multi EQ 3 THEN BEGIN
     print, 'starting hot sex'
     spawn, setup.sexexe+' '+image+','+image+' -c '+hot+ $
       ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
       ' -PARAMETERS_NAME '+outparam+ $
-      ' -WEIGHT_IMAGE '+weight+ $
-      ' -WEIGHT_TYPE '+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
+      ' -WEIGHT_IMAGE '+weight+','+weight+ $
+      ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
       ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+hotseg
 ENDIF
 
