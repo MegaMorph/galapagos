@@ -292,7 +292,7 @@ IF setup.chktype NE 'none' THEN BEGIN
 ;      ' -WEIGHT_TYPE MAP_RMS,MAP_RMS -MAG_ZEROPOINT '+zp_eff+ $
 
     print, 'starting cold sex check image on image '+image+' '
-    spawn, setup.sexexe+' '+image+' -c '+cold+ $
+    spawn, setup.sexexe+' '+image+','+image+' -c '+cold+ $
       ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
       ' -PARAMETERS_NAME '+outparam+ $
       ' -WEIGHT_IMAGE '+weight+ $
@@ -301,7 +301,7 @@ IF setup.chktype NE 'none' THEN BEGIN
       file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
     IF multi EQ 3 THEN BEGIN
         print, 'starting hot sex check image'
-        spawn, setup.sexexe+' '+image+' -c '+hot+ $
+        spawn, setup.sexexe+' '+image+','+image+' -c '+hot+ $
           ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
           ' -PARAMETERS_NAME '+outparam+ $
           ' -WEIGHT_IMAGE '+weight+ $
@@ -314,7 +314,7 @@ ENDIF
 
 ;now start sextractor to create hotcat and coldcat
 print, 'starting cold sex'
-spawn, setup.sexexe+' '+image+' -c '+cold+ $
+spawn, setup.sexexe+' '+image+','+image+' -c '+cold+ $
   ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
   ' -PARAMETERS_NAME '+outparam+ $
   ' -WEIGHT_IMAGE '+weight+ $
@@ -322,7 +322,7 @@ spawn, setup.sexexe+' '+image+' -c '+cold+ $
   ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
 IF multi EQ 3 THEN BEGIN
     print, 'starting hot sex'
-    spawn, setup.sexexe+' '+image+' -c '+hot+ $
+    spawn, setup.sexexe+' '+image+','+image+' -c '+hot+ $
       ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
       ' -PARAMETERS_NAME '+outparam+ $
       ' -WEIGHT_IMAGE '+weight+ $
@@ -3545,8 +3545,8 @@ free_lun, lun
 END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
-galapagos_version = 'GALAPAGOS-v2.1.3f'
-galapagos_date = '(May 22th, 2014)'
+galapagos_version = 'GALAPAGOS-v2.1.3g'
+galapagos_date = '(June 12th, 2014)'
 print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
 print, ''
 start=systime(0)
