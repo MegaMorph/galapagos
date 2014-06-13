@@ -676,9 +676,11 @@ The code is not as effective as it could be. However, most of the time is still 
 **v2.1.3**  
 - replaced routine create_struct with function create_struct. Does not need compilation and should be better for running in IDL runtime mode
 
-**v2.1.3f**  
-- some minor bug fixes (if the code ran, everything was correct, but code could crash under certain circumstances)
-- Galapagos now uses a different routine (perl) to shut down galfit instead of the old kill_galfit.pro. The time limit now works even if only one core is being used. Requires perl to be installed
-- removed "execute commands" from several routines, e.g. disabled them when using only one core (e.g. on HPC in runtime mode when execute causes the code to crash otherwise as it is disabled). In the same process, replaced delvarx.pro with a version that does not need the execute command to work
-- fixed bug in PSF routine that now allows to use one PSF per band
+**v2.1.4**  
 - Both GalfitM1.1.6 and Galapagos can now deal with entirely empty images, e.g. when the survey footprint id different in different bands (even if the 'primary' band). Added readout of NGOOD and NMASK (for each band) into the output catalogue, which give indications for empty images in the fit stack. 
+- In the same context, Galapagos does now restrict the number of degrees of freedom of a polynomial to the number of bands with 'useful amount of data'. For this 3 more user inputs have been created (E22-E24). As an example, setting E23) to '30' will reduce the maximum number by 1 if an postage stamp contains more than 30% empty pixels (by 2 if 2 images show this, etc..)
+- Galapagos now uses a different routine (perl) to shut down galfit instead of the old kill_galfit.pro. The time limit now works even if only one core is being used. Requires perl to be installed on the machine!
+- removed "execute commands" from several routines, e.g. disabled them when using only one core (e.g. on HPC in runtime mode when execute causes the code to crash otherwise as it is disabled). In the same process, replaced delvarx.pro with a version that does not need the execute command to work
+- some minor bug fixes (if the code ran, everything was correct, but code could crash under certain circumstances)
+- fixed bug in PSF routine that now allows to use one PSF per band
+
