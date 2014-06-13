@@ -57,7 +57,11 @@ PRO define_addcol, addcol, nband, bd_fit = bd_fit, read_bd = read_bd
             ['SKY_SIG_BAND', bandfloat], ['SKY_RAD_BAND', bandfloat], $
             ['SKY_FLAG_BAND', bandfloat], ['SKY_GALFIT_CHEB', bandfloat], $
             ['NGOOD_GALFIT_BAND', bandfloat], ['NMASK_GALFIT_BAND', bandfloat], $
-            ['PSF_GALFIT_BAND', bandstring]]
+            ['PSF_GALFIT_BAND', bandstring], $
+            ['X_GALFIT_DEG','0'], ['Y_GALFIT_DEG','0'], $
+            ['MAG_GALFIT_DEG','0'],['RE_GALFIT_DEG','0'], $
+            ['N_GALFIT_DEG','0'],['Q_GALFIT_DEG','0'], $
+            ['PA_GALFIT_DEG','0']]
   if keyword_set(bd_fit) or keyword_set(read_bd) then addcol=[[addcol], $
                                                               ['FLAG_GALFIT_BD', '0'], ['NITER_GALFIT_BD', '0'], $
                                                               ['NEIGH_GALFIT_BD', '0'], ['CHISQ_GALFIT_BD','0.'], $
@@ -113,5 +117,13 @@ PRO define_addcol, addcol, nband, bd_fit = bd_fit, read_bd = read_bd
                                                               ['PA_GALFIT_BAND_B', bandfloat], ['PAERR_GALFIT_BAND_B', bandfloat], $
                                                               ['SKY_GALFIT_BD', '0.'], ['SKY_GALFIT_BAND_BD', bandfloat], $
                                                               ['SKY_GALFIT_CHEB_BD', bandfloat], ['PSF_GALFIT_BAND_BD', bandstring], $
-                                                              ['PSF_GALFIT_BD', ' ']]  
+                                                              ['PSF_GALFIT_BD', ' '], $
+                                                              ['X_GALFIT_DEG_B','0'], ['Y_GALFIT_DEG_B','0'], $
+                                                              ['MAG_GALFIT_DEG_B','0'],['RE_GALFIT_DEG_B','0'], $
+                                                              ['N_GALFIT_DEG_B','0'],['Q_GALFIT_DEG_B','0'], $
+                                                              ['PA_GALFIT_DEG_B','0'], $
+                                                              ['X_GALFIT_DEG_D','0'], ['Y_GALFIT_DEG_D','0'], $
+                                                              ['MAG_GALFIT_DEG_D','0'],['RE_GALFIT_DEG_D','0'], $
+                                                              ['N_GALFIT_DEG_D','0'],['Q_GALFIT_DEG_D','0'], $
+                                                              ['PA_GALFIT_DEG_D','0']]  
 END

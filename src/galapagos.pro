@@ -1850,6 +1850,26 @@ openw, 1, obj_file, width=1000
 ; WRITE FILES & STUFF
 printf, 1, '# IMAGE PARAMETERS'
 
+; check how many postage stamps contain (a useful amount of) data and
+; restrict maximum number of degrees in polynomial
+maxdeg = nband
+If setup.do_restrict then begin
+    FOR b=1,nband DO BEGIN
+        deg_im = readfits(strtrim(im_file[b],2)+'.fits',1, /silent)
+        deg_wht = readfits(strtrim(mask_file[b],2)+'.fits',1,/silent)
+        deg_npix = float(n_elements(deg_im))
+; masked pixels have value 1!
+        hlpin = where(deg_wht eq 1, deg_npix_mask) ; masked pixels
+        hlpin = where(deg_im eq 0, deg_npix_zero) ; pixles with data ==0
+        
+; correct if more than 50% of image are masked or when 50% of image
+; have value 0
+        if deg_npix_zero/deg_npix GT setup.restrict_frac/100. or $
+          deg_npix_mask/deg_npix GT setup.restrict_frac_mask/100. then $
+          maxdeg = maxdeg-1
+    ENDFOR
+ENDIF
+
 ; INPUT IMAGE
 A_po=''
 FOR b=1,nband DO BEGIN
@@ -2101,8 +2121,8 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
         y_po = y_po+round_digit(par.y_galfit_band[b-1]-corner[1],2,/string)
         if b lt nband then y_po=y_po+','
     ENDFOR
-    IF fix[0] eq 1 then x_po_fit = strtrim(setup.cheb[0]+1,2) else x_po_fit = '0'
-    IF fix[1] eq 1 then y_po_fit = strtrim(setup.cheb[1]+1,2) else y_po_fit = '0'
+    IF fix[0] eq 1 then x_po_fit = strtrim((setup.cheb[0]+1)<maxdeg,2) else x_po_fit = '0'
+    IF fix[1] eq 1 then y_po_fit = strtrim((setup.cheb[1]+1)<maxdeg,2) else y_po_fit = '0'
     
     if setup.version ge 4 then begin
         printf, 1, ' 1) '+x_po+'  '+x_po_fit+'  '+band_po+'   # position x     [pixel]'
@@ -2116,7 +2136,7 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
         mag_po = mag_po+round_digit(par.mag_galfit_band[b-1],2,/string)
         if b lt nband then mag_po=mag_po+','
     ENDFOR
-    IF fix[2] eq 1 then mag_po_fit = strtrim(setup.cheb[2]+1,2) else mag_po_fit = '0'
+    IF fix[2] eq 1 then mag_po_fit = strtrim((setup.cheb[2]+1)<maxdeg,2) else mag_po_fit = '0'
     printf, 1, ' 3) '+mag_po+'    '+mag_po_fit+'   '+band_po+'    # total magnitude'
     
     re_po=''
@@ -2125,7 +2145,7 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
         re_po = re_po+round_digit(par.re_galfit_band[b-1],2,/string)
         if b lt nband then re_po=re_po+','
     ENDFOR
-    IF fix[3] eq 1 then re_po_fit = strtrim(setup.cheb[3]+1,2) else re_po_fit = '0'
+    IF fix[3] eq 1 then re_po_fit = strtrim((setup.cheb[3]+1)<maxdeg,2) else re_po_fit = '0'
     printf, 1, ' 4) '+re_po+'    '+re_po_fit+'   '+band_po+'       #     R_e              [Pixels]'
     
     n_po=''
@@ -2134,7 +2154,7 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
         n_po = n_po+round_digit(par.n_galfit_band[b-1],2,/string)
         if b lt nband then n_po=n_po+','
     ENDFOR
-    IF fix[4] eq 1 then n_po_fit = strtrim(setup.cheb[4]+1,2) else n_po_fit = '0'
+    IF fix[4] eq 1 then n_po_fit = strtrim((setup.cheb[4]+1)<maxdeg,2) else n_po_fit = '0'
     printf, 1, ' 5) '+n_po+'    '+n_po_fit+'   '+band_po+'       # Sersic exponent (deVauc=4, expdisk=1)'
     
     q_po=''
@@ -2143,7 +2163,7 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
         q_po = q_po+round_digit(par.q_galfit_band[b-1],4,/string)
         if b lt nband then q_po=q_po+','
     ENDFOR
-    IF fix[5] eq 1 then q_po_fit = strtrim(setup.cheb[5]+1,2) else q_po_fit = '0'
+    IF fix[5] eq 1 then q_po_fit = strtrim((setup.cheb[5]+1)<maxdeg,2) else q_po_fit = '0'
     IF setup.version eq 0 THEN str = ' 8) ' ELSE str = ' 9) '
     printf, 1, str+q_po+'    '+q_po_fit+'   '+band_po+'       # axis ratio (b/a)'
     
@@ -2154,7 +2174,7 @@ FOR i=0ul, n_elements(objects)-1 DO BEGIN
         pa_po = pa_po+round_digit(par.pa_galfit_band[b-1],2,/string)
         if b lt nband then pa_po=pa_po+','
     ENDFOR
-    IF fix[6] eq 1 then pa_po_fit = strtrim(setup.cheb[6]+1,2) else pa_po_fit = '0'
+    IF fix[6] eq 1 then pa_po_fit = strtrim((setup.cheb[6]+1)<maxdeg,2) else pa_po_fit = '0'
     IF setup_version eq 0 THEN str = '9) ' ELSE str = '10) '
     printf, 1, str+pa_po+'    '+pa_po_fit+'   '+band_po+'       # position angle (PA) [Degrees: Up=0, Left=90]'
     
@@ -2354,8 +2374,8 @@ FOR i=0ul, n_nums-1 DO BEGIN
         y_po = y_po+round_digit(par.y_galfit_band[b-1]-corner[1],2,/string)
         if b lt nband then y_po=y_po+','
     ENDFOR
-    IF fix[0] eq 1 then x_po_fit = strtrim(setup.cheb[0]+1,2) else x_po_fit = '0'
-    IF fix[1] eq 1 then y_po_fit = strtrim(setup.cheb[1]+1,2) else y_po_fit = '0'
+    IF fix[0] eq 1 then x_po_fit = strtrim((setup.cheb[0]+1)<maxdeg,2) else x_po_fit = '0'
+    IF fix[1] eq 1 then y_po_fit = strtrim((setup.cheb[1]+1)<maxdeg,2) else y_po_fit = '0'
     
     if setup.version ge 4 then begin
         printf, 1, ' 1) '+x_po+'  '+x_po_fit+'  '+band_po+'   # position x     [pixel]'
@@ -2370,7 +2390,7 @@ FOR i=0ul, n_nums-1 DO BEGIN
         mag_po = mag_po+round_digit(par.mag_galfit_band[b-1],2,/string)
         if b lt nband then mag_po=mag_po+','
     ENDFOR
-    IF fix[2] eq 1 then mag_po_fit = strtrim(setup.cheb[2]+1,2) else mag_po_fit = '0'
+    IF fix[2] eq 1 then mag_po_fit = strtrim((setup.cheb[2]+1)<maxdeg,2) else mag_po_fit = '0'
     printf, 1, ' 3) '+mag_po+'    '+mag_po_fit+'   '+band_po+'    # total magnitude'
     
     re_po=''
@@ -2379,7 +2399,7 @@ FOR i=0ul, n_nums-1 DO BEGIN
         re_po = re_po+round_digit(par.re_galfit_band[b-1],2,/string)
         if b lt nband then re_po=re_po+','
     ENDFOR
-    IF fix[3] eq 1 then re_po_fit = strtrim(setup.cheb[3]+1,2) else re_po_fit = '0'
+    IF fix[3] eq 1 then re_po_fit = strtrim((setup.cheb[3]+1)<maxdeg,2) else re_po_fit = '0'
     printf, 1, ' 4) '+re_po+'    '+re_po_fit+'   '+band_po+'       #     R_e              [Pixels]'
     
     n_po=''
@@ -2388,7 +2408,7 @@ FOR i=0ul, n_nums-1 DO BEGIN
         n_po = n_po+round_digit(par.n_galfit_band[b-1],2,/string)
         if b lt nband then n_po=n_po+','
     ENDFOR
-    IF fix[4] eq 1 then n_po_fit = strtrim(setup.cheb[4]+1,2) else n_po_fit = '0'
+    IF fix[4] eq 1 then n_po_fit = strtrim((setup.cheb[4]+1)<maxdeg,2) else n_po_fit = '0'
     printf, 1, ' 5) '+n_po+'    '+n_po_fit+'   '+band_po+'       # Sersic exponent (deVauc=4, expdisk=1)'
     
     q_po=''
@@ -2397,7 +2417,7 @@ FOR i=0ul, n_nums-1 DO BEGIN
         q_po = q_po+round_digit(par.q_galfit_band[b-1],4,/string)
         if b lt nband then q_po=q_po+','
     ENDFOR
-    IF fix[5] eq 1 then q_po_fit = strtrim(setup.cheb[5]+1,2) else q_po_fit = '0'
+    IF fix[5] eq 1 then q_po_fit = strtrim((setup.cheb[5]+1)<maxdeg,2) else q_po_fit = '0'
     IF setup.version eq 0 THEN str = ' 8) ' ELSE str = ' 9) '
     printf, 1, str+q_po+'    '+q_po_fit+'   '+band_po+'       # axis ratio (b/a)'
     
@@ -2408,7 +2428,7 @@ FOR i=0ul, n_nums-1 DO BEGIN
         pa_po = pa_po+round_digit(par.pa_galfit_band[b-1],2,/string)
         if b lt nband then pa_po=pa_po+','
     ENDFOR
-    IF fix[6] eq 1 then pa_po_fit = strtrim(setup.cheb[6]+1,2) else pa_po_fit = '0'
+    IF fix[6] eq 1 then pa_po_fit = strtrim((setup.cheb[6]+1)<maxdeg,2) else pa_po_fit = '0'
     IF setup_version eq 0 THEN str = '9) ' ELSE str = '10) '
     printf, 1, str+pa_po+'    '+pa_po_fit+'   '+band_po+'       # position angle (PA) [Degrees: Up=0, Left=90]'
     
@@ -2520,6 +2540,9 @@ setup = create_struct('files', '', $
                       'version', 0,$
                       'cheb', intarr(7)-1, $
                       'galfit_out_path',' ', $
+                      'do_restrict', 0, $
+                      'restrict_frac', 50., $
+                      'restrict_frac_mask', 50., $
                       'dobd', 0, $
                       'cheb_b', intarr(7)-1, $
                       'cheb_d', intarr(7)-1, $
@@ -2692,6 +2715,9 @@ WHILE NOT eof(1) DO BEGIN
             if content eq '' then setup.galfit_out_path = content
             if content ne '' then setup.galfit_out_path = set_trailing_slash(content)
         END
+        'E22)': setup.do_restrict = (content EQ 'restrict') ? 1 : 0
+        'E23)': setup.restrict_frac = content
+        'E24)': setup.restrict_frac_mask = content
         
         'F00)': BEGIN
             if block_bd eq 1 then setup.dobd = (content EQ 'execute') ? 1 : 0 $
@@ -3015,9 +3041,14 @@ IF file_test(obj[0]) THEN BEGIN
                                  'version_galfit', fit_info.version, $
                                  'firstcon_galfit', fit_info.firstcon, $
                                  'lastcon_galfit', fit_info.lastcon, $
-                                 'neigh_galfit', comp-3, 'flag_galfit', 2)
-; TO BE ADDED:
-; fitting time
+                                 'neigh_galfit', comp-3, 'flag_galfit', 2, $
+                                 'X_GALFIT_DEG', total(res_cheb.comp2_xc_fit), $
+                                 'Y_GALFIT_DEG', total(res_cheb.comp2_yc_fit), $
+                                 'MAG_GALFIT_DEG', total(res_cheb.comp2_mag_fit), $
+                                 'RE_GALFIT_DEG', total(res_cheb.comp2_re_fit), $
+                                 'N_GALFIT_DEG', total(res_cheb.comp2_n_fit), $
+                                 'Q_GALFIT_DEG', total(res_cheb.comp2_ar_fit), $
+                                 'PA_GALFIT_DEG', total(res_cheb.comp2_pa_fit))
 ; NEIGH_GALFIT HAS TO BE ADAPTED! WHY??
     ENDIF
     if keyword_set(bd) then begin
@@ -3081,8 +3112,22 @@ IF file_test(obj[0]) THEN BEGIN
                                  'version_galfit_bd', fit_info.version, $
                                  'firstcon_galfit_bd', fit_info.firstcon, $
                                  'lastcon_galfit_bd', fit_info.lastcon, $
-                                 'neigh_galfit_bd', comp-4, 'flag_galfit_bd', 2)
-    ENDIF
+                                 'neigh_galfit_bd', comp-4, 'flag_galfit_bd', 2, $
+                                 'X_GALFIT_DEG_B', total(res_cheb.comp3_xc_fit), $
+                                 'Y_GALFIT_DEG_B', total(res_cheb.comp3_yc_fit), $
+                                 'MAG_GALFIT_DEG_B', total(res_cheb.comp3_mag_fit), $
+                                 'RE_GALFIT_DEG_B', total(res_cheb.comp3_re_fit), $
+                                 'N_GALFIT_DEG_B', total(res_cheb.comp3_n_fit), $
+                                 'Q_GALFIT_DEG_B', total(res_cheb.comp3_ar_fit), $
+                                 'PA_GALFIT_DEG_B', total(res_cheb.comp3_pa_fit), $
+                                 'X_GALFIT_DEG_D', total(res_cheb.comp2_xc_fit), $
+                                 'Y_GALFIT_DEG_D', total(res_cheb.comp2_yc_fit), $
+                                 'MAG_GALFIT_DEG_D', total(res_cheb.comp2_mag_fit), $
+                                 'RE_GALFIT_DEG_D', total(res_cheb.comp2_re_fit), $
+                                 'N_GALFIT_DEG_D', total(res_cheb.comp2_n_fit), $
+                                 'Q_GALFIT_DEG_D', total(res_cheb.comp2_ar_fit), $
+                                 'PA_GALFIT_DEG_D', total(res_cheb.comp2_pa_fit))
+   ENDIF
 ; to include:
 ; there is more band_info which is not used yet (band, wl, datain,
 ; sigma, MASL, magzpt) Not sure we'll need them!
@@ -3131,9 +3176,14 @@ ENDIF ELSE BEGIN
                                  'version_galfit', 'crash', $
                                  'firstcon_galfit', -99, $
                                  'lastcon_galfit', -99, $
-                                 'neigh_galfit', -99, 'flag_galfit', 1)
-                                ; TO BE ADDED:
-; fitting time
+                                 'neigh_galfit', -99, 'flag_galfit', 1, $
+                                 'X_GALFIT_DEG', -99, $
+                                 'Y_GALFIT_DEG', -99, $
+                                 'MAG_GALFIT_DEG', -99, $
+                                 'RE_GALFIT_DEG', -99, $
+                                 'N_GALFIT_DEG', -99, $
+                                 'Q_GALFIT_DEG', -99, $
+                                 'PA_GALFIT_DEG', -99)
 ; NEIGH_GALFIT HAS TO BE ADAPTED!
     ENDIF
     if keyword_set(bd) then begin
@@ -3197,9 +3247,21 @@ ENDIF ELSE BEGIN
                                  'version_galfit_bd', 'crash', $
                                  'firstcon_galfit_bd', -99, $
                                  'lastcon_galfit_bd', -99, $
-                                 'neigh_galfit_bd', -99, 'flag_galfit_bd', 1)
-                                ; TO BE ADDED:
-; fitting time
+                                 'neigh_galfit_bd', -99, 'flag_galfit_bd', 1, $
+                                 'X_GALFIT_DEG_B', -99, $
+                                 'Y_GALFIT_DEG_B', -99, $
+                                 'MAG_GALFIT_DEG_B', -99, $
+                                 'RE_GALFIT_DEG_B', -99, $
+                                 'N_GALFIT_DEG_B', -99, $
+                                 'Q_GALFIT_DEG_B', -99, $
+                                 'PA_GALFIT_DEG_B', -99, $
+                                 'X_GALFIT_DEG_D', -99, $
+                                 'Y_GALFIT_DEG_D', -99, $
+                                 'MAG_GALFIT_DEG_D', -99, $
+                                 'RE_GALFIT_DEG_D', -99, $
+                                 'N_GALFIT_DEG_D', -99, $
+                                 'Q_GALFIT_DEG_D', -99, $
+                                 'PA_GALFIT_DEG_D', -99)
 ; NEIGH_GALFIT HAS TO BE ADAPTED!
     ENDIF
     
@@ -3305,7 +3367,14 @@ if not keyword_set(bd) then BEGIN
                              'nfree_galfit', nfree_galfit, $
                              'nfix_galfit', nfix_galfit, $
                              'chi2nu_galfit', chi2nu_galfit, $
-                             'neigh_galfit', neigh_galfit, 'flag_galfit', flag_galfit)
+                             'neigh_galfit', neigh_galfit, 'flag_galfit', flag_galfit, $
+                             'X_GALFIT_DEG', -99, $
+                             'Y_GALFIT_DEG', -99, $
+                             'MAG_GALFIT_DEG', -99, $
+                             'RE_GALFIT_DEG', -99, $
+                             'N_GALFIT_DEG', -99, $
+                             'Q_GALFIT_DEG', -99, $
+                             'PA_GALFIT_DEG', -99)
 endif
 
 if keyword_set(bd) then begin
@@ -3402,7 +3471,21 @@ if keyword_set(bd) then begin
                              'nfree_galfit_bd', nfree_galfit, $
                              'nfix_galfit_bd', nfix_galfit, $
                              'chi2nu_galfit_bd', chi2nu_galfit, $
-                             'neigh_galfit_bd', neigh_galfit, 'flag_galfit_bd', flag_galfit)
+                             'neigh_galfit_bd', neigh_galfit, 'flag_galfit_bd', flag_galfit, $
+                             'X_GALFIT_DEG_B', -99, $
+                             'Y_GALFIT_DEG_B', -99, $
+                             'MAG_GALFIT_DEG_B', -99, $
+                             'RE_GALFIT_DEG_B', -99, $
+                             'N_GALFIT_DEG_B', -99, $
+                             'Q_GALFIT_DEG_B', -99, $
+                             'PA_GALFIT_DEG_B', -99, $
+                             'X_GALFIT_DEG_D', -99, $
+                             'Y_GALFIT_DEG_D', -99, $
+                             'MAG_GALFIT_DEG_D', -99, $
+                             'RE_GALFIT_DEG_D', -99, $
+                             'N_GALFIT_DEG_D', -99, $
+                             'Q_GALFIT_DEG_D', -99, $
+                             'PA_GALFIT_DEG_D', -99)
 ENDIF       
 return, feedback
 END

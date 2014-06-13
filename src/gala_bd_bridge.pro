@@ -61,70 +61,98 @@
 ;PRO bd_fit, out_file, out_file_bd, setup, obj_file, obj_file_bd,
 ;   constr_file, constr_file_bd, no_fit=no_fit
 PRO gala_bd_bridge, filein
-restore, filein
-
+   restore, filein
+   
 ;obj_fitstab_file = out_file_bd+'.fits'
-in_file = out_file+'.fits'
-
+   in_file = out_file+'.fits'
+   
 ;   num = '21_17.346'
 ;   obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
-
+   
    tab = mrdfits(in_file, 'FINAL_BAND', /silent)
-
+   
    band_info = mrdfits(in_file, 'BAND_INFO', /silent)
    
    band_str = strupcase(strtrim(band_info.band,2))
    nband = n_elements(band_str)
    if nband eq 1 then bandstr = ' '
    if nband gt 1 then bandstr = 'band'
-
+   
    tmp = mrdfits(in_file, 'MODEL_'+band_str[0], model, /silent)
-
-   ;extract info from SS-fit
+   
+;extract info from SS-fit
    forward_function read_sersic_results
    ss_mult = read_sersic_results(in_file, nband)
-
-   ;print, obj_fitstab_file, ss_mult.MAG_GALFIT_BAND[0]
+   
+;print, obj_fitstab_file, ss_mult.MAG_GALFIT_BAND[0]
    
 ;   obj_file = strrep(obj_file, '/home/boris/', '')
    openw, filew, obj_file_bd, /get_lun
    openr, filer, obj_file, /get_lun
    line = ''
+   maxdeg = nband
+
    REPEAT BEGIN
-      readf, filer, line
+       readf, filer, line
+       
+       IF strpos(strtrim(line, 2), 'A) ') EQ 0 THEN BEGIN
+           workline=line
+           If setup.do_restrict then begin
+; get image names from seric fits header
+               input_files=strtrim(band_info.datain,2)
+               mask_files=strtrim(band_info.mask,2)
+               FOR b=1,nband DO BEGIN
 
-      IF strpos(strtrim(line, 2), 'B) ') EQ 0 THEN BEGIN
-          line = 'B) '+out_file_bd+'.fits'
-      ENDIF
-      IF strpos(strtrim(line, 2), 'G) ') EQ 0 THEN BEGIN
-          line = 'G) '+constr_file_bd
-     ENDIF
-     IF (setup.bd_hpc AND strpos(strtrim(line, 2), 'D) ') EQ 0) THEN line = strrep(line, setup.bd_psf_corr[0], setup.bd_psf_corr[1])
+; check how many postage stamps contain (a useful amount of) data and
+; restrict maximum number of degrees in polynomial
+                   deg_im = readfits(input_files[b-1],1, /silent)
+                   deg_wht = readfits(mask_files[b-1],1,/silent)
+                   deg_npix = float(n_elements(deg_im))
+; masked pixels have value 1!
+                   hlpin = where(deg_wht eq 1, deg_npix_mask) ; masked pixels
+                   hlpin = where(deg_im eq 0, deg_npix_zero) ; pixles with data ==0
+                   
+; correct if more than 50% of image are masked or when 50% of image
+; have value 0
+                   if deg_npix_zero/deg_npix GT setup.restrict_frac/100. or $
+                     deg_npix_mask/deg_npix GT setup.restrict_frac_mask/100. then $
+                     maxdeg = maxdeg-1
+               ENDFOR
+           ENDIF
+       ENDIF
+       
+       IF strpos(strtrim(line, 2), 'B) ') EQ 0 THEN BEGIN
+           line = 'B) '+out_file_bd+'.fits'
+       ENDIF
+       IF strpos(strtrim(line, 2), 'G) ') EQ 0 THEN BEGIN
+           line = 'G) '+constr_file_bd
+       ENDIF
+       IF (setup.bd_hpc AND strpos(strtrim(line, 2), 'D) ') EQ 0) THEN line = strrep(line, setup.bd_psf_corr[0], setup.bd_psf_corr[1])
 ;change path from boris on dator to general location
-     IF (setup.bd_hpc AND strpos(strtrim(line, 2), 'D) ') NE 0) THEN line = strrep(line, setup.outdir, setup.bd_hpc_path)
-     printf, filew, line
+       IF (setup.bd_hpc AND strpos(strtrim(line, 2), 'D) ') NE 0) THEN line = strrep(line, setup.outdir, setup.bd_hpc_path)
+       printf, filew, line
    ENDREP UNTIL strpos(strtrim(line, 2), '# Sersic function') EQ 0
-
+   
 ; DISK PARAMETERS
    printf, filew
    printf, filew, ' 0) sersic             # Object type --- DISC'
    x = string(ss_mult.X_GALFIT_BAND, $
-                format = '('+string(nband)+'(A,","))')
+              format = '('+string(nband)+'(A,","))')
    x = strtrim(strcompress(x, /remove_all), 2)
    x = ' 1) '+strmid(x, 0, strlen(x)-1)+ $
-        '    '+strtrim(setup.cheb_d[0]+1,2)+' '+bandstr+'   # position x     [pixel]'
+     '    '+strtrim((setup.cheb_d[0]+1)<maxdeg,2)+' '+bandstr+'   # position x     [pixel]'
    printf, filew, x
    y = string(ss_mult.Y_GALFIT_BAND, $
-                format = '('+string(nband)+'(A,","))')
+              format = '('+string(nband)+'(A,","))')
    y = strtrim(strcompress(y, /remove_all), 2)
    y = ' 2) '+strmid(y, 0, strlen(y)-1)+ $
-     '    '+strtrim(setup.cheb_d[1]+1,2)+'  '+bandstr+'   # position y     [pixel]'
+     '    '+strtrim((setup.cheb_d[1]+1)<maxdeg,2)+'  '+bandstr+'   # position y     [pixel]'
    printf, filew, y
    mag = string(ss_mult.MAG_GALFIT_BAND+2.5*alog10(2), $
                 format = '('+string(nband)+'(A,","))')
    mag = strtrim(strcompress(mag, /remove_all), 2)
    mag = ' 3) '+strmid(mag, 0, strlen(mag)-1)+ $
-        '    '+strtrim(setup.cheb_d[2]+1,2)+'  '+bandstr+'    # total magnitude'
+     '    '+strtrim((setup.cheb_d[2]+1)<maxdeg,2)+'  '+bandstr+'    # total magnitude'
    printf, filew, mag
 ;correct re to be the right shape if cheb_d eq 0!!
 ; re started at constant value in any case!
@@ -136,11 +164,11 @@ in_file = out_file+'.fits'
    if nband eq 1 then re_d = string(ss_mult.RE_GALFIT_BAND*1.2 >1., format = '(A)')
 ; original!   if nband eq 1 then re_d = string(ss_mult.RE_GALFIT_BAND >1., format = '(A)')
    if nband gt 1 then re_d = string(strarr(nband)+(median(ss_mult.RE_GALFIT_BAND)*1.2 >1.), $
-                                  format = '('+string(nband)+'(A,","))')
+                                    format = '('+string(nband)+'(A,","))')
    re_d = strtrim(strcompress(re_d, /remove_all), 2)
    re_d = ' 4) '+strmid(re_d, 0, strlen(re_d)-1)+ $
-     '    '+strtrim(setup.cheb_d[3]+1,2)+'   '+bandstr+'       #     R_e              [Pixels]'
-
+     '    '+strtrim((setup.cheb_d[3]+1)<maxdeg,2)+'   '+bandstr+'       #     R_e              [Pixels]'
+   
    printf, filew, re_d
 ;correct n to be the right shape if cheb_d eq 0!!
 ; sersic index of disk always started at 1
@@ -149,28 +177,28 @@ in_file = out_file+'.fits'
    if setup.cheb_d[4] ne -1 then begin
        if nband eq 1 then n = string((ss_mult.N_GALFIT_BAND <1.5), format = '(A)')
        if nband gt 1 then n = string(((strarr(nband)+median(ss_mult.N_GALFIT_BAND) <1.5)), $
-                                            format = '('+string(nband)+'(A,","))')
+                                     format = '('+string(nband)+'(A,","))')
    endif
    n = strtrim(strcompress(n, /remove_all), 2)
    n = ' 5) '+strmid(n, 0, strlen(n)-1)+ $
-     '   '+strtrim(setup.cheb_d[4]+1,2)+'   '+bandstr+'       # Sersic exponent (deVauc=4, expdisk=1)'
+     '   '+strtrim((setup.cheb_d[4]+1)<maxdeg,2)+'   '+bandstr+'       # Sersic exponent (deVauc=4, expdisk=1)'
    printf, filew, n
    q = string(ss_mult.Q_GALFIT_BAND, $
-                format = '('+string(nband)+'(A,","))')
+              format = '('+string(nband)+'(A,","))')
    q = strtrim(strcompress(q, /remove_all), 2)
    q = ' 9) '+strmid(q, 0, strlen(q)-1)+ $
-        '    '+strtrim(setup.cheb_d[5]+1,2)+'   '+bandstr+'       # axis ratio (b/a)'
+     '    '+strtrim((setup.cheb_d[5]+1)<maxdeg,2)+'   '+bandstr+'       # axis ratio (b/a)'
    printf, filew, q
    pa = string(ss_mult.PA_GALFIT_BAND, $
-                format = '('+string(nband)+'(A,","))')
+               format = '('+string(nband)+'(A,","))')
    pa = strtrim(strcompress(pa, /remove_all), 2)
    pa = ' 10) '+strmid(pa, 0, strlen(pa)-1)+ $
-        '    '+strtrim(setup.cheb_d[6]+1,2)+ $
-        '  '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
+     '    '+strtrim((setup.cheb_d[6]+1)<maxdeg,2)+ $
+     '  '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
    printf, filew, pa
-
+   
    printf, filew, ' Z) 0                  # output image (see above)'
-
+   
 ; BULGE PARAMETERS
    printf, filew
    printf, filew
@@ -182,7 +210,7 @@ in_file = out_file+'.fits'
    printf, filew, mag
 ;correct re to be the right shape if cheb_b eq 0!!
 ; re started at constant value in any case!
-
+   
 ;; old setup up to single_bd and multi_bd5
 ;   if nband eq 1 then re_b = string(ss_mult.RE_GALFIT_BAND, format = '(A)')
 ;   if nband gt 1 then re_b = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND), $
@@ -190,11 +218,11 @@ in_file = out_file+'.fits'
 ; new setup after single_bd2 and multi_bd6
    if nband eq 1 then re_b = string(ss_mult.RE_GALFIT_BAND*0.3 > 0.5, format = '(A)')
    if nband gt 1 then re_b = string(strarr(nband)+(median(ss_mult.RE_GALFIT_BAND)*0.3 > 0.5), $
-                                  format = '('+string(nband)+'(A,","))')
-
+                                    format = '('+string(nband)+'(A,","))')
+   
    re_b = strtrim(strcompress(re_b, /remove_all), 2)
    re_b = ' 4) '+strmid(re_b, 0, strlen(re_b)-1)+ $
-        '    '+strtrim(setup.cheb_b[3]+1,2)+'   '+bandstr+'       #     R_e              [Pixels]'
+     '    '+strtrim((setup.cheb_b[3]+1)<maxdeg,2)+'   '+bandstr+'       #     R_e              [Pixels]'
    printf, filew, re_b
 ;correct n to be the right shape if cheb_b eq 0!!
    if setup.cheb_b[4] eq -1 then n = string((strarr(nband)+4.), $
@@ -202,139 +230,149 @@ in_file = out_file+'.fits'
    if setup.cheb_b[4] ne -1 then begin
        if nband eq 1 then n = string((ss_mult.N_GALFIT_BAND >1.5), format = '(A)')
        if nband gt 1 then n = string(((strarr(nband)+median(ss_mult.N_GALFIT_BAND) >1.5)), $
-                                            format = '('+string(nband)+'(A,","))')
+                                     format = '('+string(nband)+'(A,","))')
 ;; try starting at 1 instead, Marina claims it's more stable (bd8)
 ;       if nband gt 1 then n = string(((strarr(nband)+1.)), format = '('+string(nband)+'(A,","))')
    endif
    n = strtrim(strcompress(n, /remove_all), 2)
    n = ' 5) '+strmid(n, 0, strlen(n)-1)+ $
-        '   '+strtrim(setup.cheb_b[4]+1,2)+'   '+bandstr+'       # Sersic exponent (deVauc=4, expdisk=1)'
+     '   '+strtrim((setup.cheb_b[4]+1)<maxdeg,2)+'   '+bandstr+'       # Sersic exponent (deVauc=4, expdisk=1)'
    printf, filew, n
    q = string(ss_mult.Q_GALFIT_BAND >0.6, $
-                format = '('+string(nband)+'(A,","))')
+              format = '('+string(nband)+'(A,","))')
    q = strtrim(strcompress(q, /remove_all), 2)
    q = ' 9) '+strmid(q, 0, strlen(q)-1)+ $
-        '    '+strtrim(setup.cheb_b[5]+1,2)+'   '+bandstr+'       # axis ratio (b/a)'
+     '    '+strtrim((setup.cheb_b[5]+1)<maxdeg,2)+'   '+bandstr+'       # axis ratio (b/a)'
    printf, filew, q
    printf, filew, pa
-
+   
    printf, filew, ' Z) 0                  # output image (see above)'
-
+   
    maxcomp = 2
    REPEAT BEGIN
-      maxcomp++
-      a = where(strpos(model,strtrim(maxcomp, 2)+'_PA_R') eq 0, ct)
+       maxcomp++
+       a = where(strpos(model,strtrim(maxcomp, 2)+'_PA_R') eq 0, ct)
    ENDREP UNTIL ct LE 0
    maxcomp--
-   ;maxcomp=2 means primary only
-
+                                ;maxcomp=2 means primary only
+   
    IF maxcomp GT 2 THEN BEGIN
-      FOR comp=0, maxcomp-3 DO BEGIN
-         printf, filew
-         printf, filew
-         printf, filew, '# Sersic function'
-         printf, filew
-         printf, filew, ' 0) sersic             # Object type'
-
-         x = string(tab.(37+comp*3*7), $
-                format = '('+string(nband)+'(A,","))')
-         x = strtrim(strcompress(x, /remove_all), 2)
-         x = ' 1) '+strmid(x, 0, strlen(x)-1)+ $
+       FOR comp=0, maxcomp-3 DO BEGIN
+           printf, filew
+           printf, filew
+           printf, filew, '# Sersic function'
+           printf, filew
+           printf, filew, ' 0) sersic             # Object type'
+           
+           x = string(tab.(37+comp*3*7), $
+                      format = '('+string(nband)+'(A,","))')
+           x = strtrim(strcompress(x, /remove_all), 2)
+           x = ' 1) '+strmid(x, 0, strlen(x)-1)+ $
              '  0  '+bandstr+'   # position x     [pixel]'
-         printf, filew, x
-
-         y = string(tab.(40+comp*3*7), $
-                format = '('+string(nband)+'(A,","))')
-         y = strtrim(strcompress(y, /remove_all), 2)
-         y = ' 2) '+strmid(y, 0, strlen(y)-1)+ $
+           printf, filew, x
+           
+           y = string(tab.(40+comp*3*7), $
+                      format = '('+string(nband)+'(A,","))')
+           y = strtrim(strcompress(y, /remove_all), 2)
+           y = ' 2) '+strmid(y, 0, strlen(y)-1)+ $
              '  0  '+bandstr+'   # position y     [pixel]'
-         printf, filew, y
-
-         mag = string(tab.(43+comp*3*7), $
-                format = '('+string(nband)+'(A,","))')
-         mag = strtrim(strcompress(mag, /remove_all), 2)
-         mag = ' 3) '+strmid(mag, 0, strlen(mag)-1)+ $
+           printf, filew, y
+           
+           mag = string(tab.(43+comp*3*7), $
+                        format = '('+string(nband)+'(A,","))')
+           mag = strtrim(strcompress(mag, /remove_all), 2)
+           mag = ' 3) '+strmid(mag, 0, strlen(mag)-1)+ $
              '   0   '+bandstr+'    # total magnitude'
-         printf, filew, mag
-
-         re = string(tab.(46+comp*3*7), $
-                format = '('+string(nband)+'(A,","))')
-         re = strtrim(strcompress(re, /remove_all), 2)
-         re = ' 4) '+strmid(re, 0, strlen(re)-1)+ $
+           printf, filew, mag
+           
+           re = string(tab.(46+comp*3*7), $
+                       format = '('+string(nband)+'(A,","))')
+           re = strtrim(strcompress(re, /remove_all), 2)
+           re = ' 4) '+strmid(re, 0, strlen(re)-1)+ $
              '    0   '+bandstr+'       #     R_e              [Pixels]'
-         printf, filew, re
-
-         n = string(tab.(49+comp*3*7), $
-                format = '('+string(nband)+'(A,","))')
-         n = strtrim(strcompress(n, /remove_all), 2)
-         n = ' 5) '+strmid(n, 0, strlen(n)-1)+ $
+           printf, filew, re
+           
+           n = string(tab.(49+comp*3*7), $
+                      format = '('+string(nband)+'(A,","))')
+           n = strtrim(strcompress(n, /remove_all), 2)
+           n = ' 5) '+strmid(n, 0, strlen(n)-1)+ $
              '   0   '+bandstr+'       # Sersic exponent (deVauc=4, expdisk=1)'
-         printf, filew, n
-
-         q = string(tab.(52+comp*3*7), $
-                format = '('+string(nband)+'(A,","))')
-         q = strtrim(strcompress(q, /remove_all), 2)
-         q = ' 9) '+strmid(q, 0, strlen(q)-1)+ $
+           printf, filew, n
+           
+           q = string(tab.(52+comp*3*7), $
+                      format = '('+string(nband)+'(A,","))')
+           q = strtrim(strcompress(q, /remove_all), 2)
+           q = ' 9) '+strmid(q, 0, strlen(q)-1)+ $
              '    0   '+bandstr+'       # axis ratio (b/a)'
-         printf, filew, q
-
-         pa = string(tab.(55+comp*3*7), $
-                format = '('+string(nband)+'(A,","))')
-         pa = strtrim(strcompress(pa, /remove_all), 2)
-         pa = ' 10) '+strmid(pa, 0, strlen(pa)-1)+ $
+           printf, filew, q
+           
+           pa = string(tab.(55+comp*3*7), $
+                       format = '('+string(nband)+'(A,","))')
+           pa = strtrim(strcompress(pa, /remove_all), 2)
+           pa = ' 10) '+strmid(pa, 0, strlen(pa)-1)+ $
              '    0   '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
-         printf, filew, pa
-
-         printf, filew, ' Z) 0                  # output image (see above)'
-      ENDFOR
+           printf, filew, pa
+           
+           printf, filew, ' Z) 0                  # output image (see above)'
+       ENDFOR
    ENDIF
-
+   
    free_lun, filer
    free_lun, filew
-
-   ;maximum allowed positional offset
+   
+                                ;maximum allowed positional offset
    pos_offset = ss_mult.RE_GALFIT_BAND[0]
-
-   ;constraint file
+   
+                                ;constraint file
 ;   constr_file = strrep(constr_file, '/home/boris/', '')
    openw, ut, constr_file_bd, /get_lun
-
+   
    printf, ut, '# Component/    parameter   constraint  Comment'
    printf, ut, '# operation                  values'
-
+   
    FOR j=2, maxcomp+1 DO BEGIN
-      printf, ut, '           '+strtrim(j, 2)+' n 0.2 to 8'
-      printf, ut, '           '+strtrim(j, 2)+' re 0.3 to 400'
-      printf, ut, '           '+strtrim(j, 2)+' q 0.0001 to 1'
-      printf, ut, '           '+strtrim(j, 2)+' mag -5 5'
-      printf, ut, '           '+strtrim(j, 2)+' mag 0 to 40'
-      printf, ut, '           '+strtrim(j, 2)+' pa -360 to 360'
-      printf, ut, '           '+strtrim(j, 2)+' x '+ $
-              strtrim(-pos_offset*0.5, 2)+ $
-              ' '+ strtrim(pos_offset*0.5, 2)
-      printf, ut, '           '+strtrim(j, 2)+' y '+ $
-              strtrim(-pos_offset*0.5, 2)+ $
-              ' '+ strtrim(pos_offset*0.5, 2)
+       printf, ut, '           '+strtrim(j, 2)+' n 0.2 to 8'
+       printf, ut, '           '+strtrim(j, 2)+' re 0.3 to 400'
+       printf, ut, '           '+strtrim(j, 2)+' q 0.0001 to 1'
+       printf, ut, '           '+strtrim(j, 2)+' mag -5 5'
+       printf, ut, '           '+strtrim(j, 2)+' mag 0 to 40'
+       printf, ut, '           '+strtrim(j, 2)+' pa -360 to 360'
+       printf, ut, '           '+strtrim(j, 2)+' x '+ $
+         strtrim(-pos_offset*0.5, 2)+ $
+         ' '+ strtrim(pos_offset*0.5, 2)
+       printf, ut, '           '+strtrim(j, 2)+' y '+ $
+         strtrim(-pos_offset*0.5, 2)+ $
+         ' '+ strtrim(pos_offset*0.5, 2)
    ENDFOR
    printf, ut
    printf, ut, '           2_3 x offset'
    printf, ut, '           2_3 y offset'
-
+   
    printf, ut
    free_lun, ut
-
-   ;run galfit
+   
+                                ;run galfit
    cd, galfit_path
+
    IF NOT setup.bd_hpc THEN BEGIN
        IF file_test(out_file_bd+'.fits') eq 0 then begin
-           IF setup.nice THEN spawn, 'nice '+setup.galexe+' '+obj_file_bd $
-           ELSE spawn, setup.galexe+' '+obj_file_bd
+           IF setup.nice THEN BEGIN
+               if setup.gal_kill_time eq 0 then spawn, 'nice '+setup.galexe+' '+obj_file_bd
+               if setup.gal_kill_time ne 0 then spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "nice '+setup.galexe+' '+obj_file_bd+'"'
+           ENDIF
+           
+           IF not setup.nice THEN BEGIN
+               if setup.gal_kill_time eq 0 then spawn, setup.galexe+' '+obj_file_bd
+               if setup.gal_kill_time ne 0 then spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "'+setup.galexe+' '+obj_file_bd+'"'
+           ENDIF
+;           spawn, 'nice '+setup.galexe+' '+obj_file_bd $
+;           ELSE spawn, setup.galexe+' '+obj_file_bd
            wait, 1
        ENDIF
        spawn, 'rm '+galfit_path+'/galfit.[0123456789]*'
        spawn, 'rm ~/galfit.[0123456789]*'
    ENDIF
    file_delete, filein
-
+   
 END
 
