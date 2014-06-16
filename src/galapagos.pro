@@ -3038,7 +3038,7 @@ IF file_test(obj[0]) THEN BEGIN
                                  'cputime_total_galfit', fit_info.cputime_total, $
                                  'chi2nu_galfit', fit_info.chi2nu, $
                                  'niter_galfit', fit_info.niter, $
-                                 'version_galfit', fit_info.version, $
+                                 'galfit_version', fit_info.version, $
                                  'firstcon_galfit', fit_info.firstcon, $
                                  'lastcon_galfit', fit_info.lastcon, $
                                  'neigh_galfit', comp-3, 'flag_galfit', 2, $
@@ -3109,7 +3109,7 @@ IF file_test(obj[0]) THEN BEGIN
                                  'cputime_total_galfit_bd', fit_info.cputime_total, $
                                  'chi2nu_galfit_bd', fit_info.chi2nu, $
                                  'niter_galfit_bd', fit_info.niter, $
-                                 'version_galfit_bd', fit_info.version, $
+                                 'galfit_version_bd', fit_info.version, $
                                  'firstcon_galfit_bd', fit_info.firstcon, $
                                  'lastcon_galfit_bd', fit_info.lastcon, $
                                  'neigh_galfit_bd', comp-4, 'flag_galfit_bd', 2, $
@@ -3173,7 +3173,7 @@ ENDIF ELSE BEGIN
                                  'cputime_total_galfit', -99., $
                                  'chi2nu_galfit', -99., $
                                  'niter_galfit', -99, $
-                                 'version_galfit', 'crash', $
+                                 'galfit_version', 'crash', $
                                  'firstcon_galfit', -99, $
                                  'lastcon_galfit', -99, $
                                  'neigh_galfit', -99, 'flag_galfit', 1, $
@@ -3244,7 +3244,7 @@ ENDIF ELSE BEGIN
                                  'cputime_total_galfit_bd', -99., $
                                  'chi2nu_galfit_bd', -99., $
                                  'niter_galfit_bd', -99, $
-                                 'version_galfit_bd', 'crash', $
+                                 'galfit_version_bd', 'crash', $
                                  'firstcon_galfit_bd', -99, $
                                  'lastcon_galfit_bd', -99, $
                                  'neigh_galfit_bd', -99, 'flag_galfit_bd', 1, $
@@ -3629,7 +3629,7 @@ END
 
 PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
 galapagos_version = 'GALAPAGOS-v2.1.4'
-galapagos_date = '(June 13th, 2014)'
+galapagos_date = '(June 16th, 2014)'
 print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
 print, ''
 start=systime(0)
