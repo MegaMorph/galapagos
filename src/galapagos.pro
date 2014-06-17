@@ -4950,6 +4950,11 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
 
    struct_assign, tab, out
 
+; create ID for all objects
+   add_tag, out, 'gala_ID', ' ', out2
+   out = out2
+   delvarx,out2
+
 ;find the image files for the sources
    orgim = setup.images
    orgwht = setup.weights
@@ -4976,6 +4981,10 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
        out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0] 
 
        if file_test(out_file+'.fits') then read += 1
+
+; write galapagos ID
+       out[i].gala_id = orgpre[idx]+objnum
+
        print, 'reading results for object No.'+strtrim(i+1,2)+' of '+strtrim(ntab,2)+' ('+strtrim(read,2)+' already read)' 
 ;      statusline, 'reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
      
