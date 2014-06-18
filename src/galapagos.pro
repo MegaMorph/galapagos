@@ -284,7 +284,8 @@ IF setup.sex_rms EQ 1 THEN weight_type = 'MAP_RMS'
 ;this will produce a checkimage with all the ellipses
 IF setup.chktype NE 'none' THEN BEGIN
 
-;from Arjen, to be put in: dual-image mode
+;from Arjen, dual-image mode removes a bug from single image
+;mode. Better detection & deblending!
 ;    spawn, sexexe+' '+detimage+','+image+' -c '+cold+ $
 ;      ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
 ;      ' -PARAMETERS_NAME '+outparam+ $
@@ -292,16 +293,18 @@ IF setup.chktype NE 'none' THEN BEGIN
 ;      ' -WEIGHT_TYPE MAP_RMS,MAP_RMS -MAG_ZEROPOINT '+zp_eff+ $
 
     print, 'starting cold sex check image on image '+image+' '
-    spawn, setup.sexexe+' '+image+','+image+' -c '+cold+ $
+    print, '   using weight image'+weight+' '
+    sexcommand_cc = setup.sexexe+' '+image+','+image+' -c '+cold+ $
       ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
       ' -PARAMETERS_NAME '+outparam+ $
       ' -WEIGHT_IMAGE '+weight+','+weight+ $
       ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
       ' -CHECKIMAGE_TYPE '+setup.chktype+' -CHECKIMAGE_NAME '+ $
       file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
+    spawn, sexcommand_cc
     IF multi EQ 3 THEN BEGIN
         print, 'starting hot sex check image'
-        spawn, setup.sexexe+' '+image+','+image+' -c '+hot+ $
+        sexcommand_hc = setup.sexexe+' '+image+','+image+' -c '+hot+ $
           ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
           ' -PARAMETERS_NAME '+outparam+ $
           ' -WEIGHT_IMAGE '+weight+','+weight+ $
@@ -309,25 +312,28 @@ IF setup.chktype NE 'none' THEN BEGIN
           ' -CHECKIMAGE_TYPE '+setup.chktype+' -CHECKIMAGE_NAME '+ $
           file_dirname(check)+'/'+file_basename(check, '.fits')+ $
           '.hot.fits'
+        spawn, sexcommand_hc
     ENDIF
 ENDIF
 
 ;now start sextractor to create hotcat and coldcat
 print, 'starting cold sex'
-spawn, setup.sexexe+' '+image+','+image+' -c '+cold+ $
+sexcommand_cs = setup.sexexe+' '+image+','+image+' -c '+cold+ $
   ' -CATALOG_NAME '+coldcat+' -CATALOG_TYPE ASCII' + $
   ' -PARAMETERS_NAME '+outparam+ $
   ' -WEIGHT_IMAGE '+weight+','+weight+ $
   ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
   ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
+spawn, sexcommand_cs
 IF multi EQ 3 THEN BEGIN
     print, 'starting hot sex'
-    spawn, setup.sexexe+' '+image+','+image+' -c '+hot+ $
+    sexcommand_hs = setup.sexexe+' '+image+','+image+' -c '+hot+ $
       ' -CATALOG_NAME '+hotcat+' -CATALOG_TYPE ASCII' + $
       ' -PARAMETERS_NAME '+outparam+ $
       ' -WEIGHT_IMAGE '+weight+','+weight+ $
       ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
       ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+hotseg
+    spawn, sexcommand_hs
 ENDIF
 
 ;read in hotcat and coldcat
