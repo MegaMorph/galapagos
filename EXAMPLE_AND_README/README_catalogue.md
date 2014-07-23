@@ -16,41 +16,41 @@ Other parameters are scalar parameters, unless indicated otherwise.
 | PARAMETER           | TYPE (Integer, float,..)     | EXPLANATION  |
 | ------------------  |----------- |-------|
 | **GALAPAGOS PARAMETERS** | | |
-| GALAPAGOS*_*VERSION           | STRING | The galapagos version used to create this catalogue |
-| GALA*_*ID                     | STRING | A galaxy identifier, consists of tile and SExtractor number, e.g. t15_12.101.
+| GALAPAGOS_VERSION           | STRING | The galapagos version used to create this catalogue |
+| GALA_ID                     | STRING | A galaxy identifier, consists of tile and SExtractor number, e.g. t15_12.101.
 | | | this can be used to find files matching certain objects  |
 | **SExtractor Parameters** | | |
 | NUMBER                        | LONG   | SExtractor number of the object, useful for identification |
-| X*_*IMAGE                     | DOUBLE | Position X on the SExtractor image |
-| Y*_*IMAGE                     | DOUBLE | Position Y on the SExtractor image |
-| CXX*_*IMAGE                   | DOUBLE | Ellipse parameters by SExtractor, used internally |
-| CYY*_*IMAGE                   | DOUBLE | Ellipse parameters by SExtractor, used internally |
-| CXY*_*IMAGE                   | DOUBLE | Ellipse parameters by SExtractor, used internally |
-| THETA*_*IMAGE                 | DOUBLE | Position Angle against the image, as given by SExtractor |
-| THETA*_*WORLD                 | DOUBLE | Position Angle against the WCS, as given by SExtractor | |
+| X_IMAGE                     | DOUBLE | Position X on the SExtractor image |
+| Y_IMAGE                     | DOUBLE | Position Y on the SExtractor image |
+| CXX_IMAGE                   | DOUBLE | Ellipse parameters by SExtractor, used internally |
+| CYY_IMAGE                   | DOUBLE | Ellipse parameters by SExtractor, used internally |
+| CXY_IMAGE                   | DOUBLE | Ellipse parameters by SExtractor, used internally |
+| THETA_IMAGE                 | DOUBLE | Position Angle against the image, as given by SExtractor |
+| THETA_WORLD                 | DOUBLE | Position Angle against the WCS, as given by SExtractor | |
 | ELLIPTICITY                   | DOUBLE | Object ellipticity as estimated by SExtractor |
-| KRON*_*RADIUS                 | DOUBLE | Kron radius as estimated by SExtractor, used to derive starting values for GALFIT |
-| A*_*IMAGE                     | DOUBLE | A*_*IMAGE as given by SExtractor (semi major axis in combination with KRON*_*RADIUS |
-| B*_*IMAGE                     | DOUBLE | B*_*IMAGE as given by SExtractor (semi minor axis in combination with KRON*_*RADIUS |
-| ALPHA*_*J2000                 | DOUBLE | Object Right Ascension as given by SExtractor |
-| DELTA*_*J2000                 | DOUBLE | Object Declination as given by SExtractor |
+| KRON_RADIUS                 | DOUBLE | Kron radius as estimated by SExtractor, used to derive starting values for GALFIT |
+| A_IMAGE                     | DOUBLE | A_IMAGE as given by SExtractor (semi major axis in combination with KRON_RADIUS |
+| B_IMAGE                     | DOUBLE | B_IMAGE as given by SExtractor (semi minor axis in combination with KRON_RADIUS |
+| ALPHA_J2000                 | DOUBLE | Object Right Ascension as given by SExtractor |
+| DELTA_J2000                 | DOUBLE | Object Declination as given by SExtractor |
 | BACKGROUND                    | DOUBLE | Local background as given by SExtractor |
-| FLUX*_*BEST                   | DOUBLE | Flux*_*Best as given by SExtractor |
-| FLUXERR*_*BEST                | DOUBLE | Error on FLUX*_*BEST |
-| MAG*_*BEST                    | DOUBLE | MAG*_*Best as given by SExtractor |
-| MAGERR*_*BEST                 | DOUBLE | Error on MAG*_*BEST |
-| FLUX*_*RADIUS                 | DOUBLE | Halflight radius as given by SExtractor|
-| ISOAREA*_*IMAGE               | DOUBLE | Object area as given by SExtractor |
-| FWHM*_*IMAGE                  | DOUBLE | Image FWHM as given by SExtractor |
+| FLUX_BEST                   | DOUBLE | Flux_Best as given by SExtractor |
+| FLUXERR_BEST                | DOUBLE | Error on FLUX_BEST |
+| MAG_BEST                    | DOUBLE | MAG_Best as given by SExtractor |
+| MAGERR_BEST                 | DOUBLE | Error on MAG_BEST |
+| FLUX_RADIUS                 | DOUBLE | Halflight radius as given by SExtractor|
+| ISOAREA_IMAGE               | DOUBLE | Object area as given by SExtractor |
+| FWHM_IMAGE                  | DOUBLE | Image FWHM as given by SExtractor |
 | FLAGS                         | INT    | SExtractr flags (see SExtractor manual) |
-| CLASS*_*STAR                  | DOUBLE | Star/Galaxy Classifier |
+| CLASS_STAR                  | DOUBLE | Star/Galaxy Classifier |
 | **General Galapagos Parameters** | | |
 | TILE                          | STRING | Image (Sextractor name) on which the object was selected to be fit |
-| ORG*_*IMAGE*_*BAND            | STRING | Array of Image names for each band on which the object was selected to be fit  |
-| SKY*_*GALA*_*BAND             | FLOAT  | Sky value in each band as derived by Galapagos |
-| SKY*_*SIG*_*BAND              | FLOAT  | Sky uncertainty as derived by Galapagos (not used in the code, can be used for further test/analysis |
-| SKY*_*RAD*_*BAND              | FLOAT  | Radius at which the sky has been determined [pixels] |
-| SKY*_*FLAG*_*BAND             | FLOAT  | Flags for sky determination:  |
+| ORG_IMAGE_BAND            | STRING | Array of Image names for each band on which the object was selected to be fit  |
+| SKY_GALA_BAND             | FLOAT  | Sky value in each band as derived by Galapagos |
+| SKY_SIG_BAND              | FLOAT  | Sky uncertainty as derived by Galapagos (not used in the code, can be used for further test/analysis |
+| SKY_RAD_BAND              | FLOAT  | Radius at which the sky has been determined [pixels] |
+| SKY_FLAG_BAND             | FLOAT  | Flags for sky determination:  |
 | |                                      | 0 - done successfully |
 | |                                      | +1 - image too small for accurate sky calculation (source is too large) |
 | |                                      | +2 - secondary contributing source (not subtracted) requires radius larger than image |
@@ -66,74 +66,74 @@ Other parameters are scalar parameters, unless indicated otherwise.
 | PARAMETER           | TYPE (Integer, float,..)     | EXPLANATION  |
 | ------------------  |----------- |-------|
 | **General Galfit Parameters** | | |
-| GALFIT*_*VERSION              | STRING | GALFIT version used for fit |
-| FILE*_*GALFIT                 | STRING | GALFIT output file, which includes all images, models, residuals and PSFs |
+| GALFIT_VERSION              | STRING | GALFIT version used for fit |
+| FILE_GALFIT                 | STRING | GALFIT output file, which includes all images, models, residuals and PSFs |
 | INITFILE                      | STRING | GALFIT start file, for manual re-run and adaptation |
 | CONSTRNT                      | STRING | GALFIT constraint file |
-| PSF*_*GALFIT*_*BAND           | STRING | PSF images used for the fit (but copied into output file anyway) |
-| FLAG*_*GALFIT                 | INT    | FLAG of GALFIT status: |
+| PSF_GALFIT_BAND           | STRING | PSF images used for the fit (but copied into output file anyway) |
+| FLAG_GALFIT                 | INT    | FLAG of GALFIT status: |
 | |                                      | 0: fit has not been tried, most values == -99|
 | |                                      | 1: fit has been started, but is either still active or crashed during the fit, most values == -99, but sky values etc should have been estimated, in order to be able to look for systematic faults|
 | |                                      | 2: fit has been started and produced a successful fit result|
 | FITSECT                       | STRING | Size of the fit section that the fit uses (in Galapagos use equivalent with postage stamp size) |
 | CONVBOX                       | STRING | Size of GALFIT convolution box used for the fit |
-| NGOOD*_*GALFIT*_*BAND         | FLOAT  | Number of goo pixels in each band |
-| NMASK*_*GALFIT*_*BAND         | FLOAT  | Number of masked pixels in each band |
-| NITER*_*GALFIT                | INT    | Number of Iterations that GALFIT needed to finish |
-| NEIGH*_*GALFIT                | INT    | Number of neighbouring objects in the fit, irrespective whether free or fixed (e.g. some measure of object crowding).  |
-| CHISQ*_*GALFIT                | FLOAT  | Chi^2 of the fit |
-| NFREE*_*GALFIT                | LONG   | Number of free parameters during the fit |
-| NFIX*_*GALFIT                 | LONG   | Number of fixed parameters during the fit (e.g. in neighbouring objects) |
-| NDOF*_*GALFIT                 | LONG   | Degree of Freedom of the fit |
-| CHI2NU*_*GALFIT               | FLOAT  | Reduced Chi^2 of the fit |
-| FIRSTCON*_*GALFIT             | INT    | FIRST iteration which  violated a constraint |
-| LASTCON*_*GALFIT              | INT    | LAST iteration that violated a constraints (e.g. dangerous if the last iteration before Galfit finished, however, depends on WHICH constraint has been violated and whether by primary or secondary objects) |
-| CPUTIME*_*SETUP*_*GALFIT      | FLOAT  | CPU time spend on setting up the fit |
-| CPUTIME*_*FIT*_*GALFIT        | FLOAT  | CPU time spend on the actual fit |
-| CPUTIME*_*TOTAL*_*GALFIT      | FLOAT  | total CPU time used by GALFIT |
+| NGOOD_GALFIT_BAND         | FLOAT  | Number of goo pixels in each band |
+| NMASK_GALFIT_BAND         | FLOAT  | Number of masked pixels in each band |
+| NITER_GALFIT                | INT    | Number of Iterations that GALFIT needed to finish |
+| NEIGH_GALFIT                | INT    | Number of neighbouring objects in the fit, irrespective whether free or fixed (e.g. some measure of object crowding).  |
+| CHISQ_GALFIT                | FLOAT  | Chi^2 of the fit |
+| NFREE_GALFIT                | LONG   | Number of free parameters during the fit |
+| NFIX_GALFIT                 | LONG   | Number of fixed parameters during the fit (e.g. in neighbouring objects) |
+| NDOF_GALFIT                 | LONG   | Degree of Freedom of the fit |
+| CHI2NU_GALFIT               | FLOAT  | Reduced Chi^2 of the fit |
+| FIRSTCON_GALFIT             | INT    | FIRST iteration which  violated a constraint |
+| LASTCON_GALFIT              | INT    | LAST iteration that violated a constraints (e.g. dangerous if the last iteration before Galfit finished, however, depends on WHICH constraint has been violated and whether by primary or secondary objects) |
+| CPUTIME_SETUP_GALFIT      | FLOAT  | CPU time spend on setting up the fit |
+| CPUTIME_FIT_GALFIT        | FLOAT  | CPU time spend on the actual fit |
+| CPUTIME_TOTAL_GALFIT      | FLOAT  | total CPU time used by GALFIT |
 | **Galfit Fit Parameters** | | |
-| SKY*_*GALFIT*_*BAND           | FLOAT  | Sky values as used by GALFIT for each band (should be identical with SKY*_*GALA*_*BAND) |
-| SKY*_*GALFIT*_*CHEB           | FLOAT  | Chebishev parameters that describe the sky polynomial (dangerous to use as sjy values are held fixed during the fit, e.g. the polynomial has no real meaning in between the wavelengths of the input bands)|
-| X*_*GALFIT*_*DEG              | INT    | Degree of freedom for X-position of primary source |
+| SKY_GALFIT_BAND           | FLOAT  | Sky values as used by GALFIT for each band (should be identical with SKY_GALA_BAND) |
+| SKY_GALFIT_CHEB           | FLOAT  | Chebishev parameters that describe the sky polynomial (dangerous to use as sjy values are held fixed during the fit, e.g. the polynomial has no real meaning in between the wavelengths of the input bands)|
+| X_GALFIT_DEG              | INT    | Degree of freedom for X-position of primary source |
 | |                                      | 0: fixed at input values |
 | |                                      | 1: variable during fit, but with values constant with wavelength |
 | |                                      | 2: variable during fit, linear with wavelength (e.g. 2 degrees of freedom in polynomial)|
 | |                                      | 3: variable during fit, quadratic with wavelength (e.g. 3 degrees of freedom in polynomial)|
 | |                                      | ... |
-| X*_*GALFIT*_*BAND             | FLOAT  | X-Position in each band |
-| XERR*_*GALFIT*_*BAND          | FLOAT  | Error on X-Position in each band |
-| X*_*GALFIT*_*CHEB             | FLOAT  | Chebishev parameters for X-Position |
-| XERR*_*GALFIT*_*CHEB          | FLOAT  | Errors on Chebishev parameters for X-Position |
-| Y*_*GALFIT*_*DEG              | INT    | Degree of freedom for Y-position of primary source |
-| Y*_*GALFIT*_*BAND             | FLOAT  | Y-Position in each band |
-| YERR*_*GALFIT*_*BAND          | FLOAT  | Error on Y-Position in each band |
-| Y*_*GALFIT*_*CHEB             | FLOAT  | Chebishev parameters for Y-Position |
-| YERR*_*GALFIT*_*CHEB          | FLOAT  | Error on Chebishev parameters for Y-Position |
-| MAG*_*GALFIT*_*DEG            | INT    | Degree of freedom for magnitude of primary source |
-| MAG*_*GALFIT*_*BAND           | FLOAT  | Magnitude in each band |
-| MAGERR*_*GALFIT*_*BAND        | FLOAT  | Error on Magnitude in each band |
-| MAG*_*GALFIT*_*CHEB           | FLOAT  | Chebishev parameters for Magnitude |
-| MAGERR*_*GALFIT*_*CHEB        | FLOAT  | Error on Chebishev parameters for  |
-| RE*_*GALFIT*_*DEG             | INT    | Degree of freedom for re of primary source |
-| RE*_*GALFIT*_*BAND            | FLOAT  | Re in each band |
-| REERR*_*GALFIT*_*BAND         | FLOAT  | Error on re in each band |
-| RE*_*GALFIT*_*CHEB            | FLOAT  | Chebishev parameters for re |
-| REERR*_*GALFIT*_*CHEB         | FLOAT  | Error on Chebishev parameters for re |
-| N*_*GALFIT*_*DEG              | INT    | Degree of freedom for sersic index of primary source |
-| N*_*GALFIT*_*BAND             | FLOAT  | Sersic Index in each band |
-| NERR*_*GALFIT*_*BAND          | FLOAT  | Error on Sersic Index in each band |
-| N*_*GALFIT*_*CHEB             | FLOAT  | Chebishev parameters for Sersic Index  |
-| NERR*_*GALFIT*_*CHEB          | FLOAT  | Error on Chebishev parameters for Sersic Index  |
-| Q*_*GALFIT*_*DEG              | INT    | Degree of freedom for axis ratio of primary source |
-| Q*_*GALFIT*_*BAND             | FLOAT  | Axis Ratio in each band |
-| QERR*_*GALFIT*_*BAND          | FLOAT  | Error on Axis Ratio in each band |
-| Q*_*GALFIT*_*CHEB             | FLOAT  | Chebishev parameters for Axis Ratio |
-| QERR*_*GALFIT*_*CHEB          | FLOAT  | Error on Chebishev parameters for Axis Ratio |
-| PA*_*GALFIT*_*DEG             | INT    | Degree of freedom for position angle of primary source |
-| PA*_*GALFIT*_*BAND            | FLOAT  | Position Angle in each band |
-| PAERR*_*GALFIT*_*BAND         | FLOAT  | Error on Position Angle in each band |
-| PA*_*GALFIT*_*CHEB            | FLOAT  | Chebishev parameters for Position Angle |
-| PAERR*_*GALFIT*_*CHEB         | FLOAT  | Error on Chebishev parameters for Position Angle |
+| X_GALFIT_BAND             | FLOAT  | X-Position in each band |
+| XERR_GALFIT_BAND          | FLOAT  | Error on X-Position in each band |
+| X_GALFIT_CHEB             | FLOAT  | Chebishev parameters for X-Position |
+| XERR_GALFIT_CHEB          | FLOAT  | Errors on Chebishev parameters for X-Position |
+| Y_GALFIT_DEG              | INT    | Degree of freedom for Y-position of primary source |
+| Y_GALFIT_BAND             | FLOAT  | Y-Position in each band |
+| YERR_GALFIT_BAND          | FLOAT  | Error on Y-Position in each band |
+| Y_GALFIT_CHEB             | FLOAT  | Chebishev parameters for Y-Position |
+| YERR_GALFIT_CHEB          | FLOAT  | Error on Chebishev parameters for Y-Position |
+| MAG_GALFIT_DEG            | INT    | Degree of freedom for magnitude of primary source |
+| MAG_GALFIT_BAND           | FLOAT  | Magnitude in each band |
+| MAGERR_GALFIT_BAND        | FLOAT  | Error on Magnitude in each band |
+| MAG_GALFIT_CHEB           | FLOAT  | Chebishev parameters for Magnitude |
+| MAGERR_GALFIT_CHEB        | FLOAT  | Error on Chebishev parameters for  |
+| RE_GALFIT_DEG             | INT    | Degree of freedom for re of primary source |
+| RE_GALFIT_BAND            | FLOAT  | Re in each band |
+| REERR_GALFIT_BAND         | FLOAT  | Error on re in each band |
+| RE_GALFIT_CHEB            | FLOAT  | Chebishev parameters for re |
+| REERR_GALFIT_CHEB         | FLOAT  | Error on Chebishev parameters for re |
+| N_GALFIT_DEG              | INT    | Degree of freedom for sersic index of primary source |
+| N_GALFIT_BAND             | FLOAT  | Sersic Index in each band |
+| NERR_GALFIT_BAND          | FLOAT  | Error on Sersic Index in each band |
+| N_GALFIT_CHEB             | FLOAT  | Chebishev parameters for Sersic Index  |
+| NERR_GALFIT_CHEB          | FLOAT  | Error on Chebishev parameters for Sersic Index  |
+| Q_GALFIT_DEG              | INT    | Degree of freedom for axis ratio of primary source |
+| Q_GALFIT_BAND             | FLOAT  | Axis Ratio in each band |
+| QERR_GALFIT_BAND          | FLOAT  | Error on Axis Ratio in each band |
+| Q_GALFIT_CHEB             | FLOAT  | Chebishev parameters for Axis Ratio |
+| QERR_GALFIT_CHEB          | FLOAT  | Error on Chebishev parameters for Axis Ratio |
+| PA_GALFIT_DEG             | INT    | Degree of freedom for position angle of primary source |
+| PA_GALFIT_BAND            | FLOAT  | Position Angle in each band |
+| PAERR_GALFIT_BAND         | FLOAT  | Error on Position Angle in each band |
+| PA_GALFIT_CHEB            | FLOAT  | Chebishev parameters for Position Angle |
+| PAERR_GALFIT_CHEB         | FLOAT  | Error on Chebishev parameters for Position Angle |
   
  ---  
 ###Parameters for Bulge/Disk Decomposition Fits (only available when B/D has been switched on)
@@ -142,102 +142,102 @@ Other parameters are scalar parameters, unless indicated otherwise.
 | PARAMETER           | TYPE (Integer, float,..)     | EXPLANATION  |
 | ------------------  |----------- |-------|
 | **General Galfit Parameters** | | |
-| GALFIT*_*VERSION*_*BD         | STRING | GALFIT version used for B/D fit |
-| FILE*_*GALFIT*_*BD            | STRING | GALFIT output file for B/D fit, which includes all images, models, residuals and PSFs |
-| INITFILE*_*BD                 | STRING | GALFIT start file for B/D fit, for manual re-run and adaptation |
-| CONSTRNT*_*BD                 | STRING | GALFIT constraint file used in B/D fit |
-| PSF*_*GALFIT*_*BAND*_*BD      | STRING | PSF images used for the B/D fit (but copied into output file anyway) |
-| FLAG*_*GALFIT*_*BD            | INT    | FLAG of GALFIT status: |
+| GALFIT_VERSION_BD         | STRING | GALFIT version used for B/D fit |
+| FILE_GALFIT_BD            | STRING | GALFIT output file for B/D fit, which includes all images, models, residuals and PSFs |
+| INITFILE_BD                 | STRING | GALFIT start file for B/D fit, for manual re-run and adaptation |
+| CONSTRNT_BD                 | STRING | GALFIT constraint file used in B/D fit |
+| PSF_GALFIT_BAND_BD      | STRING | PSF images used for the B/D fit (but copied into output file anyway) |
+| FLAG_GALFIT_BD            | INT    | FLAG of GALFIT status: |
 | |                                      | 0: fit has not been tried, most values == -99|
 | |                                      | 1: fit has been started, but is either still active or crashed during the fit, most values == -99, 
-| NITER*_*GALFIT*_*BD           | INT    | Number of Iterations that GALFIT needed to finish B/D fit |
-| NEIGH*_*GALFIT*_*BD           | INT    | Number of neighbouring objects in the fit in B/D fit |
-| CHISQ*_*GALFIT*_*BD           | FLOAT  | Chi^2 of the B/D fit |
-| NFREE*_*GALFIT*_*BD           | LONG   | Number of free parameters during the B/D fit |
-| NFIX*_*GALFIT*_*BD            | LONG   | Number of fixed parameters during the B/D fit (e.g. in neighbouring objects)  |
-| NDOF*_*GALFIT*_*BD            | LONG   | Degree of Freedom of the B/D fit |
-| CHI2NU*_*GALFIT*_*BD          | FLOAT  | Reduced Chi^2 of the B/D fit |
-| FIRSTCON*_*GALFIT*_*BD        | INT    | FIRST iteration which  violated a constraint |
-| LASTCON*_*GALFIT*_*BD         | INT    | LAST iteration that violated a constraints (e.g. dangerous if the last iteration before Galfit finished, however, depends on WHICH constraint has been violated and whether by primary or secondary objects) |
-| CPUTIME*_*SETUP*_*GALFIT*_*BD | FLOAT  | CPU time spend on setting up the B/D fit |
-| CPUTIME*_*FIT*_*GALFIT*_*BD   | FLOAT  | CPU time spend on the actual B/D fit |
-| CPUTIME*_*TOTAL*_*GALFIT*_*BD | FLOAT  | total CPU time used by GALFIT for B/D fit |
+| NITER_GALFIT_BD           | INT    | Number of Iterations that GALFIT needed to finish B/D fit |
+| NEIGH_GALFIT_BD           | INT    | Number of neighbouring objects in the fit in B/D fit |
+| CHISQ_GALFIT_BD           | FLOAT  | Chi^2 of the B/D fit |
+| NFREE_GALFIT_BD           | LONG   | Number of free parameters during the B/D fit |
+| NFIX_GALFIT_BD            | LONG   | Number of fixed parameters during the B/D fit (e.g. in neighbouring objects)  |
+| NDOF_GALFIT_BD            | LONG   | Degree of Freedom of the B/D fit |
+| CHI2NU_GALFIT_BD          | FLOAT  | Reduced Chi^2 of the B/D fit |
+| FIRSTCON_GALFIT_BD        | INT    | FIRST iteration which  violated a constraint |
+| LASTCON_GALFIT_BD         | INT    | LAST iteration that violated a constraints (e.g. dangerous if the last iteration before Galfit finished, however, depends on WHICH constraint has been violated and whether by primary or secondary objects) |
+| CPUTIME_SETUP_GALFIT_BD | FLOAT  | CPU time spend on setting up the B/D fit |
+| CPUTIME_FIT_GALFIT_BD   | FLOAT  | CPU time spend on the actual B/D fit |
+| CPUTIME_TOTAL_GALFIT_BD | FLOAT  | total CPU time used by GALFIT for B/D fit |
 | **General Fit Parameters** | | |
-| SKY*_*GALFIT*_*BAND*_*BD      | FLOAT  | Sky values as used by GALFIT for each band (should be identical with SKY*_*GALA*_*BAND) |
-| SKY*_*GALFIT*_*CHEB*_*BD      | FLOAT  | Chebishev parameters that describe the sky polynomial (dangerous to use as sjy values are held fixed during the fit, e.g. the polynomial has no real meaning in between the wavelengths of the input bands) |
+| SKY_GALFIT_BAND_BD      | FLOAT  | Sky values as used by GALFIT for each band (should be identical with SKY_GALA_BAND) |
+| SKY_GALFIT_CHEB_BD      | FLOAT  | Chebishev parameters that describe the sky polynomial (dangerous to use as sjy values are held fixed during the fit, e.g. the polynomial has no real meaning in between the wavelengths of the input bands) |
 | **Galfit B/D Fit Parameters BULGE** | | |
-| X*_*GALFIT*_*DEG*_*B          | INT    | Bulge: Degree of freedom for X-position of primary source |
+| X_GALFIT_DEG_B          | INT    | Bulge: Degree of freedom for X-position of primary source |
 | |                                      | 0: fixed at input values |
 | |                                      | 1: variable during fit, but with values constant with wavelength |
 | |                                      | 2: variable during fit, linear with wavelength (e.g. 2 degrees of freedom in polynomial)|
 | |                                      | 3: variable during fit, quadratic with wavelength (e.g. 3 degrees of freedom in polynomial)|
 | |                                      | ... |
-| X*_*GALFIT*_*BAND*_*B         | FLOAT  | Bulge-X-Position in each band |
-| XERR*_*GALFIT*_*BAND*_*B      | FLOAT  | Error on Bulge-X-Position in each band |
-| X*_*GALFIT*_*CHEB*_*B         | FLOAT  | Chebishev parameters for Bulge-X-Position |
-| XERR*_*GALFIT*_*CHEB*_*B      | FLOAT  | Errors on Chebishev parameters for Bulge-X-Position |
-| Y*_*GALFIT*_*DEG*_*B          | INT    | Bulge: Degree of freedom for Y-position of primary source |
-| Y*_*GALFIT*_*BAND*_*B         | FLOAT  | Bulge-Y-Position in each band |
-| YERR*_*GALFIT*_*BAND*_*B      | FLOAT  | Error on Bulge-Y-Position in each band |
-| Y*_*GALFIT*_*CHEB*_*B         | FLOAT  | Chebishev parameters for Bulge-Y-Position |
-| YERR*_*GALFIT*_*CHEB*_*B      | FLOAT  | Error on Chebishev parameters for Bulge-Y-Position |
-| MAG*_*GALFIT*_*DEG*_*B        | INT    | Bulge: Degree of freedom for magnitude of primary source |
-| MAG*_*GALFIT*_*BAND*_*B       | FLOAT  | Bulge-Magnitude in each band |
-| MAGERR*_*GALFIT*_*BAND*_*B    | FLOAT  | Error on Bulge-Magnitude in each band |
-| MAG*_*GALFIT*_*CHEB*_*B       | FLOAT  | Chebishev parameters for Bulge-Magnitude |
-| MAGERR*_*GALFIT*_*CHEB*_*B    | FLOAT  | Error on Chebishev parameters for Bulge-Magnitude |
-| RE*_*GALFIT*_*DEG*_*B         | INT    | Bulge: Degree of freedom for re of primary source |
-| RE*_*GALFIT*_*BAND*_*B        | FLOAT  | Bulge-Re in each band |
-| REERR*_*GALFIT*_*BAND*_*B     | FLOAT  | Error on Bulge-re in each band |
-| RE*_*GALFIT*_*CHEB*_*B        | FLOAT  | Chebishev parameters for Bulge-re |
-| REERR*_*GALFIT*_*CHEB*_*B     | FLOAT  | Error on Chebishev parameters for Bulge-re |
-| N*_*GALFIT*_*DEG*_*B          | INT    | Bulge: Degree of freedom for sersic index of primary source |
-| N*_*GALFIT*_*BAND*_*B         | FLOAT  | Bulge-Sersic Index in each band |
-| NERR*_*GALFIT*_*BAND*_*B      | FLOAT  | Error on Bulge-Sersic Index in each band |
-| N*_*GALFIT*_*CHEB*_*B         | FLOAT  | Chebishev parameters for Bulge-Sersic Index |
-| NERR*_*GALFIT*_*CHEB*_*B      | FLOAT  | Error on Chebishev parameters for Bulge-Sersic Index |
-| Q*_*GALFIT*_*DEG*_*B          | INT    | Bulge: Degree of freedom for axis ratio of primary source |
-| Q*_*GALFIT*_*BAND*_*B         | FLOAT  | Bulge-Axis Ratio in each band |
-| QERR*_*GALFIT*_*BAND*_*B      | FLOAT  | Error on Bulge-Axis Ratio in each band |
-| Q*_*GALFIT*_*CHEB*_*B         | FLOAT  | Chebishev parameters for Bulge-Axis Ratio |
-| QERR*_*GALFIT*_*CHEB*_*B      | FLOAT  | Error on Chebishev parameters for Bulge-Axis Ratio |
-| PA*_*GALFIT*_*DEG*_*B         | INT    | Bulge: Degree of freedom for position angle of primary source |
-| PA*_*GALFIT*_*BAND*_*B        | FLOAT  | Bulge-Position Angle in each band |
-| PAERR*_*GALFIT*_*BAND*_*B     | FLOAT  | Error on Bulge-Position Angle in each band |
-| PA*_*GALFIT*_*CHEB*_*B        | FLOAT  | Chebishev parameters for Bulge-Position Angle |
-| PAERR*_*GALFIT*_*CHEB*_*B     | FLOAT  | Error on Chebishev parameters for Bulge-Position Angle |
+| X_GALFIT_BAND_B         | FLOAT  | Bulge-X-Position in each band |
+| XERR_GALFIT_BAND_B      | FLOAT  | Error on Bulge-X-Position in each band |
+| X_GALFIT_CHEB_B         | FLOAT  | Chebishev parameters for Bulge-X-Position |
+| XERR_GALFIT_CHEB_B      | FLOAT  | Errors on Chebishev parameters for Bulge-X-Position |
+| Y_GALFIT_DEG_B          | INT    | Bulge: Degree of freedom for Y-position of primary source |
+| Y_GALFIT_BAND_B         | FLOAT  | Bulge-Y-Position in each band |
+| YERR_GALFIT_BAND_B      | FLOAT  | Error on Bulge-Y-Position in each band |
+| Y_GALFIT_CHEB_B         | FLOAT  | Chebishev parameters for Bulge-Y-Position |
+| YERR_GALFIT_CHEB_B      | FLOAT  | Error on Chebishev parameters for Bulge-Y-Position |
+| MAG_GALFIT_DEG_B        | INT    | Bulge: Degree of freedom for magnitude of primary source |
+| MAG_GALFIT_BAND_B       | FLOAT  | Bulge-Magnitude in each band |
+| MAGERR_GALFIT_BAND_B    | FLOAT  | Error on Bulge-Magnitude in each band |
+| MAG_GALFIT_CHEB_B       | FLOAT  | Chebishev parameters for Bulge-Magnitude |
+| MAGERR_GALFIT_CHEB_B    | FLOAT  | Error on Chebishev parameters for Bulge-Magnitude |
+| RE_GALFIT_DEG_B         | INT    | Bulge: Degree of freedom for re of primary source |
+| RE_GALFIT_BAND_B        | FLOAT  | Bulge-Re in each band |
+| REERR_GALFIT_BAND_B     | FLOAT  | Error on Bulge-re in each band |
+| RE_GALFIT_CHEB_B        | FLOAT  | Chebishev parameters for Bulge-re |
+| REERR_GALFIT_CHEB_B     | FLOAT  | Error on Chebishev parameters for Bulge-re |
+| N_GALFIT_DEG_B          | INT    | Bulge: Degree of freedom for sersic index of primary source |
+| N_GALFIT_BAND_B         | FLOAT  | Bulge-Sersic Index in each band |
+| NERR_GALFIT_BAND_B      | FLOAT  | Error on Bulge-Sersic Index in each band |
+| N_GALFIT_CHEB_B         | FLOAT  | Chebishev parameters for Bulge-Sersic Index |
+| NERR_GALFIT_CHEB_B      | FLOAT  | Error on Chebishev parameters for Bulge-Sersic Index |
+| Q_GALFIT_DEG_B          | INT    | Bulge: Degree of freedom for axis ratio of primary source |
+| Q_GALFIT_BAND_B         | FLOAT  | Bulge-Axis Ratio in each band |
+| QERR_GALFIT_BAND_B      | FLOAT  | Error on Bulge-Axis Ratio in each band |
+| Q_GALFIT_CHEB_B         | FLOAT  | Chebishev parameters for Bulge-Axis Ratio |
+| QERR_GALFIT_CHEB_B      | FLOAT  | Error on Chebishev parameters for Bulge-Axis Ratio |
+| PA_GALFIT_DEG_B         | INT    | Bulge: Degree of freedom for position angle of primary source |
+| PA_GALFIT_BAND_B        | FLOAT  | Bulge-Position Angle in each band |
+| PAERR_GALFIT_BAND_B     | FLOAT  | Error on Bulge-Position Angle in each band |
+| PA_GALFIT_CHEB_B        | FLOAT  | Chebishev parameters for Bulge-Position Angle |
+| PAERR_GALFIT_CHEB_B     | FLOAT  | Error on Chebishev parameters for Bulge-Position Angle |
 | **Galfit B/D Fit Parameters DISK** | | |
-| X*_*GALFIT*_*BAND*_*D         | FLOAT  | Disk-X-Position in each band |
-| XERR*_*GALFIT*_*BAND*_*D      | FLOAT  | Error on Disk-X-Position in each band |
-| X*_*GALFIT*_*CHEB*_*D         | FLOAT  | Chebishev parameters for Disk-X-Position |
-| XERR*_*GALFIT*_*CHEB*_*D      | FLOAT  | Errors on Chebishev parameters for Disk-X-Position |
-| Y*_*GALFIT*_*DEG*_*D          | INT    | Disk: Degree of freedom for Y-position of primary source |
-| Y*_*GALFIT*_*BAND*_*D         | FLOAT  | Disk-Y-Position in each band |
-| YERR*_*GALFIT*_*BAND*_*D      | FLOAT  | Error on Disk-Y-Position in each band |
-| Y*_*GALFIT*_*CHEB*_*D         | FLOAT  | Chebishev parameters for Disk-Y-Position |
-| YERR*_*GALFIT*_*CHEB*_*D      | FLOAT  | Error on Chebishev parameters for Disk-Y-Position |
-| MAG*_*GALFIT*_*DEG*_*D        | INT    | Disk: Degree of freedom for magnitude of primary source |
-| MAG*_*GALFIT*_*BAND*_*D       | FLOAT  | Disk-Magnitude in each band |
-| MAGERR*_*GALFIT*_*BAND*_*D    | FLOAT  | Error on Disk-Magnitude in each band |
-| MAG*_*GALFIT*_*CHEB*_*D       | FLOAT  | Chebishev parameters for Disk-Magnitude |
-| MAGERR*_*GALFIT*_*CHEB*_*D    | FLOAT  | Error on Chebishev parameters for Disk-Magnitude |
-| RE*_*GALFIT*_*DEG*_*D         | INT    | Disk: Degree of freedom for re of primary source |
-| RE*_*GALFIT*_*BAND*_*D        | FLOAT  | Disk-Re in each band |
-| REERR*_*GALFIT*_*BAND*_*D     | FLOAT  | Error on Disk-re in each band |
-| RE*_*GALFIT*_*CHEB*_*D        | FLOAT  | Chebishev parameters for Disk-re |
-| REERR*_*GALFIT*_*CHEB*_*D     | FLOAT  | Error on Chebishev parameters for Disk-re |
-| N*_*GALFIT*_*DEG*_*D          | INT    | Disk: Degree of freedom for sersic index of primary source |
-| N*_*GALFIT*_*BAND*_*D         | FLOAT  | Disk-Sersic Index in each band |
-| NERR*_*GALFIT*_*BAND*_*D      | FLOAT  | Error on Disk-Sersic Index in each band |
-| N*_*GALFIT*_*CHEB*_*D         | FLOAT  | Chebishev parameters for Disk-Sersic Index |
-| NERR*_*GALFIT*_*CHEB*_*D      | FLOAT  | Error on Chebishev parameters for Disk-Sersic Index |
-| Q*_*GALFIT*_*DEG*_*D          | INT    | Disk: Degree of freedom for axis ratio of primary source |
-| Q*_*GALFIT*_*BAND*_*D         | FLOAT  | Disk-Axis Ratio in each band |
-| QERR*_*GALFIT*_*BAND*_*D      | FLOAT  | Error on Disk-Axis Ratio in each band |
-| Q*_*GALFIT*_*CHEB*_*D         | FLOAT  | Chebishev parameters for Disk-Axis Ratio |
-| QERR*_*GALFIT*_*CHEB*_*D      | FLOAT  | Error on Chebishev parameters for Disk-Axis Ratio |
-| PA*_*GALFIT*_*DEG*_*D         | INT    | Disk: Degree of freedom for position angle of primary source |
-| PA*_*GALFIT*_*BAND*_*D        | FLOAT  | Disk-Position Angle in each band |
-| PAERR*_*GALFIT*_*BAND*_*D     | FLOAT  | Error on Disk-Position Angle in each band |
-| PA*_*GALFIT*_*CHEB*_*D        | FLOAT  | Chebishev parameters for Disk-Position Angle |
-| PAERR*_*GALFIT*_*CHEB*_*D     | FLOAT  | Error on Chebishev parameters for Disk-Position Angle |
+| X_GALFIT_BAND_D         | FLOAT  | Disk-X-Position in each band |
+| XERR_GALFIT_BAND_D      | FLOAT  | Error on Disk-X-Position in each band |
+| X_GALFIT_CHEB_D         | FLOAT  | Chebishev parameters for Disk-X-Position |
+| XERR_GALFIT_CHEB_D      | FLOAT  | Errors on Chebishev parameters for Disk-X-Position |
+| Y_GALFIT_DEG_D          | INT    | Disk: Degree of freedom for Y-position of primary source |
+| Y_GALFIT_BAND_D         | FLOAT  | Disk-Y-Position in each band |
+| YERR_GALFIT_BAND_D      | FLOAT  | Error on Disk-Y-Position in each band |
+| Y_GALFIT_CHEB_D         | FLOAT  | Chebishev parameters for Disk-Y-Position |
+| YERR_GALFIT_CHEB_D      | FLOAT  | Error on Chebishev parameters for Disk-Y-Position |
+| MAG_GALFIT_DEG_D        | INT    | Disk: Degree of freedom for magnitude of primary source |
+| MAG_GALFIT_BAND_D       | FLOAT  | Disk-Magnitude in each band |
+| MAGERR_GALFIT_BAND_D    | FLOAT  | Error on Disk-Magnitude in each band |
+| MAG_GALFIT_CHEB_D       | FLOAT  | Chebishev parameters for Disk-Magnitude |
+| MAGERR_GALFIT_CHEB_D    | FLOAT  | Error on Chebishev parameters for Disk-Magnitude |
+| RE_GALFIT_DEG_D         | INT    | Disk: Degree of freedom for re of primary source |
+| RE_GALFIT_BAND_D        | FLOAT  | Disk-Re in each band |
+| REERR_GALFIT_BAND_D     | FLOAT  | Error on Disk-re in each band |
+| RE_GALFIT_CHEB_D        | FLOAT  | Chebishev parameters for Disk-re |
+| REERR_GALFIT_CHEB_D     | FLOAT  | Error on Chebishev parameters for Disk-re |
+| N_GALFIT_DEG_D          | INT    | Disk: Degree of freedom for sersic index of primary source |
+| N_GALFIT_BAND_D         | FLOAT  | Disk-Sersic Index in each band |
+| NERR_GALFIT_BAND_D      | FLOAT  | Error on Disk-Sersic Index in each band |
+| N_GALFIT_CHEB_D         | FLOAT  | Chebishev parameters for Disk-Sersic Index |
+| NERR_GALFIT_CHEB_D      | FLOAT  | Error on Chebishev parameters for Disk-Sersic Index |
+| Q_GALFIT_DEG_D          | INT    | Disk: Degree of freedom for axis ratio of primary source |
+| Q_GALFIT_BAND_D         | FLOAT  | Disk-Axis Ratio in each band |
+| QERR_GALFIT_BAND_D      | FLOAT  | Error on Disk-Axis Ratio in each band |
+| Q_GALFIT_CHEB_D         | FLOAT  | Chebishev parameters for Disk-Axis Ratio |
+| QERR_GALFIT_CHEB_D      | FLOAT  | Error on Chebishev parameters for Disk-Axis Ratio |
+| PA_GALFIT_DEG_D         | INT    | Disk: Degree of freedom for position angle of primary source |
+| PA_GALFIT_BAND_D        | FLOAT  | Disk-Position Angle in each band |
+| PAERR_GALFIT_BAND_D     | FLOAT  | Error on Disk-Position Angle in each band |
+| PA_GALFIT_CHEB_D        | FLOAT  | Chebishev parameters for Disk-Position Angle |
+| PAERR_GALFIT_CHEB_D     | FLOAT  | Error on Chebishev parameters for Disk-Position Angle |
