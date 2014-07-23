@@ -689,7 +689,10 @@ FOR i=0ul, n_elements(table)-1 DO BEGIN
       table[i].x_image-xlo, table[i].y_image-ylo, $
       1./(1.-table[i].ellipticity), table[i].theta_image-90
     idx = where(arr LE (rad[i] > 5))
-    arr = fix(arr) & arr = arr*0 & arr[idx] = 1
+; old version, but crashes if idx is empty    arr = fix(arr) & arr = arr*0 & arr[idx] = 1
+    arr = fix(arr) & arr = arr*0
+    if idx[0] ne -1 then arr[idx] = 1
+
     FOR j=xlo, xhi DO BEGIN
         FOR k=ylo, yhi DO BEGIN
             IF arr[j-xlo, k-ylo] EQ 1 THEN map[j, k] = map[j, k]+1
@@ -3925,10 +3928,10 @@ endfor
 if (total(skymap_exist) ne nframes*nband) and (setup.dosky eq 1 or setup.dobd eq 1) then begin
     print, ' '
     print, 'WARNING'
-    print, 'The number of skymap files on your disk does not correspond to the number that should exist. It seems that your block C' + $
-      'did not finish correctly. It has been reported that when you have one frame only, you need to set D18 to "1" for this block to work.' + $
-      'I think I fixed this bug and have never seen this behaviour myself, but if you can read this, maybe give it a try.' + $
-      'This will mean that the processes crash in the "bridge", which will be hard to find given the lack of feedback. This is why I am' +$
+    print, 'The number of skymap files on your disk does not correspond to the number that should exist. It seems that your block C ' + $
+      'did not finish correctly. It has been reported that when you have one frame only, you need to set D18 to "1" for this block to work. ' + $
+      'I think I fixed this bug and have never seen this behaviour myself, but if you can read this, maybe give it a try. ' + $
+      'This will mean that the processes crash in the "bridge", which will be hard to find given the lack of feedback. This is why I am ' +$
       'telling you here'
     stop
 endif
@@ -4033,7 +4036,7 @@ IF setup.dosky or setup.dobd  THEN BEGIN
            readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT   
          
            srccor, table.alpha_j2000/15., table.delta_j2000, do_ra/15., do_dec, $
-             setup.srclistrad, tab_i, do_i, OPTION=0, /SPHERICAL, /SILENT
+                   setup.srclistrad, tab_i, do_i, OPTION=0, /SPHERICAL, /SILENT
            
 ; print indices in to file to be read in next time (much faster)
 ; This has to be done here and not when cutting the postage stamps,
