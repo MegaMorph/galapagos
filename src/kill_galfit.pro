@@ -1,6 +1,7 @@
 pro kill_galfit, task, time_limit, mac=mac
 ; .run kill_galfit.pro
 ; kill_galfit, 'galfitm-0.1.2.1', 180
+; kill_galfit, 'galfitm-1.1.7-l', 1
 
 spawn, 'whoami', id
 spawn, 'ps -u '+id+' | grep '+task, ps

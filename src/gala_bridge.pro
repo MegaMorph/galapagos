@@ -160,6 +160,7 @@ prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, 
    ENDIF
 
    spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
+   spawn, 'rm '+outpath_galfit[idx]+'galfit.log'
    spawn, 'rm ~/galfit.[0123456789]*'
 
    file_delete, filein

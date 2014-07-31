@@ -1,3 +1,4 @@
+
 ;@~/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
 ;@~/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
 ;@~/megamorph_dev/astro-megamorph/galapagos/mrd_hread.pro
@@ -4194,6 +4195,7 @@ loopstart2:
             IF ct GT 0 THEN BEGIN
                 REPEAT BEGIN
 ; get distance to all active objects
+;                    print, table[todo[ob]].alpha_j2000, table[todo[ob]].delta_j2000
                     gcirc, 1, table[todo[ob]].alpha_j2000/15d, table[todo[ob]].delta_j2000, $
                       bridge_pos[0, filled]/15d, bridge_pos[1, filled], dist
 ; get distance to all blocked objects
@@ -4213,6 +4215,7 @@ loopstart2:
                         wait, 1
                         ob=0l
 ;                        print, 'starting over'
+;                        wait, 1
                         goto, loopstart2
                     ENDIF
                     
@@ -4337,11 +4340,11 @@ loopstart2:
                file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
                             /allow_nonexistent, /noexpand_path
             ENDELSE
-            wait, 1
+            wait, 0.1
 ;switch to next object
         ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
-           wait, 1
+           wait, 0.1
         ENDELSE
         
 loopend:
@@ -4832,11 +4835,11 @@ loopstart2_bd:
 ;--------------------------- MARCOS SCRIPT
                     
                 ENDELSE
-                wait, 1
+                wait, 0.1
 ;switch to next object
             ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
-                wait, 1
+                wait, 0.1
             ENDELSE
 
 loopend_bd:
