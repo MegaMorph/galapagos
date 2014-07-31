@@ -696,7 +696,10 @@ FOR i=0ul, n_elements(table)-1 DO BEGIN
       table[i].x_image-xlo, table[i].y_image-ylo, $
       1./(1.-table[i].ellipticity), table[i].theta_image-90
     idx = where(arr LE (rad[i] > 5))
-    arr = fix(arr) & arr = arr*0 & arr[idx] = 1
+; old version, but crashes if idx is empty    arr = fix(arr) & arr = arr*0 & arr[idx] = 1
+    arr = fix(arr) & arr = arr*0
+    if idx[0] ne -1 then arr[idx] = 1
+
     FOR j=xlo, xhi DO BEGIN
         FOR k=ylo, yhi DO BEGIN
             IF arr[j-xlo, k-ylo] EQ 1 THEN map[j, k] = map[j, k]+1
@@ -3634,9 +3637,9 @@ printf, lun, message
 free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_PRO, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
-galapagos_version = 'GALAPAGOS-v2.1.4'
-galapagos_date = '(June 16th, 2014)'
+PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
+galapagos_version = 'GALAPAGOS-v2.1.5'
+galapagos_date = '(July 23rd, 2014)'
 print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
 print, ''
 start=systime(0)
@@ -3932,10 +3935,10 @@ endfor
 if (total(skymap_exist) ne nframes*nband) and (setup.dosky eq 1 or setup.dobd eq 1) then begin
     print, ' '
     print, 'WARNING'
-    print, 'The number of skymap files on your disk does not correspond to the number that should exist. It seems that your block C' + $
-      'did not finish correctly. It has been reported that when you have one frame only, you need to set D18 to "1" for this block to work.' + $
-      'I think I fixed this bug and have never seen this behaviour myself, but if you can read this, maybe give it a try.' + $
-      'This will mean that the processes crash in the "bridge", which will be hard to find given the lack of feedback. This is why I am' +$
+    print, 'The number of skymap files on your disk does not correspond to the number that should exist. It seems that your block C ' + $
+      'did not finish correctly. It has been reported that when you have one frame only, you need to set D18 to "1" for this block to work. ' + $
+      'I think I fixed this bug and have never seen this behaviour myself, but if you can read this, maybe give it a try. ' + $
+      'This will mean that the processes crash in the "bridge", which will be hard to find given the lack of feedback. This is why I am ' +$
       'telling you here'
     stop
 endif
@@ -4040,7 +4043,7 @@ IF setup.dosky or setup.dobd  THEN BEGIN
            readcol, setup.srclist, do_ra, do_dec, format='F,F', comment='#', /SILENT   
          
            srccor, table.alpha_j2000/15., table.delta_j2000, do_ra/15., do_dec, $
-             setup.srclistrad, tab_i, do_i, OPTION=0, /SPHERICAL, /SILENT
+                   setup.srclistrad, tab_i, do_i, OPTION=0, /SPHERICAL, /SILENT
            
 ; print indices in to file to be read in next time (much faster)
 ; This has to be done here and not when cutting the postage stamps,
@@ -4959,6 +4962,11 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
 
    struct_assign, tab, out
 
+; create ID for all objects
+   add_tag, out, 'gala_ID', ' ', out2
+   out = out2
+   delvarx,out2
+
 ;find the image files for the sources
    orgim = setup.images
    orgwht = setup.weights
@@ -4985,6 +4993,10 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
        out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0] 
 
        if file_test(out_file+'.fits') then read += 1
+
+; write galapagos ID
+       out[i].gala_id = orgpre[idx]+objnum
+
        print, 'reading results for object No.'+strtrim(i+1,2)+' of '+strtrim(ntab,2)+' ('+strtrim(read,2)+' already read)' 
 ;      statusline, 'reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
      
@@ -5031,11 +5043,67 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
       ELSE out = out[good]
    ENDIF 
 
+; delete duplicate values from table
+out=remove_tags(out,['x_galfit', 'xerr_galfit','y_galfit', 'yerr_galfit','mag_galfit', $
+                     'magerr_galfit','re_galfit', 'reerr_galfit','n_galfit', 'nerr_galfit', $
+                     'q_galfit', 'qerr_galfit','pa_galfit', 'paerr_galfit', $
+                     'x_galfit_b', 'xerr_galfit_b','y_galfit_b', 'yerr_galfit_b','mag_galfit_b', $
+                     'magerr_galfit_b','re_galfit_b', 'reerr_galfit_b','n_galfit_b', 'nerr_galfit_b', $
+                     'q_galfit_b', 'qerr_galfit_b','pa_galfit_b', 'paerr_galfit_b', $
+                     'x_galfit_d', 'xerr_galfit_d','y_galfit_d', 'yerr_galfit_d','mag_galfit_d', $
+                     'magerr_galfit_d','re_galfit_d', 'reerr_galfit_d','n_galfit_d', 'nerr_galfit_d', $
+                     'q_galfit_d', 'qerr_galfit_d','pa_galfit_d', 'paerr_galfit_d', $
+                     'sky_galfit', 'sky_galfit_bd', 'psf_galfit', 'psf_galfit_bd', 'org_image'])
+   
 ; write galapagos and galfit version into catalogue
    add_tag, out, 'galapagos_version', galapagos_version, out2
    out = out2
-   out2 = reorder_tags(out, ['galapagos_version'])
+
+; reorder all columns into useful order
+   out2 = reorder_tags(out, $
+                       ['GALAPAGOS_VERSION','GALA_ID','NUMBER',$
+                        'X_IMAGE','Y_IMAGE','CXX_IMAGE','CYY_IMAGE','CXY_IMAGE',$
+                        'THETA_IMAGE','THETA_WORLD','ELLIPTICITY','KRON_RADIUS','A_IMAGE',$
+                        'B_IMAGE','ALPHA_J2000','DELTA_J2000','BACKGROUND','FLUX_BEST',$
+                        'FLUXERR_BEST','MAG_BEST','MAGERR_BEST','FLUX_RADIUS','ISOAREA_IMAGE',$
+                        'FWHM_IMAGE','FLAGS','CLASS_STAR',$
+                        'TILE','ORG_IMAGE_BAND',$
+                        'SKY_GALA_BAND','SKY_SIG_BAND','SKY_RAD_BAND','SKY_FLAG_BAND',$
+                        'GALFIT_VERSION','FILE_GALFIT','INITFILE','CONSTRNT','PSF_GALFIT_BAND',$
+                        'FLAG_GALFIT','FITSECT','CONVBOX','NGOOD_GALFIT_BAND','NMASK_GALFIT_BAND',$
+                        'NITER_GALFIT','NEIGH_GALFIT','CHISQ_GALFIT','NFREE_GALFIT','NFIX_GALFIT',$
+                        'NDOF_GALFIT','CHI2NU_GALFIT','FIRSTCON_GALFIT','LASTCON_GALFIT','CPUTIME_SETUP_GALFIT',$
+                        'CPUTIME_FIT_GALFIT','CPUTIME_TOTAL_GALFIT',$
+                        'SKY_GALFIT_BAND','SKY_GALFIT_CHEB',$
+                        'X_GALFIT_DEG','X_GALFIT_BAND','XERR_GALFIT_BAND','X_GALFIT_CHEB','XERR_GALFIT_CHEB',$
+                        'Y_GALFIT_DEG','Y_GALFIT_BAND','YERR_GALFIT_BAND','Y_GALFIT_CHEB','YERR_GALFIT_CHEB',$
+                        'MAG_GALFIT_DEG','MAG_GALFIT_BAND','MAGERR_GALFIT_BAND','MAG_GALFIT_CHEB','MAGERR_GALFIT_CHEB',$
+                        'RE_GALFIT_DEG','RE_GALFIT_BAND','REERR_GALFIT_BAND','RE_GALFIT_CHEB','REERR_GALFIT_CHEB' ,$
+                        'N_GALFIT_DEG','N_GALFIT_BAND' ,'NERR_GALFIT_BAND' ,'N_GALFIT_CHEB','NERR_GALFIT_CHEB',$
+                        'Q_GALFIT_DEG','Q_GALFIT_BAND','QERR_GALFIT_BAND' ,'Q_GALFIT_CHEB','QERR_GALFIT_CHEB',$
+                        'PA_GALFIT_DEG','PA_GALFIT_BAND','PAERR_GALFIT_BAND','PA_GALFIT_CHEB','PAERR_GALFIT_CHEB',$
+                        'GALFIT_VERSION_BD','FILE_GALFIT_BD','INITFILE_BD','CONSTRNT_BD','PSF_GALFIT_BAND_BD',$
+                        'FLAG_GALFIT_BD','NITER_GALFIT_BD','NEIGH_GALFIT_BD','CHISQ_GALFIT_BD','NFREE_GALFIT_BD',$
+                        'NFIX_GALFIT_BD','NDOF_GALFIT_BD','CHI2NU_GALFIT_BD','FIRSTCON_GALFIT_BD','LASTCON_GALFIT_BD',$
+                        'CPUTIME_SETUP_GALFIT_BD','CPUTIME_FIT_GALFIT_BD','CPUTIME_TOTAL_GALFIT_BD' ,$
+                        'SKY_GALFIT_BAND_BD','SKY_GALFIT_CHEB_BD',$
+                        'X_GALFIT_DEG_B','X_GALFIT_BAND_B','XERR_GALFIT_BAND_B' ,'X_GALFIT_CHEB_B','XERR_GALFIT_CHEB_B',$
+                        'Y_GALFIT_DEG_B','Y_GALFIT_BAND_B','YERR_GALFIT_BAND_B' ,'Y_GALFIT_CHEB_B','YERR_GALFIT_CHEB_B',$
+                        'MAG_GALFIT_DEG_B','MAG_GALFIT_BAND_B','MAGERR_GALFIT_BAND_B'  ,'MAG_GALFIT_CHEB_B','MAGERR_GALFIT_CHEB_B',$
+                        'RE_GALFIT_DEG_B','RE_GALFIT_BAND_B','REERR_GALFIT_BAND_B','RE_GALFIT_CHEB_B','REERR_GALFIT_CHEB_B',$
+                        'N_GALFIT_DEG_B','N_GALFIT_BAND_B','NERR_GALFIT_BAND_B','N_GALFIT_CHEB_B','NERR_GALFIT_CHEB_B',$
+                        'Q_GALFIT_DEG_B','Q_GALFIT_BAND_B' ,'QERR_GALFIT_BAND_B','Q_GALFIT_CHEB_B','QERR_GALFIT_CHEB_B',$
+                        'PA_GALFIT_DEG_B','PA_GALFIT_BAND_B','PAERR_GALFIT_BAND_B','PA_GALFIT_CHEB_B','PAERR_GALFIT_CHEB_B',$
+                        'X_GALFIT_DEG_D','X_GALFIT_BAND_D','XERR_GALFIT_BAND_D','X_GALFIT_CHEB_D','XERR_GALFIT_CHEB_D',$
+                        'Y_GALFIT_DEG_D','Y_GALFIT_BAND_D','YERR_GALFIT_BAND_D','Y_GALFIT_CHEB_D','YERR_GALFIT_CHEB_D',$
+                        'MAG_GALFIT_DEG_D','MAG_GALFIT_BAND_D','MAGERR_GALFIT_BAND_D','MAG_GALFIT_CHEB_D','MAGERR_GALFIT_CHEB_D',$
+                        'RE_GALFIT_DEG_D','RE_GALFIT_BAND_D','REERR_GALFIT_BAND_D','RE_GALFIT_CHEB_D','REERR_GALFIT_CHEB_D',$
+                        'N_GALFIT_DEG_D','N_GALFIT_BAND_D' ,'NERR_GALFIT_BAND_D','N_GALFIT_CHEB_D','NERR_GALFIT_CHEB_D',$
+                        'Q_GALFIT_DEG_D','Q_GALFIT_BAND_D','QERR_GALFIT_BAND_D','Q_GALFIT_CHEB_D','QERR_GALFIT_CHEB_D',$
+                        'PA_GALFIT_DEG_D','PA_GALFIT_BAND_D','PAERR_GALFIT_BAND_D','PA_GALFIT_CHEB_D','PAERR_GALFIT_CHEB_D'])
    out = out2
+
+; write out catalogue
    mwrfits, out, setup.outdir+setup.cat, /silent, /create
 ENDIF
 d = check_math()
