@@ -687,3 +687,8 @@ The code is not as effective as it could be. However, most of the time is still 
 - some minor bug fixes (if the code ran, everything was correct, but code could crash under certain circumstances)
 - fixed bug in PSF routine that now allows to use one PSF per band
 
+**v2.1.5**
+- Fixed one minor bug, which (in case of bad setup) can cause the code to crash. Should not affect anyone
+- Removed duplicate information from the output catalogue
+- Reordered columns in the output catalogue into a more sensible way
+- Added README_catalogue.md in the EXAMPLE folder, which explains all columns in the output catalogue
