@@ -1,4 +1,4 @@
-##GALAPAGOS-2 README (v.2.1.3)
+##GALAPAGOS-2 README (v.2.1.5)
 
 Please read this file for details on input format and new features off the code.  
 Especially read this file regarding your image normalisation and how to set up and run galapagos in the most efficient way.  
@@ -72,9 +72,12 @@ If this worked, delete it and run:
     bridge_arr = objarr(1)             
     bridge_arr[0] = obj_new('IDL_IDLBridge')  
     bridge_arr[0]->execute, '.r write_bridge_test_file.pro'        
-    bridge_arr[0]->execute, 'write_bridge_test_file'
+    bridge_arr[0]->execute, 'write_bridge_test_file', /nowait
 If the file pops up in your home directory again, then your bridge is installed correctly and you're ready to go.  
 If not, it seems your IDL installation does not support the IDL\_BRIDGE. Ask your IT department to fix this.
+
+CORRECTION: The above does not test this well.
+The problem is (or can be) caused by the /nowait flag. Despite the above error message and the program stopping, the file IS created. I'm a bit puzzled and we're looking for a solution. For now it seems that if you DO see the above error message when running the test above, you will not be able to run Galapagos one more than 1 core (everything still works with D18==1)
 
 6) Please make sure you use an appropriate number for D18. It is explained below, how to find and set this number.
 
@@ -684,3 +687,8 @@ The code is not as effective as it could be. However, most of the time is still 
 - some minor bug fixes (if the code ran, everything was correct, but code could crash under certain circumstances)
 - fixed bug in PSF routine that now allows to use one PSF per band
 
+**v2.1.5**
+- Fixed one minor bug, which (in case of bad setup) can cause the code to crash. Should not affect anyone
+- Removed duplicate information from the output catalogue
+- Reordered columns in the output catalogue into a more sensible way
+- Added README_catalogue.md in the EXAMPLE folder, which explains all columns in the output catalogue
