@@ -1675,7 +1675,7 @@ dist_ellipse, arr_current, [pxhi-pxlo+1, pyhi-pylo+1], $
   1./(1.-table[current].ellipticity), $
   theta[current]*!radeg-90
 
-con_num = 0
+con_num = 0ul
 ;loop over all sources in the table (including neighbouring frames)
 FOR i=0ul, ntab-1 DO BEGIN
     IF i EQ current THEN CONTINUE
@@ -3681,7 +3681,7 @@ if file_test(setup.srclist) then spawn, 'cp '+setup.srclist+' '+save_folder
 if file_test(setup.bd_srclist) then spawn, 'cp '+setup.bd_srclist+' '+save_folder
 
 IF keyword_set(logfile) THEN $
-  start_log, logfile, 'Reading setup file... done!'
+  start_log, logfile, systime()+': Reading setup file... done!'
 if setup.dobd eq 1 then print, 'You are trying to do B/D decomposition? Are you sure you know what you are doing?!' 
 
 ;==============================================================================   
@@ -3772,7 +3772,7 @@ FOR i=0ul, n_elements(outpath_band)-1 DO IF NOT file_test(outpath_band[i]) THEN 
 FOR i=0ul, n_elements(outpath_galfit)-1 DO IF NOT file_test(outpath_galfit[i]) THEN $
   spawn, 'mkdir -p  '+outpath_galfit[i]
 IF keyword_set(logfile) THEN $
-  update_log, logfile, 'Initialisation... done!'
+  update_log, logfile, systime()+': Initialisation... done!'
 ;===============================================================================
 
 ; define the columns that have to be added to the SExtractor catalogue
@@ -3808,7 +3808,7 @@ IF setup.dosex THEN BEGIN
     sex2ds9reg, setup.outdir+setup.sexcomb, outpath_file[0,0]+setup.outparam, $
       setup.outdir+'sexcomb.reg', 10, color='green', tag = 'comb'
     IF keyword_set(logfile) THEN $
-      update_log, logfile, 'SExtraction... done!'
+      update_log, logfile, systime()+': SExtraction... done!'
     print, 'finished SExtractor: '+systime(0)
 ENDIF
 
@@ -3832,7 +3832,7 @@ IF setup.dostamps THEN BEGIN
            post_bridge_arr[i]->execute, '.r '+gala_pro
        ENDFOR
    ENDIF 
-   done_cnt=0
+   done_cnt=0L
    i=0
 
    REPEAT BEGIN
@@ -3883,7 +3883,7 @@ IF setup.dostamps THEN BEGIN
    ENDIF
 
 ;create skymap files using bridge
-   done_cnt=0
+   done_cnt=0L
    i=0
    print, 'starting skymaps: '+systime(0)
    REPEAT BEGIN
@@ -3921,13 +3921,13 @@ IF setup.dostamps THEN BEGIN
    IF n_elements(post_bridge_arr) GT 0 THEN obj_destroy, post_bridge_arr
    
    IF keyword_set(logfile) THEN $
-     update_log, logfile, 'Postage stamps... done!'
+     update_log, logfile, systime()+': Postage stamps... done!'
    print, 'finished cutting postage stamps: '+systime(0)
 ENDIF 
 
 ; check whether skymaps exist, if not, something went wrong above
 skymap_exist = intarr(nframes,nband)
-for t=0,nframes-1 do begin
+for t=0ul,nframes-1 do begin
     for b=1,nband do begin
         skymap_exist[t,b-1] = file_test(outpath_file_no_band[t,b]+setup.stamp_pre[b]+'.'+setup.skymap+'.fits')
     endfor
@@ -3945,7 +3945,7 @@ endif
 
 ;==============================================================================
 IF keyword_set(logfile) THEN $
-   update_log, logfile, 'Setting up output catalogue...'
+   update_log, logfile, systime()+': Setting up output catalogue...'
 ;==============================================================================
 ;read in the combined SExtractor table
 if keyword_set(jump1) then goto, jump_over_this_1
@@ -3963,7 +3963,7 @@ table = sexcat[br]
 ; make table.frame multi-wavelength-ready to be passed onto gala_bridge
 tableim = strarr(nband+1,n_elements(table.frame))
 
-for i = 0, n_elements(images[*,0])-1 do begin
+for i = 0l, n_elements(images[*,0])-1 do begin
     whtableim = where(table.frame eq images[i,0], ct)
     if ct gt 0 then for b=0,nband do tableim[b,whtableim] = images[i,b]
 ENDFOR 
@@ -4022,7 +4022,7 @@ IF setup.dosky or setup.dobd  THEN BEGIN
    readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband, save_folder
 
    IF keyword_set(logfile) THEN $
-      update_log, logfile, 'Setting up objects list to be fit...'
+      update_log, logfile, systime()+': Setting up objects list to be fit...'
 ;;==============================================================================
    add_tag, table, 'do_list', 0, table_new
    table = table_new
@@ -4067,7 +4067,7 @@ ENDIF
 ;==============================================================================
 IF setup.dosky THEN BEGIN
    IF keyword_set(logfile) THEN $
-      update_log, logfile, 'Beginning sky loop...'
+      update_log, logfile, systime()+': Beginning sky loop...'
    
 ; fittab does NOT contain FRAME (which is needed quite often!) Other
 ; than that, table is a subset of parameters, fittab is a subset of
@@ -4142,9 +4142,9 @@ IF setup.dosky THEN BEGIN
     
     REPEAT BEGIN
         IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
-            update_log, logfile, 'last in cue... '+strtrim(cur, 2)
+            update_log, logfile, systime()+': last in cue... '+strtrim(cur, 2)
             FOR i=0, setup.max_proc-1 DO $
-              update_log, logfile, 'Bridge status... '+ $
+              update_log, logfile, systime()+': Bridge status... '+ $
               strtrim(bridge_arr[i]->status(), 2)
         ENDIF
         loop++
@@ -4230,7 +4230,7 @@ loopstart2:
             
 ; check whether this object has already been done, if so, read in
 ; result
-            ct = 0 
+            ct = 0l 
             idx = where(table[cur].frame[0] EQ orgim[*,0], ct)
             IF ct GT 0 THEN BEGIN
                 objnum = round_digit(table[cur].number, 0, /str)
@@ -4323,31 +4323,34 @@ loopstart2:
             save_cur = where(save_table.frame[0] eq table[cur].frame[0] and save_table.number eq table[cur].number)
             save_cur = save_cur[0]
 
+;print, systime()+'  writing '+out_file+'.sav'
             save, save_cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
                   sky_file, stamp_param_file, mask_file, im_file, sigma_file, obj_file, $
                   constr_file, out_file, save_table, nband, orgpath_pre, outpath_file, $
                   outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
                   orgpath_band, orgpath_file, seed,$
                   filename=out_file+'.sav'
-  
+;print, systime()+'  written '+out_file+'.sav'
+
             IF setup.max_proc GT 1 THEN BEGIN
                IF keyword_set(logfile) THEN $
-                  update_log, logfile, 'Starting new bridge... ('+out_file+')'
+                  update_log, logfile, systime()+': starting new bridge... ('+out_file+' on '+strtrim(free[0],2)+')'
+;print, systime()+'  starting '+out_file+'.sav on bridge'+strtrim(free[0],2)
                bridge_arr[free[0]]->execute, $
                   'gala_bridge, "'+out_file+'.sav"', /nowait
             ENDIF ELSE BEGIN
                IF keyword_set(logfile) THEN $
-                  update_log, logfile, 'Starting next object... ('+out_file+')'
+                  update_log, logfile, systime()+': Starting next object... ('+out_file+')'
                cd, orgpath[idx,0]
                gala_bridge, out_file+'.sav'
                file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
                             /allow_nonexistent, /noexpand_path
             ENDELSE
-            wait, 0.1
+            wait, 1
 ;switch to next object
         ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
-           wait, 0.1
+           wait, 1
         ENDELSE
         
 loopend:
@@ -4496,7 +4499,7 @@ jump_over_this_2:
    ENDELSE
 
     IF keyword_set(logfile) THEN $
-      update_log, logfile, 'Beginning Bulge_Disk_decomposition ...'
+      update_log, logfile, systime()+': Beginning Bulge_Disk_decomposition ...'
 ; set standard values for B/D parameters
 ; fill with standard values
     table.mag_galfit_d = 999.
@@ -4588,9 +4591,9 @@ jump_over_this_2:
 
         REPEAT BEGIN
             IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
-                update_log, logfile, 'last in cue... '+strtrim(cur, 2)
+                update_log, logfile, systime()+': last in cue... '+strtrim(cur, 2)
                 FOR i=0, setup.max_proc-1 DO $
-                  update_log, logfile, 'Bridge status... '+ $
+                  update_log, logfile, systime()+': Bridge status... '+ $
                   strtrim(bridge_arr[i]->status(), 2)
             ENDIF
             loop++
@@ -4606,7 +4609,7 @@ loopstart_bd:
                 FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
                 goto, loopend_bd
             ENDIF
-            ct = 0
+            ct = 0l
             
 loopstart2_bd:
 ;get status of bridge elements
@@ -4689,7 +4692,7 @@ loopstart2_bd:
             
 ; check whether this object has already been done, if so, read in
 ; result and restart
-                ct = 0 
+                ct = 0l
                 idx = where(table[cur].frame[0] EQ orgim[*,0], ct)
                 IF ct GT 0 THEN BEGIN
                     objnum = round_digit(table[cur].number, 0, /str)
@@ -4808,7 +4811,7 @@ loopstart2_bd:
 
                 IF setup.max_proc GT 1 THEN BEGIN
                     IF keyword_set(logfile) THEN $
-                      update_log, logfile, 'Starting new bridge... ('+out_file+')'
+                      update_log, logfile, systime()+': Starting new bridge... ('+out_file+' on '+strtrim(free[0],2)+')'
 ; print, 'starting new object at '+systime(0)
 ;                bridge_arr[free[0]]->execute, $
 ;                  'gala_bridge, "'+out_file+'.sav", /bd_fit', /nowait
@@ -4825,7 +4828,7 @@ loopstart2_bd:
                     
                 ENDIF ELSE BEGIN
                     IF keyword_set(logfile) THEN $
-                      update_log, logfile, 'Starting next object... ('+out_file+')'
+                      update_log, logfile, systime()+': Starting next object... ('+out_file+')'
                     cd, orgpath[idx,0]
 ;                gala_bridge, out_file+'.bd.sav', /bd_fit', /nowait
 ;                file_delete, orgpath[idx,0]+'galfit.[0123456789]*', /quiet, $
@@ -4838,11 +4841,11 @@ loopstart2_bd:
 ;--------------------------- MARCOS SCRIPT
                     
                 ENDELSE
-                wait, 0.1
+                wait, 1
 ;switch to next object
             ENDIF ELSE BEGIN
 ;all bridges are busy --> wait 
-                wait, 0.1
+                wait, 1
             ENDELSE
 
 loopend_bd:
@@ -4986,7 +4989,7 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
    ENDIF
    
    print,' '
-   read = 0
+   read = 0L
    FOR i=0ul, ntab-1 DO BEGIN
        objnum = round_digit(tab[i].number, 0, /str)
        idx = where(tab[i].tile EQ orgim[*,0])
