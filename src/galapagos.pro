@@ -5032,16 +5032,16 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
    ENDIF 
 
 ; delete duplicate values from table
-out=remove_tags(out,['x_galfit', 'xerr_galfit','y_galfit', 'yerr_galfit','mag_galfit', $
-                     'magerr_galfit','re_galfit', 'reerr_galfit','n_galfit', 'nerr_galfit', $
-                     'q_galfit', 'qerr_galfit','pa_galfit', 'paerr_galfit', $
-                     'x_galfit_b', 'xerr_galfit_b','y_galfit_b', 'yerr_galfit_b','mag_galfit_b', $
-                     'magerr_galfit_b','re_galfit_b', 'reerr_galfit_b','n_galfit_b', 'nerr_galfit_b', $
-                     'q_galfit_b', 'qerr_galfit_b','pa_galfit_b', 'paerr_galfit_b', $
-                     'x_galfit_d', 'xerr_galfit_d','y_galfit_d', 'yerr_galfit_d','mag_galfit_d', $
-                     'magerr_galfit_d','re_galfit_d', 'reerr_galfit_d','n_galfit_d', 'nerr_galfit_d', $
-                     'q_galfit_d', 'qerr_galfit_d','pa_galfit_d', 'paerr_galfit_d', $
-                     'sky_galfit', 'sky_galfit_bd', 'psf_galfit', 'psf_galfit_bd', 'org_image'])
+   out=remove_tags(out,['x_galfit', 'xerr_galfit','y_galfit', 'yerr_galfit','mag_galfit', $
+                        'magerr_galfit','re_galfit', 'reerr_galfit','n_galfit', 'nerr_galfit', $
+                        'q_galfit', 'qerr_galfit','pa_galfit', 'paerr_galfit', $
+                        'x_galfit_b', 'xerr_galfit_b','y_galfit_b', 'yerr_galfit_b','mag_galfit_b', $
+                        'magerr_galfit_b','re_galfit_b', 'reerr_galfit_b','n_galfit_b', 'nerr_galfit_b', $
+                        'q_galfit_b', 'qerr_galfit_b','pa_galfit_b', 'paerr_galfit_b', $
+                        'x_galfit_d', 'xerr_galfit_d','y_galfit_d', 'yerr_galfit_d','mag_galfit_d', $
+                        'magerr_galfit_d','re_galfit_d', 'reerr_galfit_d','n_galfit_d', 'nerr_galfit_d', $
+                        'q_galfit_d', 'qerr_galfit_d','pa_galfit_d', 'paerr_galfit_d', $
+                        'sky_galfit', 'sky_galfit_bd', 'psf_galfit', 'psf_galfit_bd', 'org_image'])
    
 ; write galapagos and galfit version into catalogue
    add_tag, out, 'galapagos_version', galapagos_version, out2
