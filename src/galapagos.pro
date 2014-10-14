@@ -3628,8 +3628,8 @@ free_lun, lun
 END
 
 PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
-galapagos_version = 'GALAPAGOS-v2.1.5'
-galapagos_date = '(July 23rd, 2014)'
+galapagos_version = 'GALAPAGOS-v2.1.6'
+galapagos_date = '(October 14th, 2014)'
 print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
 print, ''
 start=systime(0)
