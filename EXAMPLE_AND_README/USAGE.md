@@ -1,4 +1,4 @@
-##GALAPAGOS-2 README (v.2.1.5)
+##GALAPAGOS-2 README (v.2.1.6)
 
 Please read this file for details on input format and new features off the code.  
 Especially read this file regarding your image normalisation and how to set up and run galapagos in the most efficient way.  
