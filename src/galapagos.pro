@@ -1804,7 +1804,7 @@ FOR i=0ul, n_elements(con_num)-1 DO BEGIN
     IF ct GT 0 THEN mask1[idx] = 0
 ENDFOR
 mask = (mask+mask1) < 1
-writefits, mask_file+'.fits', mask, headfits(im_file+'.fits')
+writefits, mask_file+'.fits', byte(mask), headfits(im_file+'.fits')
 
 corner = [pxlo, pylo]
 END
@@ -5048,6 +5048,7 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
    out = out2
 
 ; reorder all columns into useful order
+; how can I keep ALL Sextractor columns? Use outparam file!
    out2 = reorder_tags(out, $
                        ['GALAPAGOS_VERSION','GALA_ID','NUMBER',$
                         'X_IMAGE','Y_IMAGE','CXX_IMAGE','CYY_IMAGE','CXY_IMAGE',$
