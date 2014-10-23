@@ -5097,7 +5097,6 @@ IF setup.docombine or setup.docombinebd THEN BEGIN
    out2 = reorder_tags(out, order)
    out = out2
    delvarx, out2
-stop
 ; write out catalogue
    mwrfits, out, setup.outdir+setup.cat, /silent, /create
 ENDIF
