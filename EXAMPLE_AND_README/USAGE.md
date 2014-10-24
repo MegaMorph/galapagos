@@ -697,3 +697,6 @@ The code is not as effective as it could be. However, most of the time is still 
 - some edits to save disk space, e.g. mask images are now saved in BYTE format, rather than full FLOAT
 - the galapagos version is now saved in the output catalogue for version control issues along with the GalfitM version used for each fit.
 - the 'weight' images for each image can now be BYTE (0/1) format as well, in order to save disk space. As they are only used in the main part of the code to flag bad pixels, this is possible even at older versions. This, however, is DIFFERENT for the SEXTRACTOR weights. SExtractor DOES care about the actual weight values, so the user should take care with these.
+- added some more flexibility to the models. It's now possible to run B/D with a higher factor in a parameter than the single-sersic fits.
+- along the same lines, Bulge and Disk now behave differently (so far many parameters, x,y,mag) werehardwired to behave the same way.
+- In this context, Galapagos now makes the start values uniform if DOF==1 is chosen for a parameter as GalfitM requires.
