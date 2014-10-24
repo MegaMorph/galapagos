@@ -136,66 +136,88 @@ PRO gala_bd_bridge, filein
 ; DISK PARAMETERS
    printf, filew
    printf, filew, ' 0) sersic             # Object type --- DISC'
-   x = string(ss_mult.X_GALFIT_BAND, $
-              format = '('+string(nband)+'(A,","))')
-   x = strtrim(strcompress(x, /remove_all), 2)
-   x = ' 1) '+strmid(x, 0, strlen(x)-1)+ $
+
+; X DISK
+   if (setup.cheb_d[0]+1)<maxdeg eq 1 then begin
+       x_d = string(strarr(nband)+median([ss_mult.X_GALFIT_BAND]), $
+                    format = '('+string(nband)+'(A,","))')
+   endif else x_d = string(ss_mult.X_GALFIT_BAND, $
+                           format = '('+string(nband)+'(A,","))')
+   x_d = strtrim(strcompress(x_d, /remove_all), 2)
+   x_d = ' 1) '+strmid(x_d, 0, strlen(x_d)-1)+ $
      '    '+strtrim((setup.cheb_d[0]+1)<maxdeg,2)+' '+bandstr+'   # position x     [pixel]'
-   printf, filew, x
-   y = string(ss_mult.Y_GALFIT_BAND, $
-              format = '('+string(nband)+'(A,","))')
-   y = strtrim(strcompress(y, /remove_all), 2)
-   y = ' 2) '+strmid(y, 0, strlen(y)-1)+ $
+   printf, filew, x_d
+   
+; Y DISK
+   if (setup.cheb_d[1]+1)<maxdeg eq 1 then begin
+       y_d = string(strarr(nband)+median([ss_mult.Y_GALFIT_BAND]), $
+                    format = '('+string(nband)+'(A,","))')
+   endif else y_d = string(ss_mult.Y_GALFIT_BAND, $
+                           format = '('+string(nband)+'(A,","))')
+   y_d = strtrim(strcompress(y_d, /remove_all), 2)
+   y_d = ' 2) '+strmid(y_d, 0, strlen(y_d)-1)+ $
      '    '+strtrim((setup.cheb_d[1]+1)<maxdeg,2)+'  '+bandstr+'   # position y     [pixel]'
-   printf, filew, y
-   mag = string(ss_mult.MAG_GALFIT_BAND+2.5*alog10(2), $
-                format = '('+string(nband)+'(A,","))')
-   mag = strtrim(strcompress(mag, /remove_all), 2)
-   mag = ' 3) '+strmid(mag, 0, strlen(mag)-1)+ $
+   printf, filew, y_d
+   
+; MAG DISK
+   if (setup.cheb_d[2]+1)<maxdeg eq 1 then begin
+       mag_d = string(strarr(nband)+median([ss_mult.MAG_GALFIT_BAND])+2.5*alog10(2), $
+                      format = '('+string(nband)+'(A,","))')
+   endif else mag_d = string(ss_mult.MAG_GALFIT_BAND+2.5*alog10(2), $
+                             format = '('+string(nband)+'(A,","))')
+   mag_d = strtrim(strcompress(mag_d, /remove_all), 2)
+   mag_d = ' 3) '+strmid(mag_d, 0, strlen(mag_d)-1)+ $
      '    '+strtrim((setup.cheb_d[2]+1)<maxdeg,2)+'  '+bandstr+'    # total magnitude'
-   printf, filew, mag
-;correct re to be the right shape if cheb_d eq 0!!
-; re started at constant value in any case!
-; up to single_bd1 and multi_bd5
-;   if nband eq 1 then re_d = string(ss_mult.RE_GALFIT_BAND, format = '(A)')
-;   if nband gt 1 then re_d = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND), $
-;                                  format = '('+string(nband)+'(A,","))'
+   printf, filew, mag_d
+
+; RE DISK
+; re always started at constant value!
 ; new setup after single_bd2 and multi_bd6
-   if nband eq 1 then re_d = string(ss_mult.RE_GALFIT_BAND*1.2 >1., format = '(A)')
-; original!   if nband eq 1 then re_d = string(ss_mult.RE_GALFIT_BAND >1., format = '(A)')
-   if nband gt 1 then re_d = string(strarr(nband)+(median(ss_mult.RE_GALFIT_BAND)*1.2 >1.), $
-                                    format = '('+string(nband)+'(A,","))')
+;   if nband eq 1 then re_d = string(ss_mult.RE_GALFIT_BAND*1.2 >1., format = '(A)')
+;   if nband gt 1 then re_d = string(strarr(nband)+(median(ss_mult.RE_GALFIT_BAND)*1.2 >1.), $
+;                                    format = '('+string(nband)+'(A,","))')
+   re_d = string(strarr(nband)+(median([ss_mult.RE_GALFIT_BAND])*1.2 >1.), $
+                 format = '('+string(nband)+'(A,","))')
    re_d = strtrim(strcompress(re_d, /remove_all), 2)
    re_d = ' 4) '+strmid(re_d, 0, strlen(re_d)-1)+ $
      '    '+strtrim((setup.cheb_d[3]+1)<maxdeg,2)+'   '+bandstr+'       #     R_e              [Pixels]'
-   
    printf, filew, re_d
-;correct n to be the right shape if cheb_d eq 0!!
-; sersic index of disk always started at 1
-   if setup.cheb_d[4] eq -1 then n = string((strarr(nband)+1.), $
-                                            format = '('+string(nband)+'(A,","))')
+
+; SERSIC INDEX DISK
+; n always started at constant value!
+   if setup.cheb_d[4] eq -1 then n_d = string((strarr(nband)+1.), $
+                                              format = '('+string(nband)+'(A,","))')
    if setup.cheb_d[4] ne -1 then begin
-       if nband eq 1 then n = string((ss_mult.N_GALFIT_BAND <1.5), format = '(A)')
-       if nband gt 1 then n = string(((strarr(nband)+median(ss_mult.N_GALFIT_BAND) <1.5)), $
-                                     format = '('+string(nband)+'(A,","))')
+       n_d = string(strarr(nband)+(median([ss_mult.N_GALFIT_BAND]) <1.5), $
+                                       format = '('+string(nband)+'(A,","))')
    endif
-   n = strtrim(strcompress(n, /remove_all), 2)
-   n = ' 5) '+strmid(n, 0, strlen(n)-1)+ $
+   n_d = strtrim(strcompress(n_d, /remove_all), 2)
+   n_d = ' 5) '+strmid(n_d, 0, strlen(n_d)-1)+ $
      '   '+strtrim((setup.cheb_d[4]+1)<maxdeg,2)+'   '+bandstr+'       # Sersic exponent (deVauc=4, expdisk=1)'
-   printf, filew, n
-   q = string(ss_mult.Q_GALFIT_BAND, $
-              format = '('+string(nband)+'(A,","))')
-   q = strtrim(strcompress(q, /remove_all), 2)
-   q = ' 9) '+strmid(q, 0, strlen(q)-1)+ $
+   printf, filew, n_d
+
+; AR DISK
+   if (setup.cheb_d[5]+1)<maxdeg eq 1 then begin
+       q_d = string(strarr(nband)+median([ss_mult.Q_GALFIT_BAND]), $
+                    format = '('+string(nband)+'(A,","))')
+   endif else q_d = string(ss_mult.Q_GALFIT_BAND, $
+                           format = '('+string(nband)+'(A,","))')
+   q_d = strtrim(strcompress(q_d, /remove_all), 2)
+   q_d = ' 9) '+strmid(q_d, 0, strlen(q_d)-1)+ $
      '    '+strtrim((setup.cheb_d[5]+1)<maxdeg,2)+'   '+bandstr+'       # axis ratio (b/a)'
-   printf, filew, q
-   pa = string(ss_mult.PA_GALFIT_BAND, $
-               format = '('+string(nband)+'(A,","))')
-   pa = strtrim(strcompress(pa, /remove_all), 2)
-   pa = ' 10) '+strmid(pa, 0, strlen(pa)-1)+ $
+   printf, filew, q_d
+
+; PA DISK
+   if (setup.cheb_d[6]+1)<maxdeg eq 1 then begin
+       pa_d = string(strarr(nband)+median([ss_mult.PA_GALFIT_BAND]), $
+                     format = '('+string(nband)+'(A,","))')
+   endif else pa_d = string(ss_mult.PA_GALFIT_BAND, $
+                            format = '('+string(nband)+'(A,","))')
+   pa_d = strtrim(strcompress(pa_d, /remove_all), 2)
+   pa_d = ' 10) '+strmid(pa_d, 0, strlen(pa_d)-1)+ $
      '    '+strtrim((setup.cheb_d[6]+1)<maxdeg,2)+ $
      '  '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
-   printf, filew, pa
+   printf, filew, pa_d
    
    printf, filew, ' Z) 0                  # output image (see above)'
    
@@ -205,47 +227,94 @@ PRO gala_bd_bridge, filein
    printf, filew, '# Sersic function'
    printf, filew
    printf, filew, ' 0) sersic             # Object type --- BULGE'
-   printf, filew, x
-   printf, filew, y
-   printf, filew, mag
-;correct re to be the right shape if cheb_b eq 0!!
-; re started at constant value in any case!
-   
-;; old setup up to single_bd and multi_bd5
-;   if nband eq 1 then re_b = string(ss_mult.RE_GALFIT_BAND, format = '(A)')
-;   if nband gt 1 then re_b = string(strarr(nband)+median(ss_mult.RE_GALFIT_BAND), $
-;                                  format = '('+string(nband)+'(A,","))')
+
+; X BULGE
+   if (setup.cheb_b[0]+1)<maxdeg eq 1 then begin
+       x_b = string(strarr(nband)+median([ss_mult.X_GALFIT_BAND]), $
+                    format = '('+string(nband)+'(A,","))')
+   endif else x_b = string(ss_mult.X_GALFIT_BAND, $
+                           format = '('+string(nband)+'(A,","))')
+   x_b = strtrim(strcompress(x_b, /remove_all), 2)
+   x_b = ' 1) '+strmid(x_b, 0, strlen(x_b)-1)+ $
+     '    '+strtrim((setup.cheb_b[0]+1)<maxdeg,2)+' '+bandstr+'   # position x     [pixel]'
+   printf, filew, x_b
+
+; Y BULGE
+   if (setup.cheb_b[1]+1)<maxdeg eq 1 then begin
+       y_b = string(strarr(nband)+median([ss_mult.Y_GALFIT_BAND]), $
+                    format = '('+string(nband)+'(A,","))')
+   endif else y_b = string(ss_mult.Y_GALFIT_BAND, $
+                           format = '('+string(nband)+'(A,","))')
+   y_b = strtrim(strcompress(y_b, /remove_all), 2)
+   y_b = ' 2) '+strmid(y_b, 0, strlen(y_b)-1)+ $
+     '    '+strtrim((setup.cheb_b[1]+1)<maxdeg,2)+'  '+bandstr+'   # position y     [pixel]'
+   printf, filew, y_b
+
+; MAG BULGE
+   if (setup.cheb_b[2]+1)<maxdeg eq 1 then begin
+       mag_b = string(strarr(nband)+median([ss_mult.MAG_GALFIT_BAND])+2.5*alog10(2), $
+         format = '('+string(nband)+'(A,","))')
+   endif else mag_b = string(ss_mult.MAG_GALFIT_BAND+2.5*alog10(2), $
+                             format = '('+string(nband)+'(A,","))')
+   mag_b = strtrim(strcompress(mag_b, /remove_all), 2)
+   mag_b = ' 3) '+strmid(mag_b, 0, strlen(mag_b)-1)+ $
+     '    '+strtrim((setup.cheb_b[2]+1)<maxdeg,2)+'  '+bandstr+'    # total magnitude'
+   printf, filew, mag_b
+
+; RE BULGE
+; re always started at constant value!
 ; new setup after single_bd2 and multi_bd6
-   if nband eq 1 then re_b = string(ss_mult.RE_GALFIT_BAND*0.3 > 0.5, format = '(A)')
-   if nband gt 1 then re_b = string(strarr(nband)+(median(ss_mult.RE_GALFIT_BAND)*0.3 > 0.5), $
+;   if nband eq 1 then re_b = string(ss_mult.RE_GALFIT_BAND*0.3 > 0.5, format = '(A)')
+;   if nband gt 1 then re_b = string(strarr(nband)+(median(ss_mult.RE_GALFIT_BAND)*0.3 > 0.5), $
+;                                    format = '('+string(nband)+'(A,","))')
+   re_b = string(strarr(nband)+(median([ss_mult.RE_GALFIT_BAND])*0.3 > 0.5), $
                                     format = '('+string(nband)+'(A,","))')
-   
    re_b = strtrim(strcompress(re_b, /remove_all), 2)
    re_b = ' 4) '+strmid(re_b, 0, strlen(re_b)-1)+ $
      '    '+strtrim((setup.cheb_b[3]+1)<maxdeg,2)+'   '+bandstr+'       #     R_e              [Pixels]'
    printf, filew, re_b
-;correct n to be the right shape if cheb_b eq 0!!
-   if setup.cheb_b[4] eq -1 then n = string((strarr(nband)+4.), $
-                                            format = '('+string(nband)+'(A,","))')
+
+; SERSIC INDEX BULGE
+; n always started at constant value!
+   if setup.cheb_b[4] eq -1 then n_b = string((strarr(nband)+4.), $
+                                              format = '('+string(nband)+'(A,","))')
    if setup.cheb_b[4] ne -1 then begin
-       if nband eq 1 then n = string((ss_mult.N_GALFIT_BAND >1.5), format = '(A)')
-       if nband gt 1 then n = string(((strarr(nband)+median(ss_mult.N_GALFIT_BAND) >1.5)), $
+;       if nband eq 1 then n_b = string((ss_mult.N_GALFIT_BAND >1.5), format = '(A)')
+;       if nband gt 1 then n_b = string(((strarr(nband)+median(ss_mult.N_GALFIT_BAND) >1.5)), $
+;                                     format = '('+string(nband)+'(A,","))')
+       n_b = string(strarr(nband)+(median([ss_mult.N_GALFIT_BAND]) >1.5), $
                                      format = '('+string(nband)+'(A,","))')
 ;; try starting at 1 instead, Marina claims it's more stable (bd8)
 ;       if nband gt 1 then n = string(((strarr(nband)+1.)), format = '('+string(nband)+'(A,","))')
    endif
-   n = strtrim(strcompress(n, /remove_all), 2)
-   n = ' 5) '+strmid(n, 0, strlen(n)-1)+ $
+   n_b = strtrim(strcompress(n_b, /remove_all), 2)
+   n_b = ' 5) '+strmid(n_b, 0, strlen(n_b)-1)+ $
      '   '+strtrim((setup.cheb_b[4]+1)<maxdeg,2)+'   '+bandstr+'       # Sersic exponent (deVauc=4, expdisk=1)'
-   printf, filew, n
-   q = string(ss_mult.Q_GALFIT_BAND >0.6, $
-              format = '('+string(nband)+'(A,","))')
-   q = strtrim(strcompress(q, /remove_all), 2)
-   q = ' 9) '+strmid(q, 0, strlen(q)-1)+ $
+   printf, filew, n_b
+
+; AR BULGE
+   if (setup.cheb_b[5]+1)<maxdeg eq 1 then begin
+       q_b = string(strarr(nband)+(median([ss_mult.Q_GALFIT_BAND])>0.6), $
+                                   format = '('+string(nband)+'(A,","))')
+   endif else q_b = string(ss_mult.Q_GALFIT_BAND, $
+                           format = '('+string(nband)+'(A,","))')
+   q_b = strtrim(strcompress(q_b, /remove_all), 2)
+   q_b = ' 9) '+strmid(q_b, 0, strlen(q_b)-1)+ $
      '    '+strtrim((setup.cheb_b[5]+1)<maxdeg,2)+'   '+bandstr+'       # axis ratio (b/a)'
-   printf, filew, q
-   printf, filew, pa
-   
+   printf, filew, q_b
+
+; PA BULGE
+   if (setup.cheb_b[6]+1)<maxdeg eq 1 then begin
+       pa_b = string(strarr(nband)+median([ss_mult.PA_GALFIT_BAND]), $
+                     format = '('+string(nband)+'(A,","))')
+   endif else pa_b = string(ss_mult.PA_GALFIT_BAND, $
+                            format = '('+string(nband)+'(A,","))')
+   pa_b = strtrim(strcompress(pa_b, /remove_all), 2)
+   pa_b = ' 10) '+strmid(pa_b, 0, strlen(pa_b)-1)+ $
+     '    '+strtrim((setup.cheb_b[6]+1)<maxdeg,2)+ $
+     '  '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
+   printf, filew, pa_b
+ 
    printf, filew, ' Z) 0                  # output image (see above)'
    
    maxcomp = 2
@@ -365,8 +434,6 @@ PRO gala_bd_bridge, filein
                if setup.gal_kill_time eq 0 then spawn, setup.galexe+' '+obj_file_bd
                if setup.gal_kill_time ne 0 then spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "'+setup.galexe+' '+obj_file_bd+'"'
            ENDIF
-;           spawn, 'nice '+setup.galexe+' '+obj_file_bd $
-;           ELSE spawn, setup.galexe+' '+obj_file_bd
            wait, 1
        ENDIF
        spawn, 'rm '+galfit_path+'/galfit.[0123456789]*'
