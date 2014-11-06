@@ -272,7 +272,8 @@ close, 2
 
 ;read image header and calculate sextractor magnitude zeropoint
 header = headfits(image)
-exptime = double(sxpar(header, 'EXPTIME'))
+;exptime = double(sxpar(header, 'EXPTIME'))
+exptime = setup.expt[0]
 zp_eff = strtrim(setup.zp[0]+2.5*alog10(exptime), 2)
 
 print, '---using exptime: '+strtrim(exptime[0], 2)+'s (zp='+zp_eff[0]+') for: '+ $
@@ -1814,7 +1815,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
                     conv_box, zero_pt, plate_scl, num_contrib, frame_contrib, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
                     conminm, conmaxm, setup_version, nband, $
-                    outpre, bd_fit = bd_fit
+                    outpre, maxdeg, bd_fit = bd_fit
 ;   setup_version = 4
 ;objects contains an index of secondary sources
 ;in the case of contributing sources, the TABLE is changed, so keep a
@@ -2543,6 +2544,7 @@ setup = create_struct('files', '', $
                       'do_restrict', 0, $
                       'restrict_frac', 50., $
                       'restrict_frac_mask', 50., $
+                      'mindeg', 0, $
                       'dobd', 0, $
                       'cheb_b', intarr(7)-1, $
                       'cheb_d', intarr(7)-1, $
@@ -2718,6 +2720,7 @@ WHILE NOT eof(1) DO BEGIN
         'E22)': setup.do_restrict = (content EQ 'restrict') ? 1 : 0
         'E23)': setup.restrict_frac = content
         'E24)': setup.restrict_frac_mask = content
+        'E25)': setup.mindeg = content
         
         'F00)': BEGIN
             if block_bd eq 1 then setup.dobd = (content EQ 'execute') ? 1 : 0 $
@@ -2783,6 +2786,7 @@ IF setup.maglim_gal EQ -1 THEN setup.maglim_gal = 5
 IF setup.maglim_star EQ -1 THEN setup.maglim_star = 2
 IF setup.min_dist_block EQ -1 THEN setup.min_dist_block = setup.min_dist/3.
 IF setup.cheb[0] EQ -1 THEN for n=0,n_elements(setup.cheb)-1 do setup.cheb[n] = 0
+IF setup.mindeg lt 1 THEN setup.mindeg = 1
 ;IF setup.cheb_b[0] EQ -1 THEN for n=0,n_elements(setup.cheb_b)-1 do setup.cheb_b[n] = 0
 ;IF setup.cheb_d[0] EQ -1 THEN for n=0,n_elements(setup.cheb_d)-1 do setup.cheb_d[n] = 0
 
@@ -3184,7 +3188,6 @@ ENDIF ELSE BEGIN
                                  'N_GALFIT_DEG', -99, $
                                  'Q_GALFIT_DEG', -99, $
                                  'PA_GALFIT_DEG', -99)
-; NEIGH_GALFIT HAS TO BE ADAPTED!
     ENDIF
     if keyword_set(bd) then begin
         feedback = create_struct('mag_galfit_d', -999., 'magerr_galfit_d',99999., $
@@ -3262,7 +3265,6 @@ ENDIF ELSE BEGIN
                                  'N_GALFIT_DEG_D', -99, $
                                  'Q_GALFIT_DEG_D', -99, $
                                  'PA_GALFIT_DEG_D', -99)
-; NEIGH_GALFIT HAS TO BE ADAPTED!
     ENDIF
     
 ENDELSE
@@ -3532,51 +3534,39 @@ for j=0,n_elements(name_res)-1 do begin
 ENDFOR
 
 ; set galfit_flag
-if not keyword_set(bd) then table[i].flag_galfit = res.flag_galfit
-if keyword_set(bd) then table[i].flag_galfit_bd = res.flag_galfit_bd    
+; always set, e.g. as given by read_sersic_result
+IF NOT keyword_set(bd) THEN table[i].flag_galfit = res.flag_galfit
+IF keyword_set(bd) THEN table[i].flag_galfit_bd = res.flag_galfit_bd    
 
-; deal with crashed objects
-if not file_test(out_file+'.fits') then begin
-; SHORT TERM SOLUTION! CHECK THAT SAV FILE DOESN'T EXIST, EITHER!
-; LONG TERM SOLUTION: MAKE SURE THAT BRIDGE DOESN"T CRASH!! EVER!
-; WHY DO WE SET BACK FLAG_GALFIT IN THE FIRST PLACE??????
-   if not file_test(obj_file) and not file_test(out_file+'.sav') then begin        
-; object has not yet been started.
-      if not keyword_set(bd) then table[i].flag_galfit = 0
-      if keyword_set(bd) then table[i].flag_galfit_bd = 0
-  endif else begin
-; object has been started and crashed (or is currently doing sky determination)
-      if not keyword_set(bd) then begin
-          table[i].flag_galfit = 1
-          table[i].initfile = obj_file
-      endif
-      if keyword_set(bd) then begin
-          table[i].flag_galfit_bd = 1
-          table[i].initfile_bd = obj_file
-      endif
+; deal with 'crashed' objects
+IF NOT file_test(out_file+'.fits') THEN BEGIN
+; object has deliberately not been started as the maximum degree of freedom is too small
+   IF file_test(obj_file+'_not_started') THEN BEGIN
+      IF NOT keyword_set(bd) THEN table[i].flag_galfit = -1
+      IF keyword_set(bd) THEN table[i].flag_galfit_bd = -1
+   ENDIF
       
-;; read all sky files (for the case that the fit crashed and the output
-;; file does not exist. Useful to find systematic crashes with sky value)
-;      if not keyword_set(bd) then begin
-;         for b=1,nband do begin
-;; check whether sky file exists first
-;; overwrite -999. from above with true value
-;            if file_test(sky_file[b]) eq 1 then begin
-;               openr, 99, sky_file[b]
-;               readf, 99, sky, dsky, skyrad, sky_magobj, skyflag
-;               close, 99
-;               table[i].sky_gala_band[b-1] = round_digit(sky,3)
-;               table[i].sky_sig_band[b-1] = round_digit(dsky,5)
-;               table[i].sky_rad_band[b-1] = round_digit(skyrad,5)
-;               table[i].sky_flag_band[b-1] = round_digit(skyflag,5)
-;               if b eq 1 then $
-;                  table[i].sky_galfit = round_digit(sky,3)
-;            endif
-;         endfor
-;     ENDIF
-  ENDELSE
+   IF NOT file_test(obj_file+'_not_started') THEN BEGIN
+      IF NOT file_test(obj_file) AND NOT file_test(out_file+'.sav') THEN BEGIN
+; object has not YET been started.
+         IF NOT keyword_set(bd) THEN table[i].flag_galfit = 0
+         IF keyword_set(bd) THEN table[i].flag_galfit_bd = 0
+      ENDIF ELSE BEGIN
+; object has been started and has actually crashed (or is currently doing sky determination)
+         IF NOT keyword_set(bd) THEN BEGIN
+            table[i].flag_galfit = 1
+            table[i].initfile = obj_file
+         ENDIF
+         IF keyword_set(bd) THEN BEGIN
+            table[i].flag_galfit_bd = 1
+            table[i].initfile_bd = obj_file
+         ENDIF
+      ENDELSE
+   ENDIF
 ENDIF ELSE BEGIN
-; IN B/D THIS BIT WILL BE DONE IN EACH READIN, BUT RESULT IS EQUIVALENT
+
+; set flag if outfile actually exists (e.g. successful fit)
+; IN B/D THIS BIT WILL BE DONE IN EACH READIN, BUT RESULT IS EQUIVALENT to SS
    if keyword_set(final) then begin
       table[i].org_image = table[i].tile
       table[i].org_image_band = table[i].tile
@@ -3594,23 +3584,24 @@ ENDIF ELSE BEGIN
 ENDELSE
 
 ; read all sky values and flags
-if not keyword_set(bd) then begin
-    for b=1,nband do begin
+IF NOT keyword_set(bd) THEN BEGIN
+   FOR b=1,nband DO BEGIN
 ; check whether sky file exists first
 ; overwrite -999. from above with true value
-        if file_test(sky_file[b]) eq 1 then begin
-            openr, 99, sky_file[b]
-            readf, 99, sky, dsky, skyrad, sky_magobj, skyflag
-            close, 99
-            table[i].sky_gala_band[b-1] = round_digit(sky,3)
-            table[i].sky_sig_band[b-1] = round_digit(dsky,5)
-            table[i].sky_rad_band[b-1] = round_digit(skyrad,5)
-            table[i].sky_flag_band[b-1] = round_digit(skyflag,5)
-            if b eq 1 then $
-              table[i].sky_galfit = round_digit(sky,3)
-        endif
-    endfor
+      IF file_test(sky_file[b]) EQ 1 THEN BEGIN
+         openr, 99, sky_file[b]
+         readf, 99, sky, dsky, skyrad, sky_magobj, skyflag
+         close, 99
+         table[i].sky_gala_band[b-1] = round_digit(sky,3)
+         table[i].sky_sig_band[b-1] = round_digit(dsky,5)
+         table[i].sky_rad_band[b-1] = round_digit(skyrad,5)
+         table[i].sky_flag_band[b-1] = round_digit(skyflag,5)
+         IF b EQ 1 THEN $
+            table[i].sky_galfit = round_digit(sky,3)
+      ENDIF
+   ENDFOR
 ENDIF
+
 
 
 END
@@ -3628,8 +3619,8 @@ free_lun, lun
 END
 
 PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
-galapagos_version = 'GALAPAGOS-v2.1.6'
-galapagos_date = '(October 24th, 2014)'
+galapagos_version = 'GALAPAGOS-v2.1.7'
+galapagos_date = '(November 6th, 2014)'
 print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
 print, ''
 start=systime(0)
@@ -3663,12 +3654,12 @@ IF NOT file_test(save_folder) THEN $
 spawn, 'cp '+setup_file+' '+save_folder
 spawn, 'cp '+setup.files+' '+save_folder
 spawn, 'cp '+setup.sexout+' '+save_folder
-if file_test(setup.cold) then spawn, 'cp '+setup.cold+' '+save_folder
-if file_test(setup.hot) then spawn, 'cp '+setup.hot+' '+save_folder
-if file_test(setup.exclude) then spawn, 'cp '+setup.exclude+' '+save_folder
-if file_test(setup.bad) then spawn, 'cp '+setup.bad+' '+save_folder
-if file_test(setup.srclist) then spawn, 'cp '+setup.srclist+' '+save_folder
-if file_test(setup.bd_srclist) then spawn, 'cp '+setup.bd_srclist+' '+save_folder
+IF file_test(setup.cold) then spawn, 'cp '+setup.cold+' '+save_folder
+IF file_test(setup.hot) then spawn, 'cp '+setup.hot+' '+save_folder
+IF file_test(setup.exclude) then spawn, 'cp '+setup.exclude+' '+save_folder
+IF file_test(setup.bad) then spawn, 'cp '+setup.bad+' '+save_folder
+IF file_test(setup.srclist) then spawn, 'cp '+setup.srclist+' '+save_folder
+IF file_test(setup.bd_srclist) then spawn, 'cp '+setup.bd_srclist+' '+save_folder
 
 IF keyword_set(logfile) THEN $
   start_log, logfile, 'Reading setup file... done!'
