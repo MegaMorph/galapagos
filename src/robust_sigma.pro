@@ -58,7 +58,7 @@ FUNCTION  ROBUST_SIGMA,Y, ZERO=REF, GOODVEC = Q
  UU  = U*U
  Q   = WHERE(UU LE 1.0, COUNT)
  IF COUNT LT 3 THEN BEGIN
-   PRINT,'ROBUST_SIGMA: This distribution is TOO WEIRD! Returning -1'
+;   PRINT,'ROBUST_SIGMA: This distribution is TOO WEIRD! Returning -1'
    SIGGMA = -1.
    RETURN,SIGGMA
  ENDIF

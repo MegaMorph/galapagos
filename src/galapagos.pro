@@ -403,7 +403,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
            ENDIF
            hot_table[i].number = off+i
         ENDFOR
-        writefits, outseg, segim, seghd
+        writefits, outseg, segim, seghd,/silent
      ENDIF ELSE file_copy, coldseg, outseg, /overwrite
      
      IF multi EQ 3 THEN table_all = [cold_table, hot_table] $
@@ -434,7 +434,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
            table_all[i].number = i+1
         ENDFOR
         
-        writefits, outseg, segim, seghd
+        writefits, outseg, segim, seghd,/silent
      ENDIF
      
      write_sex_table, table_all, outcat
@@ -629,7 +629,7 @@ PRO cut_stamps, image, param, outpath, pre, post, cut_list
                      cat[i].xlo, cat[i].xhi, cat[i].ylo, cat[i].yhi, /silent
            num = strtrim(cat[i].id, 2)
 ;    WHILE strlen(num) LT ndigits DO num = '0'+num
-           writefits, outpath+pre+num+post+'.fits', out, outhd
+           writefits, outpath+pre+num+post+'.fits', out, outhd,/silent
         ENDIF
      ENDFOR
   ENDIF
@@ -1805,7 +1805,7 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
      IF ct GT 0 THEN mask1[idx] = 0
   ENDFOR
   mask = (mask+mask1) < 1
-  writefits, mask_file+'.fits', byte(mask), headfits(im_file+'.fits')
+  writefits, mask_file+'.fits', byte(mask), headfits(im_file+'.fits'),/silent
   
   corner = [pxlo, pylo]
 END
