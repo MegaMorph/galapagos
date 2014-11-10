@@ -2,7 +2,7 @@ pro write_bridge_test_file
   openw, 1, '~/IDL_bridge_works'
   printf, 1, 'IDL works'
   close,1
-  spawn, 'rm ~/IDL_bridge_does not work'
+  spawn, 'rm ~/IDL_bridge_does_not_work'
 end
 
 pro check_idl_bridge
