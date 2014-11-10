@@ -2,7 +2,7 @@
 
 Please read this file for details on input format and new features off the code.  
 Especially read this file regarding your image normalisation and how to set up and run galapagos in the most efficient way.  
-Please note that this code (Galapagos-2.1.0) is NOT (!) backwards compatible to old galapagos input files, please make sure you adapt your files appropriately.
+Please note that this code (all versions of Galapagos-2) is NOT (!) backwards compatible to old Galapagos input files, please make sure you adapt your files appropriately.
 
 In everything not explained here, the code and data setup should follow Barden et al. 2012.  
 Please contact us in case of problems or questions at BorisHaeussler.astro@gmail.com  
