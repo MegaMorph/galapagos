@@ -60,24 +60,16 @@ If you have such a dataset, I would recommend 2 independent runs, e.g. one where
 
 4) Please read http://users.obs.carnegiescience.edu/peng/work/galfit/TOP10.html  for top 10 tips for galfit, most of which are also true for Galapagos-2, e.g. image calibration,…
 
-5) Please make sure you can actually RUN Galapagos/Galapagos-2 on your computer. E.g. IDL (at least v6.4, I think) has to be installed properly, including (and especially) IDL\_IDLBRIDGE  
+5) Please make sure you can actually RUN Galapagos/Galapagos-2 on your computer. E.g. IDL (at least v6.4, I think) has to be installed properly, including (and especially) IDL\_IDLBRIDGE. Galapagos will work without this feature, as long as only 1 processore is used (D18 == 1), but will not work for parallelization.
 (the error message  
 % Attempt to call undefined method: 'IDL\_IDLBRIDGE::ExecuteTimer'  
 seems to be connected to this)  
 This is how you test this:  
-We provide a script write\_bridge\_test\_file.pro for this purpose.  
-Try running this script in your IDL. It should simply write a file into your home directory called ~/IDL\_bridge\_test\_file.
-If this worked, delete it and run:
+We provide a script check\_idl\_bridge.pro for this purpose.  
+Simply run this script in your IDL. 
+It should simply write a file into your home directory called ~/IDL\_bridge\_works, using the IDL_bridge.
 
-    bridge_arr = objarr(1)             
-    bridge_arr[0] = obj_new('IDL_IDLBridge')  
-    bridge_arr[0]->execute, '.r write_bridge_test_file.pro'        
-    bridge_arr[0]->execute, 'write_bridge_test_file', /nowait
-If the file pops up in your home directory again, then your bridge is installed correctly and you're ready to go.  
-If not, it seems your IDL installation does not support the IDL\_BRIDGE. Ask your IT department to fix this.
-
-CORRECTION: The above does not test this well.
-The problem is (or can be) caused by the /nowait flag. Despite the above error message and the program stopping, the file IS created. I'm a bit puzzled and we're looking for a solution. For now it seems that if you DO see the above error message when running the test above, you will not be able to run Galapagos one more than 1 core (everything still works with D18==1)
+If this script tells you that IDL\_IDLBRIDGE is not working, ask your IT department to fix this.
 
 6) Please make sure you use an appropriate number for D18. It is explained below, how to find and set this number.
 
@@ -705,3 +697,4 @@ The code is not as effective as it could be. However, most of the time is still 
 - 2 bug fixes
 - Galapagos now takes the expsosure time for the SExtractor images from the setup file, rather than from the image header. While this is more complicated, it is more in line with the other filters and allow more flexibility for different surveys (we encountered that some software needs the header keyword to be different, which is avoided this way).
 - BUG FIX & NEW INPUT: The input file now requires a line E25), which is the minimum number of 'good' bands (bands with data) in order for the fit to actually be carried out. In previous versions, it could happen that Galapagos restricts the maximum number of degrees of freedom to 0. This would mean that the galfit fit is being carried out, but without free parameters. This would write out a galfit 'output' file, with all the model parameters being the input parameters, mostly as derived by SExtractor. If this object then becomes a secondary for a different object, Galapagos would hold its parameters fixed at these values, which is obviously a very bad idea. Not carrying out the fit will prevent this, the object would be impemented as an object with free parameters. However, such cases should BEST be dealt with in the sextractor mask/weight, such that this problem does not even appear. This feature is a security measure to prevent the worst. These objects can be identified in the Galapagos output catalogue by having flag_galfit (or flag_galfit_bd) == -1
+- There's a new, improved script to test the installation of IDL_IDLBRIDGE, essential for running Galapagos on multiple cores. .
