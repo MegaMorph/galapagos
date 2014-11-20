@@ -1949,7 +1949,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      openr, 2, sky_file[b]
      readf, 2, sky, dsky, skyrad, sky_magobj, flag
      close, 2
-     SKY_po=SKY_po+strtrim(round_digit(sky,3,/string),2)
+     SKY_po=SKY_po+strtrim(round_digit(sky,3,/string,/L64),2)
      SKY_po2=SKY_po2+'0'
      IF b LT nband THEN SKY_po=SKY_po+','
      IF b LT nband THEN SKY_po2=SKY_po2+','
@@ -3592,12 +3592,12 @@ PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = 
            openr, 99, sky_file[b]
            readf, 99, sky, dsky, skyrad, sky_magobj, skyflag
            close, 99
-           table[i].sky_gala_band[b-1] = round_digit(sky,3)
-           table[i].sky_sig_band[b-1] = round_digit(dsky,5)
+           table[i].sky_gala_band[b-1] = round_digit(sky,3,/L64)
+           table[i].sky_sig_band[b-1] = round_digit(dsky,5,/L64)
            table[i].sky_rad_band[b-1] = round_digit(skyrad,5)
            table[i].sky_flag_band[b-1] = round_digit(skyflag,5)
            IF b EQ 1 THEN $
-              table[i].sky_galfit = round_digit(sky,3)
+              table[i].sky_galfit = round_digit(sky,3,/L64)
         ENDIF
      ENDFOR
   ENDIF

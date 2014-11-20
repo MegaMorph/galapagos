@@ -1,5 +1,5 @@
 FUNCTION round2, number, digit, SIGNIFICANT = significant, $
-                 FIRST = first, string = string, space = space
+                 FIRST = first, string = string, space = space, L64=L64
 ;round number after digit
 ;SIGNIFICANT: keep DIGIT digits significant (5.532 -> 5.5, 2
 ;significant digits or 234567.89 -> 230000.00, 2 significant digits)
@@ -13,7 +13,7 @@ FUNCTION round2, number, digit, SIGNIFICANT = significant, $
     ENDIF ELSE digita = digit
   ENDFOR
   IF keyword_set(first) THEN digita = digita[0]
-  result = round(number*10.^digita)/10.^digita
+  result = round(number*10.^digita,L64=L64)/10.^digita
   IF keyword_set(string) THEN BEGIN
     result = strtrim(string(result), 2)
     FOR i = 0, n_elements(result)-1 DO BEGIN
