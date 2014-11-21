@@ -5,7 +5,7 @@ PRO gala_bridge, filein, bd_fit = bd_fit
 ;constr_file, out_file, table, nband, outpath_file
 ;orgpath_band, orgpath_pre, orgpath_galfit, orgpath_file,
 ;orgpath_file_no_band, seed
-
+  
   restore, filein
   cur = save_cur
   table = save_table
