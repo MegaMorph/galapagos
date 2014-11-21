@@ -389,10 +389,10 @@ PRO gala_bd_bridge, filein
    free_lun, filer
    free_lun, filew
    
-                                ;maximum allowed positional offset
+;maximum allowed positional offset
    pos_offset = ss_mult.RE_GALFIT_BAND[0]
    
-                                ;constraint file
+;constraint file
 ;   constr_file = strrep(constr_file, '/home/boris/', '')
    openw, ut, constr_file_bd, /get_lun
    

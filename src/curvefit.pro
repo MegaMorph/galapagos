@@ -365,8 +365,7 @@ FUNCTION CURVEFIT, x, y, weightsIn, a, sigma, FUNCTION_NAME = Function_Name, $
                 if ARG_PRESENT(status) then begin
                     status = 1
                 endif else begin
-                    MESSAGE,'Failed to converge- CHISQ increasing without bound.', $
-                       /INFORMATIONAL
+                   ;MESSAGE,'Failed to converge- CHISQ increasing without bound.', /INFORMATIONAL
                 endelse
 
                 GOTO, done
@@ -388,8 +387,7 @@ FUNCTION CURVEFIT, x, y, weightsIn, a, sigma, FUNCTION_NAME = Function_Name, $
             status = 2
         endif else begin
             iterationStr = STRTRIM(itmax,2)+' iteration' + (['','s'])[itmax NE 1]
-            MESSAGE, 'Failed to converge after '+iterationStr+'.', $
-                /INFORMATIONAL
+            ;MESSAGE, 'Failed to converge after '+iterationStr+'.', /INFORMATIONAL
         endelse
 
 done:

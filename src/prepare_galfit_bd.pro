@@ -120,7 +120,7 @@ FOR b=1, nband DO BEGIN
     openr, 2, sky_file[b]
     readf, 2, sky, dsky, minrad, maxrad, flag
     close, 2
-    SKY_po=SKY_po+strtrim(round_digit(sky,3,/string),2)
+    SKY_po=SKY_po+strtrim(round_digit(sky,3,/string,/L64),2)
     SKY_po2=SKY_po2+'0'
     if b lt nband then SKY_po=SKY_po+','
     if b lt nband then SKY_po2=SKY_po2+','
