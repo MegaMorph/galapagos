@@ -405,7 +405,7 @@ PRO gala_bd_bridge, filein
        printf, ut, '           '+strtrim(j, 2)+' q 0.0001 to 1'
        printf, ut, '           '+strtrim(j, 2)+' mag -5 5'
        printf, ut, '           '+strtrim(j, 2)+' mag 0 to 40'
-       printf, ut, '           '+strtrim(j, 2)+' pa -360 to 360'
+;       printf, ut, '           '+strtrim(j, 2)+' pa -360 to 360'
        printf, ut, '           '+strtrim(j, 2)+' x '+ $
          strtrim(-pos_offset*0.5, 2)+ $
          ' '+ strtrim(pos_offset*0.5, 2)
