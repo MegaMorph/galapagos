@@ -1848,7 +1848,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      printf, 1, j, ' q 0.0001  to 1.'
      printf, 1, j, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
      printf, 1, j, ' mag 0 to 40'
-     printf, 1, j, ' pa -360 to 360'
+;     printf, 1, j, ' pa -360 to 360'
      printf, 1, j, ' x '+strtrim(-xmax)+' '+strtrim(xmax)
      printf, 1, j, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
   ENDFOR
@@ -2455,7 +2455,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         printf, 1, ctr, ' q 0.0001  to 1.'
         printf, 1, ctr, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
         printf, 1, ctr, ' mag 0 to 40'
-        printf, 1, ctr, ' pa -360 to 360'
+;        printf, 1, ctr, ' pa -360 to 360'
         printf, 1, ctr, ' x '+strtrim(-xmax)+' '+strtrim(xmax)
         printf, 1, ctr, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
         close, 1
