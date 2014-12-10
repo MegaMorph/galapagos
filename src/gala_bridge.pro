@@ -5,12 +5,19 @@ PRO gala_bridge, filein, bd_fit = bd_fit
 ;constr_file, out_file, table, nband, outpath_file
 ;orgpath_band, orgpath_pre, orgpath_galfit, orgpath_file,
 ;orgpath_file_no_band, seed
-  
   restore, filein
   cur = save_cur
   table = save_table
+
+  print, ' '
+  print, ' '
+  print, 'starting object '+obj_file
+  print, ' '
+  print, ' '
+  
   
   FOR b=1,nband DO BEGIN
+      print, 'getting sky in '+setup.stamp_pre[b]+'-band'
 ;read in image and weight (takes few sec)
      im=readfits(strtrim(table[cur].frame[b],2), hd,/silent)
      wht=readfits(orgwht[idx,b], whd,/silent)
@@ -33,7 +40,7 @@ PRO gala_bridge, filein, bd_fit = bd_fit
 ;the aperture of the object)
      rad = table.a_image*table.kron_radius*setup.skyscl+setup.skyoff
      
-;get first guess FOR global sky
+;get first guess for global sky
      skypix = where(map EQ 0 AND finite(im) EQ 1,ct)
 ; new scheme takes around 2 second,s the next, old system, about 6
 ; moment() would be 3 times faster, but returns a MEAN value!
@@ -62,10 +69,12 @@ PRO gala_bridge, filein, bd_fit = bd_fit
 ;                    /noderivative, status = status, iter = iter)
 ;   global_sky = par[1]
 ;   global_sigsky = par[2]
+        print, 'sky estimated as median(skypixels) as '+strtrim(global_sky,2)+' +/- '+strtrim(global_sigsky,2)
      ENDIF
      IF ct EQ 0 THEN BEGIN
         global_sky=median(im)
         global_sigsky=stddev(im)
+        print, 'sky estimated as median(image) as '+strtrim(global_sky,2)+' +/- '+strtrim(global_sigsky,2)
      ENDIF
      
      delvarx, skypix
@@ -87,10 +96,12 @@ PRO gala_bridge, filein, bd_fit = bd_fit
 ; the run on the reference band.
      IF b EQ 1 THEN BEGIN
         contrib_targets, setup.expt[b], setup.zp[b], setup.neiscl, setup.skyoff, setup.power, table, $
-                         cur, setup.cut, nums, frames
-     ENDIF 
+                         cur, setup.cut, nums, frames 
+        IF nums[0] GE 0 THEN print, strtrim(n_elements(nums),2)+' contributing targets found'
+    ENDIF 
      
 ; get sky values, while using the contributing sources
+     print, 'starting getsky_loop at '+systime(0)  
      getsky_loop, setup, cur, table, rad, im, hd, map, setup.expt, $
                   setup.zp, setup.neiscl, setup.skyoff, setup.power, $
                   setup.cut, setup.files, psf, setup.dstep, $
@@ -102,6 +113,7 @@ PRO gala_bridge, filein, bd_fit = bd_fit
                   xarr, yarr, seed
      
 ; create mask images
+     print, 'creating mask image for '+setup.stamp_pre[b]+'-band'
      create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
                   im_file[b], table[cur].frame[b], cur, $
                   setup.neiscl, setup.skyoff, nums, frames, $
@@ -117,6 +129,7 @@ PRO gala_bridge, filein, bd_fit = bd_fit
   ENDFOR
   
 ;if not keyword_set(bd_fit) THEN $
+  print, 'preparing GALFIT start file'
   prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
                   im_file, sigma_file, constr_file, mask_file, chosen_psf_file, $
                   out_file, sky_file, setup.convbox, setup.zp, $
@@ -157,6 +170,8 @@ PRO gala_bridge, filein, bd_fit = bd_fit
   
 ;; perl version
   IF maxdeg GE setup.mindeg THEN BEGIN
+     print, 'degrees of freedom and everything else seems fine.'
+     print, 'starting the fit at '+systime(0)
      IF setup.nice THEN BEGIN
         IF setup.gal_kill_time eq 0 THEN spawn, 'nice '+setup.galexe+' '+obj_file
         IF setup.gal_kill_time ne 0 THEN spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "nice '+setup.galexe+' '+obj_file+'"'
@@ -169,7 +184,9 @@ PRO gala_bridge, filein, bd_fit = bd_fit
      spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
      spawn, 'rm ~/galfit.[0123456789]*'
   ENDIF
-  
+
+  print, 'all done for this object at '+systime(0)  
+  print, 'deleting *sav file and returning to main queue' 
   file_delete, filein
   wait, 1
 END
