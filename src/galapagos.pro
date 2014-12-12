@@ -1239,7 +1239,9 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;    larger than image
 ;4 - sky not converged, still decreasing with radius at image boundary
 ;    (image too small)
-;8 - not enough measurements, value from SExtractor taken
+;8 - not enough measurements, value from median(image) taken  ;
+;    initially 'SExtractor taken', but not good in multi-band mode,
+;    replace if dual-image sextractor is being used
 ;16 - value from contributing source taken
 ;32 - image is masked entirey, no sky determination was
 ;    possible. Assuming 0 as sky value
@@ -1535,8 +1537,11 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;too few measurements -> take value from SExtractor
 ; why SExtractor and not previous curvefit value?
               min_sky_flag0 = 8
-              new_sky = table[current_obj].background
-              new_sky_sig = 999
+              new_sky = global_sky
+              new_sky_sig = global_sigsky
+; SExtractor sky (BAD idea in multi-band mode)
+;              new_sky = table[current_obj].background
+;              new_sky_sig = 999
            ENDELSE
            IF new_sky LT min_sky and new_sky_sig lt 1e20 THEN BEGIN
               min_sky_flag = min_sky_flag0
@@ -1576,8 +1581,11 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
      ENDIF ELSE BEGIN
 ;too few measurements -> take value from SExtractor
         sky_flag0 = 8
-        new_sky = table[current_obj].background
-        new_sky_sig = 999
+        new_sky = global_sky
+        new_sky_sig = global_sigsky
+; SExtractor sky (BAD idea in multi-band mode)
+;        new_sky = table[current_obj].background
+;        new_sky_sig = 999
         fit = [0, 0]
      ENDELSE
      IF ct GT 0 THEN sky_rad = mean(sl_rad[idx]) ELSE sky_rad = radius[(r-1) >0]
@@ -3627,7 +3635,7 @@ END
 
 PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal = bridgejournal, jump1=jump1, jump2=jump2, mac=mac
   galapagos_version = 'GALAPAGOS-v2.1.8'
-  galapagos_date = '(November 6th, 2014)'
+  galapagos_date = '(December 10th, 2014)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)
