@@ -1609,7 +1609,8 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
      printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
              sky_flag
      close, 1
-  ENDIF
+     print, 'sky estimated by getsky_loop as '+strtrim(new_sky,2)+' +/- '+strtrim(new_sky_sig,2)
+ ENDIF
 END
 
 PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
@@ -3624,8 +3625,8 @@ PRO start_log, logfile, message
   free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, jump1=jump1, jump2=jump2, mac=mac
-  galapagos_version = 'GALAPAGOS-v2.1.7'
+PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal = bridgejournal, jump1=jump1, jump2=jump2, mac=mac
+  galapagos_version = 'GALAPAGOS-v2.1.8'
   galapagos_date = '(November 6th, 2014)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
@@ -3654,22 +3655,23 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, jump1=jump1, ju
 ;copy setup file to output folder for future reference
   date=systime(0)
   date=strsplit(date,' ',/extract)  
-  save_folder = setup.outdir+'setup_'+date[4]+'_'+date[1]+'_'+date[2]
-  IF NOT file_test(save_folder) THEN $
-     spawn, 'mkdir -p '+save_folder
+  save_folder = setup.outdir+'setups/setup_'+date[4]+'_'+date[1]+'_'+date[2]
+  IF NOT file_test(save_folder) THEN spawn, 'mkdir -p '+save_folder
   spawn, 'cp '+setup_file+' '+save_folder
   spawn, 'cp '+setup.files+' '+save_folder
   spawn, 'cp '+setup.sexout+' '+save_folder
-  if file_test(setup.cold) then spawn, 'cp '+setup.cold+' '+save_folder
-  if file_test(setup.hot) then spawn, 'cp '+setup.hot+' '+save_folder
-  if file_test(setup.exclude) then spawn, 'cp '+setup.exclude+' '+save_folder
-  if file_test(setup.bad) then spawn, 'cp '+setup.bad+' '+save_folder
-  if file_test(setup.srclist) then spawn, 'cp '+setup.srclist+' '+save_folder
-  if file_test(setup.bd_srclist) then spawn, 'cp '+setup.bd_srclist+' '+save_folder
+  IF file_test(setup.cold) THEN spawn, 'cp '+setup.cold+' '+save_folder
+  IF file_test(setup.hot) THEN spawn, 'cp '+setup.hot+' '+save_folder
+  IF file_test(setup.exclude) THEN spawn, 'cp '+setup.exclude+' '+save_folder
+  IF file_test(setup.bad) THEN spawn, 'cp '+setup.bad+' '+save_folder
+  IF file_test(setup.srclist) THEN spawn, 'cp '+setup.srclist+' '+save_folder
+  IF file_test(setup.bd_srclist) THEN spawn, 'cp '+setup.bd_srclist+' '+save_folder
+  journal_folder = setup.outdir+'journals/bridgejournal_'+date[4]+'_'+date[1]+'_'+date[2]
+  IF keyword_set(bridgejournal) THEN spawn, 'mkdir -p '+journal_folder
   
   IF keyword_set(logfile) THEN $
      start_log, logfile, systime()+': Reading setup file... done!'
-  if setup.dobd eq 1 then print, 'You are trying to do B/D decomposition? Are you sure you know what you are doing?!' 
+  IF setup.dobd EQ 1 THEN print, 'You are trying to do B/D decomposition? Are you sure you know what you are doing?!' 
   
 ;==============================================================================   
 ;read input files into arrays
@@ -3811,13 +3813,16 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, jump1=jump1, ju
 ;allow main to see which process is free
      post_bridge_use = bytarr(setup.max_proc <max_proc)
 ;initialise every bridge (specify output property to allow debugging)
-     FOR i=0, setup.max_proc-1 <(max_proc-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
-     
+     IF keyword_set(bridgejournal) THEN BEGIN
+         FOR i=0, setup.max_proc-1 <(max_proc-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_postage_stamps_'+strtrim(i,2))
+     ENDIF ELSE BEGIN
+         FOR i=0, setup.max_proc-1 <(max_proc-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+     ENDELSE
      IF setup.max_proc <(max_proc) GT 1 THEN BEGIN
-        FOR i=0, setup.max_proc-1 <(max_proc-1) DO BEGIN
-           post_bridge_arr[i]->execute, 'astrolib'
-           post_bridge_arr[i]->execute, '.r '+gala_pro
-        ENDFOR
+         FOR i=0, setup.max_proc-1 <(max_proc-1) DO BEGIN
+             post_bridge_arr[i]->execute, 'astrolib'
+             post_bridge_arr[i]->execute, '.r '+gala_pro
+         ENDFOR
      ENDIF 
      done_cnt=0L
      i=0
@@ -3861,12 +3866,16 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, jump1=jump1, ju
 ;allow main to see which process is free
      post_bridge_use = bytarr(setup.max_proc < nframes)
 ;initialise every bridge (specify output property to allow debugging)
-     FOR i=0, setup.max_proc-1 < (nframes-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+     IF keyword_set(bridgejournal) THEN BEGIN
+         FOR i=0, setup.max_proc-1 < (nframes-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_skymaps_'+strtrim(i,2))
+     ENDIF ELSE BEGIN
+         FOR i=0, setup.max_proc-1 < (nframes-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+     ENDELSE
      IF setup.max_proc <(nframes) GT 1 THEN BEGIN
-        FOR i=0, setup.max_proc-1 < (nframes-1) DO BEGIN
-           post_bridge_arr[i]->execute, 'astrolib'
-           post_bridge_arr[i]->execute, '.r '+gala_pro
-        ENDFOR
+         FOR i=0, setup.max_proc-1 < (nframes-1) DO BEGIN
+             post_bridge_arr[i]->execute, 'astrolib'
+             post_bridge_arr[i]->execute, '.r '+gala_pro
+         ENDFOR
      ENDIF
      
 ;create skymap files using bridge
@@ -4084,15 +4093,17 @@ jump_over_this_1:
      bridge_pos = dblarr(2, setup.max_proc)+!values.F_NAN
      
 ;initialise every bridge (specify output property to allow debugging)
-     FOR i=0, setup.max_proc-1 DO $
-        bridge_arr[i] = obj_new('IDL_IDLBridge')
-     
+     IF keyword_set(bridgejournal) THEN BEGIN
+         FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_fitting_'+strtrim(i,2))
+     ENDIF ELSE BEGIN
+         FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge')
+     ENDELSE
      IF setup.max_proc GT 1 THEN BEGIN
-        FOR i=0, setup.max_proc-1 DO BEGIN
-           bridge_arr[i]->execute, 'astrolib'
-           bridge_arr[i]->execute, '.r '+gala_pro
-           bridge_arr[i]->execute, '.r gala_bridge'
-        ENDFOR
+         FOR i=0, setup.max_proc-1 DO BEGIN
+             bridge_arr[i]->execute, 'astrolib'
+             bridge_arr[i]->execute, '.r '+gala_pro
+             bridge_arr[i]->execute, '.r gala_bridge'
+         ENDFOR
      ENDIF
      
      IF keyword_set(plot) THEN BEGIN
@@ -4290,6 +4301,8 @@ loopstart2:
                        psf_struct, table[cur].frame, chosen_psf_file, nband
            
 ; change seed for random in getsky_loop
+; this isn't really random, but random enough for the purpose and
+; allows exact re-running of the code
            seed=table[cur].number
 ; create sav file for gala_bridge to read in
            
@@ -4535,15 +4548,17 @@ jump_over_this_2:
         bridge_pos = dblarr(2, setup.max_proc)+!values.F_NAN
         
 ;initialise every bridge (specify output property to allow debugging)
-        FOR i=0, setup.max_proc-1 DO $
-           bridge_arr[i] = obj_new('IDL_IDLBridge')
-        
+        IF keyword_set(bridgejournal) THEN BEGIN
+            FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_fitting_bd_'+strtrim(i,2))
+        ENDIF ELSE BEGIN
+            FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge')
+        ENDELSE
         IF setup.max_proc gt 1 THEN BEGIN
-           FOR i=0, setup.max_proc-1 DO BEGIN
-              bridge_arr[i]->execute, 'astrolib'
-              bridge_arr[i]->execute, '.r '+gala_pro
-              bridge_arr[i]->execute, '.r gala_bd_bridge'
-           ENDFOR  
+            FOR i=0, setup.max_proc-1 DO BEGIN
+                bridge_arr[i]->execute, 'astrolib'
+                bridge_arr[i]->execute, '.r '+gala_pro
+                bridge_arr[i]->execute, '.r gala_bd_bridge'
+            ENDFOR  
         ENDIF
         IF keyword_set(plot) THEN BEGIN
            loadct,39,/silent
