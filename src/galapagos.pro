@@ -4256,7 +4256,7 @@ loopstart2:
            bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
            table[cur].flag_galfit = 1
 ; get numbers for statusline
-           nr_obj = strtrim(n_elements(where(table.flag_galfit ne 0)),2)
+           nr_obj = n_elements(where(table.flag_galfit ne 0))
            nr_todo = strtrim(n_elements(where(table.do_list EQ 1 AND table.do_batch eq 1)),2)
            nr_total = strtrim(n_elements(table),2)
            objects_done = where(table.flag_galfit EQ 2)
@@ -4265,9 +4265,8 @@ loopstart2:
            objects_not_done = where(table.flag_galfit EQ -1)
            nr_not_done = strtrim(n_elements(objects_not_done),2)
            IF objects_not_done[0] EQ '-1' THEN nr_not_done = '0'
-
 ; print information on progress
-           IF n_elements(nr_obj) MOD 10 EQ 0 THEN print, systime()+': starting object No. '+nr_obj+' of '+nr_todo+' (of '+nr_total+' objects detected). For now: '+nr_done+' fit finished,  '+nr_not_done+' not started (too few images with data)'
+           IF nr_obj MOD 10 EQ 0 THEN print, systime()+': starting object No. '+strtrim(nr_obj,2)+' of '+nr_todo+' (of '+nr_total+' objects detected). For now: '+nr_done+' fit finished,  '+nr_not_done+' not started (too few images with data)'
            IF keyword_set(plot) THEN BEGIN
               plot, table.alpha_J2000,table.delta_J2000, psym=3, ystyle=1, xstyle=1
               IF n_elements(blocked) GT 1 THEN BEGIN
