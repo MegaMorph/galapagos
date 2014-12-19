@@ -1753,8 +1753,7 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
            faintlim = lim_star $
      ELSE faintlim = lim_gal
      
-     IF r1+r2 GT d AND $
-        table[i].mag_best LT table[current].mag_best+faintlim THEN BEGIN
+     IF r1+r2 GT d AND table[i].mag_best LT table[current].mag_best+faintlim THEN BEGIN
 ;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ;loop source has overlap with current --> secondary
         idx = where(arr LE (rad[i])[0] AND (small_mask MOD 2) EQ 0, ct)
@@ -1774,9 +1773,7 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
         IF ct GT 0 THEN small_mask[idx] += plus
      ENDELSE
      
-     IF r1+r2 GT d AND table[i].mag_best GE $
-        table[current].mag_best+faintlim THEN $
-           BEGIN
+     IF r1+r2 GT d AND table[i].mag_best GE table[current].mag_best+faintlim THEN BEGIN
 ;loop source has overlap with current --> secondary
         idx = where(arr LE (rad[i])[0] AND (small_mask MOD 2) EQ 0 $
                     AND arr_current[xlo:xhi, ylo:yhi] LE (rad[current])[0], $
@@ -4145,7 +4142,7 @@ jump_over_this_1:
 ;loop over all objects
      loop = 0l
      print, 'starting fitting at '+systime()
-     
+   
      REPEAT BEGIN
         IF loop MOD 100000 EQ 0 AND keyword_set(logfile) THEN BEGIN
            update_log, logfile, systime()+': last in cue... '+strtrim(cur, 2)
@@ -4258,9 +4255,19 @@ loopstart2:
            bridge_obj[free[0]] = cur
            bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
            table[cur].flag_galfit = 1
-           IF n_elements(where(table.flag_galfit)) MOD 10 EQ 0 THEN print, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(where(table.do_list EQ 1 AND table.do_batch eq 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
-;            if n_elements(where(table.flag_galfit)) mod 10 eq 0 then statusline, systime()+': starting object No. '+strtrim(n_elements(where(table.flag_galfit ge 1)),2)+' of '+strtrim(n_elements(where(table.do_list EQ 1)),2)+' (of '+strtrim(n_elements(table),2)+' objects detected)   '
-;              print, obj_file
+; get numbers for statusline
+           nr_obj = strtrim(n_elements(where(table.flag_galfit ne 0)),2)
+           nr_todo = strtrim(n_elements(where(table.do_list EQ 1 AND table.do_batch eq 1)),2)
+           nr_total = strtrim(n_elements(table),2)
+           objects_done = where(table.flag_galfit EQ 2)
+           nr_done = strtrim(n_elements(objects_done),2)
+           IF objects_done[0] EQ '-1' THEN nr_done = '0'
+           objects_not_done = where(table.flag_galfit EQ -1)
+           nr_not_done = strtrim(n_elements(objects_not_done),2)
+           IF objects_not_done[0] EQ '-1' THEN nr_not_done = '0'
+
+; print information on progress
+           IF n_elements(nr_obj) MOD 10 EQ 0 THEN print, systime()+': starting object No. '+nr_obj+' of '+nr_todo+' (of '+nr_total+' objects detected). For now: '+nr_done+' fit finished,  '+nr_not_done+' not started (too few images with data)'
            IF keyword_set(plot) THEN BEGIN
               plot, table.alpha_J2000,table.delta_J2000, psym=3, ystyle=1, xstyle=1
               IF n_elements(blocked) GT 1 THEN BEGIN
@@ -4731,7 +4738,7 @@ loopstart2_bd:
               bridge_pos[*, free[0]] = [table[cur].alpha_j2000, table[cur].delta_j2000]
               table[cur].flag_galfit_bd = 1
               IF n_elements(where(table.flag_galfit_bd)) MOD 10 EQ 0 THEN $
-                 print, systime()+': starting B/D on object No. '+strtrim(n_elements(where(table.flag_galfit_bd GE 1)),2)+' of ' $
+                 print, systime()+': starting B/D on object No. '+strtrim(n_elements(where(table.flag_galfit_bd NE 0)),2)+' of ' $
                         +strtrim(n_elements(where(table.do_list_bd EQ 1 AND table.do_batch EQ 1 AND table.mag_galfit_band[0] GT 0 $
                                                   AND table.mag_galfit_band[0] LT setup.bd_maglim)),2)+ $
                         ' (of '+strtrim(n_elements(table),2)+' objects detected)   '
