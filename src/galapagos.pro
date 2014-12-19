@@ -4266,7 +4266,7 @@ loopstart2:
            nr_not_done = strtrim(n_elements(objects_not_done),2)
            IF objects_not_done[0] EQ '-1' THEN nr_not_done = '0'
 ; print information on progress
-           IF nr_obj MOD 10 EQ 0 THEN print, systime()+': starting object No. '+strtrim(nr_obj,2)+' of '+nr_todo+' (of '+nr_total+' objects detected). For now: '+nr_done+' fit finished,  '+nr_not_done+' not started (too few images with data)'
+           IF nr_obj MOD 10 EQ 0 THEN print, systime()+': starting object No. '+strtrim(nr_obj,2)+' of '+nr_todo+' (of '+nr_total+' objects detected). For now: '+nr_done+' fits finished,  '+nr_not_done+' not started (too few images with data)'
            IF keyword_set(plot) THEN BEGIN
               plot, table.alpha_J2000,table.delta_J2000, psym=3, ystyle=1, xstyle=1
               IF n_elements(blocked) GT 1 THEN BEGIN
