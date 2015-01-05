@@ -1,4 +1,4 @@
-##GALAPAGOS-2 README (v.2.1.8)
+##GALAPAGOS-2 README (v.2.2.0)
 
 Please read this file for details on input format and new features off the code.  
 Especially read this file regarding your image normalisation and how to set up and run galapagos in the most efficient way.  
@@ -704,3 +704,8 @@ The code is not as effective as it could be. However, most of the time is still 
 - added flag /bridgejournal to Galapagos. This writes a journal for all bridge processes into files (in a 'journal' folder in the output folder), which is handy for debugging. WARNING! As these files will contain the GalfitM output stream, these files become HUGE (>1MB per galaxy fit in my test examples, so easily hundreds of MB or even GB for large surveys), which at some point will slow down the fitting. Thi feature should hence only be used for debugging purposes and NOT once the code succesfully runs. Please restart in this case without this flag being set.
 - added a script to run automatic single-vs-multi-band comparison (single_band_comparison.pro and two little scripts needed by this to run) for any galapagos style (sky first, then objects) GalfitM setup file. The only input needed is the multi-band file, all information is found in there. The fits will still need to find the input files, obviously, so needs to be run on the same machine. The script is trivial to run, does not interfere with Galapagos output files and creates both a little FITS table with the comparision results for the object and, if wanted, a simple plot showing the comparison. This script is NOT run from within GALAPAGOS, but can easily be run by a user. Please look at the script for more details and options.
 - removes PA constraints from constraints file as those are not needed anymore in GalfitM
+
+**v2.2.0**
+- The system introduced in 2.1.7 for reducing the DOF in case of masked images did not work in crowded fields, as in most cases, MOST of the images will be masked out. The scheme has now been changed so it only analyses the pixels within the primaries SExtractor ellipse. This makes setup parameter E23 mean something else (fraction of masked pixels within the primary ellipse), E24 obsolete and renames E25->E24. Sorry for the trouble. I thought the old scheme had fixed the problems, which it had in shallow data. In deep data, it had not.
+- There is more output for progress
+
