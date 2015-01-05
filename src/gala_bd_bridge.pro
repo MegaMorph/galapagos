@@ -105,17 +105,17 @@ PRO gala_bd_bridge, filein
 
 ; check how many postage stamps contain (a useful amount of) data and
 ; restrict maximum number of degrees in polynomial
-                   deg_im = readfits(input_files[b-1],1, /silent)
-                   deg_wht = readfits(mask_files[b-1],1,/silent)
-                   deg_npix = float(n_elements(deg_im))
+                  deg_im = readfits(strtrim(im_file[b],2)+'.fits',1, /silent)
+                  deg_wht = readfits(strtrim(mask_file[b],2)+'.fits',1,/silent)
+                  deg_prim = readfits(strtrim(mask_file_primary,2)+'.fits',1,/silent)
+                  deg_npix_prim = float(n_elements(where(deg_prim EQ 1)))
 ; masked pixels have value 1!
-                   hlpin = where(deg_wht eq 1, deg_npix_mask) ; masked pixels
-                   hlpin = where(deg_im eq 0, deg_npix_zero) ; pixles with data ==0
-                   
-; correct if more than 50% of image are masked or when 50% of image
-; have value 0
-                   if deg_npix_zero/deg_npix GT setup.restrict_frac/100. or $
-                     deg_npix_mask/deg_npix GT setup.restrict_frac_mask/100. then $
+                  hlpin = where(deg_prim EQ 1 AND (deg_wht EQ 1 OR deg_im EQ 0), deg_npix_prim_mask)
+                  delvarx, hlpin
+
+; correct if more than x% of pixels are masked or have value 0 within
+; the primary elliipse
+                  IF deg_npix_prim_mask/deg_npix_prim GT setup.restrict_frac_primary/100. THEN $
                      maxdeg = maxdeg-1
                ENDFOR
            ENDIF

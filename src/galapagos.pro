@@ -1621,7 +1621,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
  ENDIF
 END
 
-PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
+PRO create_mask, table0, wht, seg, paramfile, mask_file, mask_file_primary, im_file, image, $
                  current, scale, offset, nums, frames, lim_gal, lim_star, $
                  stel_slope, stel_zp, objects, corner, b
 ;objects and corner are output needed by prepare_galfit
@@ -1683,7 +1683,7 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
                 table[current].y_image-pylo, $
                 1./(1.-table[current].ellipticity), $
                 theta[current]*!radeg-90
-  
+
   con_num = 0ul
 ;loop over all sources in the table (including neighbouring frames)
   FOR i=0ul, ntab-1 DO BEGIN
@@ -1799,6 +1799,13 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
                 1./(1.-table[current].ellipticity), theta[current]*!radeg-90
   idx = where(arr LE (rad[current])[0], ct)
   IF ct GT 0 THEN mask[idx] = 0
+
+; create primary mask if band = 1
+  IF b EQ 1 THEN BEGIN
+     arr = arr*0
+     arr[idx] = 1
+     writefits, mask_file_primary+'.fits', byte(arr), headfits(im_file+'.fits'),/silent
+  ENDIF
 ;*****************************************************************************
   
 ;set rest to 1
@@ -1819,6 +1826,7 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
      idx = where(segm EQ con_num[i] AND segm GT 0, ct)
      IF ct GT 0 THEN mask1[idx] = 0
   ENDFOR
+
   mask = (mask+mask1) < 1
   writefits, mask_file+'.fits', byte(mask), headfits(im_file+'.fits'),/silent
   
@@ -1826,7 +1834,7 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, im_file, image, $
 END
 
 PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, sigma_file, $
-                    constr_file, mask_file, psf_file, out_file, sky_file, $
+                    constr_file, mask_file, mask_file_primary, psf_file, out_file, sky_file, $
                     conv_box, zero_pt, plate_scl, num_contrib, frame_contrib, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
                     conminm, conmaxm, setup_version, nband, $
@@ -1873,16 +1881,16 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      FOR b=1,nband DO BEGIN
         deg_im = readfits(strtrim(im_file[b],2)+'.fits',1, /silent)
         deg_wht = readfits(strtrim(mask_file[b],2)+'.fits',1,/silent)
-        deg_npix = float(n_elements(deg_im))
+        deg_prim = readfits(strtrim(mask_file_primary,2)+'.fits',1,/silent)
+        deg_npix_prim = float(n_elements(where(deg_prim EQ 1)))
 ; masked pixels have value 1!
-        hlpin = where(deg_wht EQ 1, deg_npix_mask) ; masked pixels
-        hlpin = where(deg_im EQ 0, deg_npix_zero)  ; pixles with data ==0
+        hlpin = where(deg_prim EQ 1 AND (deg_wht EQ 1 OR deg_im EQ 0), deg_npix_prim_mask)
+        delvarx, hlpin
         
-; correct if more than 50% of image are masked or when 50% of image
-; have value 0
-        IF deg_npix_zero/deg_npix GT setup.restrict_frac/100. OR $
-           deg_npix_mask/deg_npix GT setup.restrict_frac_mask/100. THEN $
-              maxdeg = maxdeg-1
+; correct if more than x% of pixels are masked or have value 0 within
+; the primary elliipse
+        IF deg_npix_prim_mask/deg_npix_prim GT setup.restrict_frac_primary/100. THEN $
+           maxdeg = maxdeg-1
      ENDFOR
   ENDIF
   
@@ -2557,8 +2565,7 @@ PRO read_setup, setup_file, setup
                         'cheb', intarr(7)-1, $
                         'galfit_out_path',' ', $
                         'do_restrict', 0, $
-                        'restrict_frac', 50., $
-                        'restrict_frac_mask', 50., $
+                        'restrict_frac_primary', 20., $
                         'mindeg', 0, $
                         'dobd', 0, $
                         'cheb_b', intarr(7)-1, $
@@ -2733,9 +2740,8 @@ PRO read_setup, setup_file, setup
            if content ne '' then setup.galfit_out_path = set_trailing_slash(content)
         END
         'E22)': setup.do_restrict = (content EQ 'restrict') ? 1 : 0
-        'E23)': setup.restrict_frac = content
-        'E24)': setup.restrict_frac_mask = content
-        'E25)': setup.mindeg = content
+        'E23)': setup.restrict_frac_primary = content
+        'E24)': setup.mindeg = content
         
         'F00)': BEGIN
            if block_bd eq 1 then setup.dobd = (content EQ 'execute') ? 1 : 0 $
@@ -3632,7 +3638,7 @@ END
 
 PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal = bridgejournal, jump1=jump1, jump2=jump2, mac=mac
   galapagos_version = 'GALAPAGOS-v2.1.8'
-  galapagos_date = '(December 15th, 2014)'
+  galapagos_date = '(January 5th, 2015)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)
@@ -4290,6 +4296,7 @@ loopstart2:
 ;galfit masks
            mask_file = strarr(nband+1)
            FOR q=1,nband DO mask_file[q] = (outpath_galfit[idx]+outpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
+           mask_file_primary = (outpath_galfit[idx]+outpre[idx,1]+objnum+'_'+setup.mask+'_primary')[0]
 ;galfit obj file
            obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
 ;galfit constraint file
@@ -4339,7 +4346,7 @@ loopstart2:
            
 ;print, systime()+'  writing '+out_file+'.sav'
            save, save_cur, orgwht, idx, orgpath, orgpre, setup, chosen_psf_file,$
-                 sky_file, stamp_param_file, mask_file, im_file, sigma_file, obj_file, $
+                 sky_file, stamp_param_file, mask_file, mask_file_primary, im_file, sigma_file, obj_file, $
                  constr_file, out_file, save_table, nband, orgpath_pre, outpath_file, $
                  outpath_file_no_band, orgpath_file_no_band, outpath_galfit, $
                  orgpath_band, orgpath_file, seed,$

@@ -114,7 +114,7 @@ PRO gala_bridge, filein, bd_fit = bd_fit
      
 ; create mask images
      print, 'creating mask image for '+setup.stamp_pre[b]+'-band'
-     create_mask, table, wht, seg, stamp_param_file, mask_file[b], $
+     create_mask, table, wht, seg, stamp_param_file, mask_file[b], mask_file_primary, $
                   im_file[b], table[cur].frame[b], cur, $
                   setup.neiscl, setup.skyoff, nums, frames, $
                   setup.maglim_gal, setup.maglim_star, $
@@ -131,7 +131,7 @@ PRO gala_bridge, filein, bd_fit = bd_fit
 ;if not keyword_set(bd_fit) THEN $
   print, 'preparing GALFIT start file'
   prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
-                  im_file, sigma_file, constr_file, mask_file, chosen_psf_file, $
+                  im_file, sigma_file, constr_file, mask_file, mask_file_primary, chosen_psf_file, $
                   out_file, sky_file, setup.convbox, setup.zp, $
                   setup.platescl, nums, frames, cur, $
                   setup.outcat, setup.outparam, setup.stampfile, $
@@ -170,7 +170,7 @@ PRO gala_bridge, filein, bd_fit = bd_fit
   
 ;; perl version
   IF maxdeg GE setup.mindeg THEN BEGIN
-     print, 'degrees of freedom and everything else seems fine.'
+     print, 'degrees of freedom is '+strtrim(maxdeg,2)+' and everything else also seems fine.'
      print, 'starting the fit at '+systime(0)
      IF setup.nice THEN BEGIN
         IF setup.gal_kill_time eq 0 THEN spawn, 'nice '+setup.galexe+' '+obj_file
