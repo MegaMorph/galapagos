@@ -92,7 +92,8 @@ E17) 4.0                  # GALFIT version string. E.g. 2.0.3c  (this defines th
 			  # galfitm = 4.0,, galftim (later or equal to version 1.2.0 = 4.1, this lets you define the output file format in E18) ).
 E18) input,model,residual,psf      # string used to define the format of the galfit output files (string simply passed on to galfitm)
 			  # Allowed values (only in case galfitm1.2.0 or later is used, only listing the ones that make sense, e.g. nonparametric can not happen in Galapagos):
-			  # blank,input,model,residual -- as usual
+		          # blank,input,model,residual -- as usual Galfit
+		          # input,model,residual,psf -- as Galapagos before, but without the blank image at the front. 
 			  # component -- individual model components (not very useful in sigle-sersic fitting)
 			  # psf -- input psf image
 			  # sigma -- sigma image (input or created)
