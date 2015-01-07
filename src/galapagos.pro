@@ -592,7 +592,7 @@ PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac, setup
 ; write out parameters for postages stamps, but only if object is in
 ; srclist
 ; in case of an empty catalogue, 0s have to be written out (if the file
-; doesn't exist, galapapos crases) The check is in the cut_stamps
+; doesn not exist, galapapos crases) The check is in the cut_stamps
 ;    if (cat[i].cut_list eq 1) then begin
      printf, 1, cat[i].number, cat[i].x_image, cat[i].y_image, $
              xlo, xhi, ylo, yhi, format = '(I,2(F),4(I))'
