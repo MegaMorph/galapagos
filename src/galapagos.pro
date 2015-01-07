@@ -1247,7 +1247,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;    possible. Assuming 0 as sky value
   sky_flag = 0
   
-; rename image so im0 isn't changed
+; rename image so im0 is not changed
   im = im0
   
 ;get the size of the image
@@ -2790,7 +2790,7 @@ PRO read_setup, setup_file, setup
      ENDCASE
   ENDWHILE
   close, 1
-; Ensure backwards compatibility for D21, E18, E19. They don't exist
+; Ensure backwards compatibility for D21, E18, E19. They do not exist
 ; in the old input file. Also, the format of the image setup file changed!!
   
 ;default values
@@ -3158,7 +3158,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
      ENDIF
 ; to include:
 ; there is more band_info which is not used yet (band, wl, datain,
-; sigma, MASL, magzpt) Not sure we'll need them!
+; sigma, MASL, magzpt) Not sure we will need them!
      
   ENDIF ELSE BEGIN
      psf=strarr(nband)
@@ -4672,7 +4672,7 @@ loopstart2_bd:
                  bridge_pos[*, free[0]]= [!values.F_NAN, !values.F_NAN]
               ENDIF
 ; only run the loop when the fit is actually done, everything else
-; doesn't make sense
+; does not make sense
 ; check if current position is far enough from bridge positions
               filled = where(finite(bridge_pos[0, *]) EQ 1 AND $
                              bridge_use GT 0, ct)
