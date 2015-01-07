@@ -89,7 +89,7 @@ E14) 0.2                  # constraint min sersic index
 E15) 8                    # constraint max sersic index
 E16) nice                 # nice the GALFIT process ("nice" = true) (If your IDL session is niced, the galfit is alreadyniced automatically)
 E17) 4.0                  # GALFIT version string. E.g. 2.0.3c  (this defines the input file format for the galfit start files)
-			  # galfitm = 4.0,, galftim (later or equal to version 1.2.0 = 4.1, this lets you define the output file format in E18) ).
+			  # galfitm = 4.0 or later
 E18) input,model,residual,psf      # string used to define the format of the galfit output files (string simply passed on to galfitm)
 			  # Allowed values (only in case galfitm1.2.0 or later is used, only listing the ones that make sense, e.g. nonparametric can not happen in Galapagos):
 		          # blank,input,model,residual -- as usual Galfit
