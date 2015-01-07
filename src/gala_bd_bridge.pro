@@ -96,18 +96,21 @@ PRO gala_bd_bridge, filein
        readf, filer, line
        
        IF strpos(strtrim(line, 2), 'A) ') EQ 0 THEN BEGIN
-           workline=line
-           If setup.do_restrict then begin
+          workline=line
+          If setup.do_restrict then begin
 ; get image names from seric fits header
-               input_files=strtrim(band_info.datain,2)
-               mask_files=strtrim(band_info.mask,2)
-               FOR b=1,nband DO BEGIN
+             input_files=strtrim(band_info.datain,2)
+             mask_files=strtrim(band_info.mask,2)
 
+; read in primary ellips file
+             deg_prim = readfits(strtrim(mask_file_primary,2)+'.fits',1,/silent)
+; restrict maximal DOF if images are empty
+             FOR b=1,nband DO BEGIN
+                
 ; check how many postage stamps contain (a useful amount of) data and
-; restrict maximum number of degrees in polynomial
-                  deg_im = readfits(strtrim(im_file[b],2)+'.fits',1, /silent)
-                  deg_wht = readfits(strtrim(mask_file[b],2)+'.fits',1,/silent)
-                  deg_prim = readfits(strtrim(mask_file_primary,2)+'.fits',1,/silent)
+; restrict maximum number of degrees in polynomial (b-1 as b starts counting at 1, instead of 0)
+                  deg_im = readfits(strtrim(band_info[b-1].datain,2),1, /silent)
+                  deg_wht = readfits(strtrim(band_info[b-1].mask,2),1,/silent)
                   deg_npix_prim = float(n_elements(where(deg_prim EQ 1)))
 ; masked pixels have value 1!
                   hlpin = where(deg_prim EQ 1 AND (deg_wht EQ 1 OR deg_im EQ 0), deg_npix_prim_mask)
@@ -121,18 +124,24 @@ PRO gala_bd_bridge, filein
            ENDIF
        ENDIF
        
+; adapt a few lines for B/D use
        IF strpos(strtrim(line, 2), 'B) ') EQ 0 THEN BEGIN
            line = 'B) '+out_file_bd+'.fits'
        ENDIF
        IF strpos(strtrim(line, 2), 'G) ') EQ 0 THEN BEGIN
            line = 'G) '+constr_file_bd
        ENDIF
+       IF strpos(strtrim(line, 2), 'W) ') EQ 0 THEN BEGIN
+          IF setup.version GE 4.1 THEN line = 'W) '+setup.gal_output_bd+' # GALFIT output file format'
+       ENDIF
+
+
        IF (setup.bd_hpc AND strpos(strtrim(line, 2), 'D) ') EQ 0) THEN line = strrep(line, setup.bd_psf_corr[0], setup.bd_psf_corr[1])
 ;change path from boris on dator to general location
        IF (setup.bd_hpc AND strpos(strtrim(line, 2), 'D) ') NE 0) THEN line = strrep(line, setup.outdir, setup.bd_hpc_path)
        printf, filew, line
    ENDREP UNTIL strpos(strtrim(line, 2), '# Sersic function') EQ 0
-   
+
 ; DISK PARAMETERS
    printf, filew
    printf, filew, ' 0) sersic             # Object type --- DISC'
@@ -436,7 +445,7 @@ PRO gala_bd_bridge, filein
            ENDIF
            wait, 1
        ENDIF
-       spawn, 'rm '+galfit_path+'/galfit.[0123456789]*'
+;       spawn, 'rm '+galfit_path+'/galfit.[0123456789]*'
        spawn, 'rm ~/galfit.[0123456789]*'
    ENDIF
    file_delete, filein

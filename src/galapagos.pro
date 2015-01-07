@@ -1317,8 +1317,8 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;read in the GALFIT image fitting results from current_file
               forward_function read_sersic_results ; not quite sure why this is needed
               forward_function read_sersic_results_old_galfit ; not quite sure why this is needed
-              IF setup.version ge 4 then par = read_sersic_results(current_contrib_file,nband)
-              IF setup.version lt 4 then par = read_sersic_results_old_galfit(current_contrib_file)      
+              IF setup.version ge 4. then par = read_sersic_results(current_contrib_file,nband)
+              IF setup.version lt 4. then par = read_sersic_results_old_galfit(current_contrib_file)      
               contrib_sky = [contrib_sky, par.sky_galfit_band[b-1]]
               
 ;subtract the source from the image               
@@ -1839,7 +1839,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
                     current, out_cat, out_param, out_stamps, conmaxre, $
                     conminm, conmaxm, setup_version, nband, $
                     outpre, maxdeg, bd_fit = bd_fit
-;   setup_version = 4
+;   setup_version = 4.
 ;objects contains an index of secondary sources
 ;in the case of contributing sources, the TABLE is changed, so keep a
 ;backup copy
@@ -1901,7 +1901,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      IF b LT nband THEN A_po=A_po+','
   ENDFOR
   printf, 1, 'A) '+a_po+'   #input file'
-  IF setup.version GE 4 THEN BEGIN
+  IF setup.version GE 4. THEN BEGIN
      A1_po=''
      FOR b=1,nband DO BEGIN
         A1_po=A1_po+strtrim(setup.stamp_pre[b],2)
@@ -1958,6 +1958,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   printf, 1, 'O) regular             # Display type (regular, curses, both)'
   printf, 1, 'P) 0                   # Create ouput only? (1=yes; 0=optimize)'
   printf, 1, 'S) 0                   # Modify/create objects interactively?'
+  printf, 1, 'W) '+setup.gal_output+' # GALFIT output file format'
   printf, 1, ''
   printf, 1, ''
   printf, 1, '# sky'
@@ -1979,7 +1980,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   ENDFOR
 ;print, SKY_po
   band_po=' '
-  IF setup.version GE 4 AND nband GT 1 THEN band_po='band'
+  IF setup.version GE 4. AND nband GT 1 THEN band_po='band'
   printf, 1, ' 1) '+SKY_po+'    '+SKY_po2+'  '+band_po+'       # sky background       [ADU counts]'
   SKYG_po=''
   SKYG_po2=''
@@ -2038,8 +2039,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      forward_function read_sersic_results_old_galfit
      IF file_test(secout_file) THEN BEGIN
 ;sources with existing fit will be included as static source
-        IF setup.version ge 4 then par = read_sersic_results(secout_file,nband)
-        IF setup.version lt 4 then par = read_sersic_results_old_galfit(secout_file)      
+        IF setup.version ge 4. then par = read_sersic_results(secout_file,nband)
+        IF setup.version lt 4. then par = read_sersic_results_old_galfit(secout_file)      
         
 ;problem: position from GALFIT is relative to original postage
 ;stamp. Need to compute offset using SExtractor input for that fit
@@ -2075,8 +2076,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ; not matter
         forward_function read_sersic_results
         forward_function read_sersic_results_old_galfit
-        IF setup.version GE 4 then par = read_sersic_results(secout_file,nband)
-        IF setup.version LT 4 then par = read_sersic_results_old_galfit(secout_file)      
+        IF setup.version GE 4. then par = read_sersic_results(secout_file,nband)
+        IF setup.version LT 4. then par = read_sersic_results_old_galfit(secout_file)      
         par.x_galfit = table[objects[i]].x_image
         par.x_galfit_band = fltarr(nband)+table[objects[i]].x_image
         par.y_galfit = table[objects[i]].y_image
@@ -2148,7 +2149,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      IF fix[0] EQ 1 THEN x_po_fit = strtrim((setup.cheb[0]+1)<maxdeg,2) else x_po_fit = '0'
      IF fix[1] EQ 1 THEN y_po_fit = strtrim((setup.cheb[1]+1)<maxdeg,2) else y_po_fit = '0'
      
-     IF setup.version GE 4 THEN BEGIN
+     IF setup.version GE 4. THEN BEGIN
         printf, 1, ' 1) '+x_po+'  '+x_po_fit+'  '+band_po+'   # position x     [pixel]'
         printf, 1, ' 2) '+y_po+'  '+y_po_fit+'  '+band_po+'   # position y     [pixel]'
      ENDIF ELSE BEGIN
@@ -2188,7 +2189,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         if b lt nband then q_po=q_po+','
      ENDFOR
      IF fix[5] EQ 1 THEN q_po_fit = strtrim((setup.cheb[5]+1)<maxdeg,2) ELSE q_po_fit = '0'
-     IF setup.version EQ 0 THEN str = ' 8) ' ELSE str = ' 9) '
+     IF setup.version EQ 0. THEN str = ' 8) ' ELSE str = ' 9) '
      printf, 1, str+q_po+'    '+q_po_fit+'   '+band_po+'       # axis ratio (b/a)'
      
      
@@ -2199,7 +2200,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         IF b LT nband THEN pa_po=pa_po+','
      ENDFOR
      IF fix[6] EQ 1 THEN pa_po_fit = strtrim((setup.cheb[6]+1)<maxdeg,2) ELSE pa_po_fit = '0'
-     IF setup_version EQ 0 THEN str = '9) ' ELSE str = '10) '
+     IF setup_version EQ 0. THEN str = '9) ' ELSE str = '10) '
      printf, 1, str+pa_po+'    '+pa_po_fit+'   '+band_po+'       # position angle (PA) [Degrees: Up=0, Left=90]'
      
      printf, 1, ' Z) 0                  # output image (see above)'
@@ -2247,8 +2248,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ;sources with existing fit will be included as static source
         forward_function read_sersic_results
         forward_function read_sersic_results_old_galfit
-        IF setup.version GE 4 THEN par = read_sersic_results(current_contrib_file,nband)
-        IF setup.version LT 4 THEN par = read_sersic_results_old_galfit(current_contrib_file)      
+        IF setup.version GE 4. THEN par = read_sersic_results(current_contrib_file,nband)
+        IF setup.version LT 4. THEN par = read_sersic_results_old_galfit(current_contrib_file)      
 ;problem: position from GALFIT is relative to original postage
 ;stamp. Need to compute offset using SExtractor input for that fit
         tb = read_sex_table(outpath_file[idx,0]+out_cat, $
@@ -2283,8 +2284,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ; not matter
               forward_function read_sersic_results
               forward_function read_sersic_results_old_galfit
-              IF setup.version GE 4 THEN par = read_sersic_results(secout_file,nband)
-              IF setup.version LT 4 THEN par = read_sersic_results_old_galfit(secout_file)      
+              IF setup.version GE 4. THEN par = read_sersic_results(secout_file,nband)
+              IF setup.version LT 4. THEN par = read_sersic_results_old_galfit(secout_file)      
 ; replace correctly!
               par.x_galfit = table[i_con].x_image
               par.x_galfit_band = fltarr(nband)+table[i_con].x_image
@@ -2308,8 +2309,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ;source is in fit_table but no fit exists -> bombed -> free fit
               forward_function read_sersic_results
               forward_function read_sersic_results_old_galfit
-              IF setup.version GE 4 THEN par = read_sersic_results(secout_file,nband)
-              IF setup.version LT 4 THEN par = read_sersic_results_old_galfit(secout_file)      
+              IF setup.version GE 4. THEN par = read_sersic_results(secout_file,nband)
+              IF setup.version LT 4. THEN par = read_sersic_results_old_galfit(secout_file)      
               
               par.x_galfit = table[i_con].x_image
               par.x_galfit_band = fltarr(nband)+table[i_con].x_image
@@ -2334,8 +2335,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ;source is not in fit_table -> free fit
            forward_function read_sersic_results
            forward_function read_sersic_results_old_galfit
-           IF setup.version GE 4 THEN par = read_sersic_results(secout_file,nband)
-           IF setup.version LT 4 THEN par = read_sersic_results_old_galfit(secout_file)      
+           IF setup.version GE 4. THEN par = read_sersic_results(secout_file,nband)
+           IF setup.version LT 4. THEN par = read_sersic_results_old_galfit(secout_file)      
            
            par.x_galfit = table[i_con].x_image
            par.x_galfit_band = fltarr(nband)+table[i_con].x_image
@@ -2386,7 +2387,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ; for different GALFIT versions, fit will work, READOUT of parameters
 ; will NOT work!
      band_po=' '
-     IF setup.version GE 4 AND nband GT 1 THEN band_po='band'
+     IF setup.version GE 4. AND nband GT 1 THEN band_po='band'
      
      x_po=''
      x_po_fit=''
@@ -2401,7 +2402,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      IF fix[0] EQ 1 THEN x_po_fit = strtrim((setup.cheb[0]+1)<maxdeg,2) ELSE x_po_fit = '0'
      IF fix[1] EQ 1 THEN y_po_fit = strtrim((setup.cheb[1]+1)<maxdeg,2) ELSE y_po_fit = '0'
      
-     IF setup.version GE 4 THEN BEGIN
+     IF setup.version GE 4. THEN BEGIN
         printf, 1, ' 1) '+x_po+'  '+x_po_fit+'  '+band_po+'   # position x     [pixel]'
         printf, 1, ' 2) '+y_po+'  '+y_po_fit+'  '+band_po+'   # position y     [pixel]'
      ENDIF ELSE BEGIN
@@ -2442,7 +2443,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         IF b LT nband THEN q_po=q_po+','
      ENDFOR
      IF fix[5] EQ 1 THEN q_po_fit = strtrim((setup.cheb[5]+1)<maxdeg,2) ELSE q_po_fit = '0'
-     IF setup.version EQ 0 THEN str = ' 8) ' ELSE str = ' 9) '
+     IF setup.version EQ 0. THEN str = ' 8) ' ELSE str = ' 9) '
      printf, 1, str+q_po+'    '+q_po_fit+'   '+band_po+'       # axis ratio (b/a)'
      
      
@@ -2453,7 +2454,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         IF b LT nband THEN pa_po=pa_po+','
      ENDFOR
      IF fix[6] EQ 1 THEN pa_po_fit = strtrim((setup.cheb[6]+1)<maxdeg,2) ELSE pa_po_fit = '0'
-     IF setup_version EQ 0 THEN str = '9) ' ELSE str = '10) '
+     IF setup_version EQ 0. THEN str = '9) ' ELSE str = '10) '
      printf, 1, str+pa_po+'    '+pa_po_fit+'   '+band_po+'       # position angle (PA) [Degrees: Up=0, Left=90]'
      
      printf, 1, ' Z) 0                  # output image (see above)'
@@ -2543,7 +2544,7 @@ PRO read_setup, setup_file, setup
                         'srclist', '', $
                         'srclistrad', 0.0, $
                         'galexe', '', $ 
-                        'gal_kill_string', '',$
+                        'gal_output', '',$
                         'gal_kill_time', 0.,$
                         'batch', '', $
                         'obj', '', $
@@ -2561,7 +2562,7 @@ PRO read_setup, setup_file, setup
                         'conminn', 0.2, $
                         'conmaxn', 8.0, $
                         'nice', 0, $
-                        'version', 0,$
+                        'version', 0.,$
                         'cheb', intarr(7)-1, $
                         'galfit_out_path',' ', $
                         'do_restrict', 0, $
@@ -2571,6 +2572,7 @@ PRO read_setup, setup_file, setup
                         'cheb_b', intarr(7)-1, $
                         'cheb_d', intarr(7)-1, $
                         'bd_label',' ', $
+                        'gal_output_bd', '',$
                         'bd_hpc',0, $
                         'bd_hpc_path',' ', $
                         'bd_srclist', '', $
@@ -2714,18 +2716,18 @@ PRO read_setup, setup_file, setup
         'E15)': setup.conmaxn = float(content)
         'E16)': setup.nice = (content EQ 'nice') ? 1 : 0
         'E17)': BEGIN
-           setup.version = 1
+           setup.version = 1.
            IF (pos = stregex(content, '[0123456789]')) GT 0 THEN $
               content = strmid(content, pos, strlen(content)-pos)
            pos = strpos(content, '.')
            content = strrep(content, '.', ' ')
            strput, content, '.', pos
            content = strcompress(content, /remove_all)
-           if float(content) lt 2.1 then setup.version = 0
-           if (float(content) GE 2.1 and float(content) lt 4) then setup.version = 1
-           if float(content) GE 4.0 then setup.version = 4
+           if float(content) lt 2.1 then setup.version = 0.
+           if (float(content) GE 2.1 and float(content) lt 4.) then setup.version = 1.
+           if float(content) GE 4.0 then setup.version = float(content)
         END
-        'E18)': setup.gal_kill_string = content
+        'E18)': setup.gal_output = content
         'E19)': setup.gal_kill_time = content
         'E20)': BEGIN
            for n=0,5 do begin
@@ -2772,9 +2774,10 @@ PRO read_setup, setup_file, setup
         ELSE setup.bd_srclist = content
         'F05)': setup.bd_srclistrad = float(content)
         'F06)': setup.bd_maglim = float(content)
-        'F07)': setup.bd_hpc = (content EQ 'HPC') ? 1 : 0
-        'F08)': setup.bd_hpc_path = set_trailing_slash(content)
-        'F09)': BEGIN
+        'F07)': setup.gal_output_bd = content
+        'F08)': setup.bd_hpc = (content EQ 'HPC') ? 1 : 0
+        'F09)': setup.bd_hpc_path = set_trailing_slash(content)
+        'F10)': BEGIN
            pos=strpos(content, ',')
            setup.bd_psf_corr[0] = strtrim(strmid(content,0,pos),2)
            content=strmid(content,pos+1)
@@ -2905,7 +2908,7 @@ PRO read_image_files, setup, save_folder, silent=silent
 ; filesnames pointing to other file lists that contain all the images.
   IF ncolf EQ 6 THEN BEGIN
      IF NOT keyword_set(silent) THEN print, 'assuming multi-wavelength dataset. Assuming first line to be for SExtractor, rest for fitting!'
-     IF setup.version LT 4 THEN BEGIN
+     IF setup.version LT 4. THEN BEGIN
         print, 'you seem to be using mulit-wavelength data, but the GALFIT version you have specified only supports one-band data'
         print, 'Multi-band fitting needs GALFITM in order to be able to read out the fitting parameters (output has to be in a fits table)'
         stop
@@ -3519,8 +3522,8 @@ PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = 
   forward_function read_sersic_results_old_galfit
 ; this routine takes care of objects with non-existent output files
 ; (e.g. crashed)
-  IF setup.version GE 4 THEN res = read_sersic_results(out_file+'.fits', nband, bd=bd)
-  IF setup.version LT 4 THEN res = read_sersic_results_old_galfit(out_file+'.fits', bd=bd)      
+  IF setup.version GE 4. THEN res = read_sersic_results(out_file+'.fits', nband, bd=bd)
+  IF setup.version LT 4. THEN res = read_sersic_results_old_galfit(out_file+'.fits', bd=bd)      
   name_table = tag_names(table)
   name_res = tag_names(res)
   
@@ -3637,8 +3640,8 @@ PRO start_log, logfile, message
 END
 
 PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal = bridgejournal, jump1=jump1, jump2=jump2, mac=mac
-  galapagos_version = 'GALAPAGOS-v2.2.0'
-  galapagos_date = '(January 5th, 2015)'
+  galapagos_version = 'GALAPAGOS-v2.2.1'
+  galapagos_date = '(January 6th, 2015)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)
@@ -4488,7 +4491,7 @@ jump_over_this_2:
      table = table_new
      delvarx, table_new
      
-; get sourcelist of intereting (primary) sources and correlate to catalogue
+; get sourcelist of interesting (primary) sources and correlate to catalogue
      IF (setup.bd_srclist EQ '' OR setup.bd_srclistrad LE 0) THEN BEGIN
         table.do_list_bd = 1
      ENDIF ELSE BEGIN
@@ -4772,6 +4775,7 @@ loopstart2_bd:
 ;galfit masks
               mask_file = strarr(nband+1)
               FOR q=1,nband DO mask_file[q] = (outpath_galfit[idx]+outpre[idx,q]+objnum+'_'+setup.bd_label+'_'+setup.stamp_pre[q]+'_'+setup.mask)[0]
+              mask_file_primary = (outpath_galfit[idx]+outpre[idx,1]+objnum+'_'+setup.mask+'_primary')[0]
 ;galfit obj file
               obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
               obj_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
@@ -4831,7 +4835,7 @@ loopstart2_bd:
 ;;;;;;;; END OF COMMENTED SECTION
               galfit_path = outpath_galfit_bd[idx]
               save, out_file, out_file_bd, obj_file, obj_file_bd, constr_file, constr_file_bd, setup, galfit_path, $
-                    filename=out_file_bd+'.sav'
+                    mask_file_primary, filename=out_file_bd+'.sav'
               
               IF setup.max_proc GT 1 THEN BEGIN
                  IF keyword_set(logfile) THEN $
