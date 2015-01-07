@@ -83,13 +83,24 @@ E08) 30.0                 # zeropoint (only used for single image run, for multi
 E09) 0.339                # plate scale of the images [arcsec/pixel]
 E10) 1.0                  # exposure time (only used for single image run, for multiband defined in A00)
 E11) 400                  # constraint max Re
-E12) -5                   #constraint min magnitude deviation (minus)
-E13) 5                    #constraint max magnitude deviation (plus)
-E14) 0.2                  #constraint min sersic index
-E15) 8                    #constraint max sersic index
-E16) nice                 #nice the GALFIT process ("nice" = true) (If your IDL session is niced, the galfit is alreadyniced automatically)
-E17) 4.0                  #GALFIT version string. E.g. 2.0.3c  (this defines the input file format for the galfit start files.
-E18) galfitm-0.1.3.1      # string used to identify running galfits in order to kill them after E19 minutes (string seen in 'top')
+E12) -5                   # constraint min magnitude deviation (minus)
+E13) 5                    # constraint max magnitude deviation (plus)
+E14) 0.2                  # constraint min sersic index
+E15) 8                    # constraint max sersic index
+E16) nice                 # nice the GALFIT process ("nice" = true) (If your IDL session is niced, the galfit is alreadyniced automatically)
+E17) 4.0                  # GALFIT version string. E.g. 2.0.3c  (this defines the input file format for the galfit start files)
+			  # galfitm = 4.0 or later
+E18) input,model,residual,psf      # string used to define the format of the galfit output files (string simply passed on to galfitm)
+			  # Allowed values (only in case galfitm1.2.0 or later is used, only listing the ones that make sense, e.g. nonparametric can not happen in Galapagos):
+		          # blank,input,model,residual -- as usual Galfit
+		          # input,model,residual,psf -- as Galapagos before, but without the blank image at the front. 
+			  # component -- individual model components (not very useful in sigle-sersic fitting)
+			  # psf -- input psf image
+			  # sigma -- sigma image (input or created)
+			  # NOT (!!!) itertable -- table of parameters at each iteration. This would create a output file at the beginning of the fitting process.
+			  #      This file would confuse Galapagos, this option should hence NOT be used!!
+			  # model,residual    # or any comma seaprated list of valid options
+			  # different formats have no influence on the performance of Galapagos, but might make continuing from the output files with your own scripts easier.
 E19) 240                  # time (in minutes) after which galfit processes are killed
                           # feature switched off when time == 0 
 E20) 0,0,9,2,2,0,0        # x,y,mag,re,n,AR,PA  order of Chebyshev polynomials in the individual parameters to be used in GALFIT
@@ -103,7 +114,6 @@ E23) 30                   # fraction of data pixels ==0 within the primaries SEx
                           # e.g. 99 still allows full polynomial freedom if 1% of the data has values (but is a foolish value)
 E24) 3                    # minimum number of good images that are needed for the fit (is set to be >1 by the code), e.g. objects without any good data are NEVER fit) 
                           # (if restricted above to less than that, galfit startfile is written out, but fit is NOT started)
-
 #===========B/D DECOMPOSITION SETUP===========
 F00) execute                             # execute the B/D fitting block ('execute' = true). Mostly assumes that single sersic fitting (block E) is also or had previsouly been run
 F01) 0,0,9,0,0,0,0                       # similar to E18 for BULGE (see README for details) 
@@ -112,10 +122,11 @@ F03) bd1                                 # additinal output label, e.g. output f
 F04) /path/to/target_objects             # optional list containing primary targets, can be different (a subset) of D22)
 F05) 1.0                                 # search/correlation radius for the above list
 F06) 18.0                                # additional magnitude limit (sersic fit, main band) down to which B/D will be done
+F07) input,model,residual,component,psf # See E18, but for B/D fitting (only in case galfitm1.2.0 or later is used)
 # ------ experimental and probably does not work for other users without code adaptation
-F07) nHPC                                # switches to HPC mode ("HPC" = true), paths will be adapted (F08 and F09 become important)
-F08) /path/to/HPC/output/folder          # alternative path for Supercomputer use.
-F09) /path/to/data/, /path/to/data/HPC   # PSF filename correction (!). [1] is replaced by [2]
+F08) nHPC                                # switches to HPC mode ("HPC" = true), paths will be adapted (F08 and F09 become important)
+F09) /path/to/HPC/output/folder          # alternative path for Supercomputer use.
+F10) /path/to/data/, /path/to/data/HPC   # PSF filename correction (!). [1] is replaced by [2]
 # additionally uses the same values as E07 - E19 and E22 - E24
 ##===========OUTPUT CATALOGUE SETUP===========
 G00) execute      # execute catalogue combination block (read single_sersic)
