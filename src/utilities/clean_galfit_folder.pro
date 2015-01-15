@@ -11,8 +11,8 @@ FOR n=0,n_elements(list)-1 DO BEGIN
     pre = ''
     pre = strmid(list[n],0,strpos(list[n],'_gf.sav'))
     print, 'deleting files '+pre+'_* '
-    spawn, 'rm '+pre+'_*'
     spawn, 'rm '+list[n]
+    spawn, 'rm '+pre+'_*'
 ENDFOR
 
 ; same for bd folder!
@@ -22,8 +22,8 @@ IF keyword_set(bd) THEN BEGIN
       pre = ''
       pre = strmid(listbd[n],0,strpos(listbd[n],'_gf.sav'))
       print, 'deleting files '+pre+'_* '
-      spawn, 'rm '+pre+'_*'
       spawn, 'rm '+list[n]
+      spawn, 'rm '+pre+'_*'
    ENDFOR
 ENDIF
 
