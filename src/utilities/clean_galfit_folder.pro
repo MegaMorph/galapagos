@@ -10,8 +10,8 @@ spawn, 'ls */galfit/*sav', list
 FOR n=0,n_elements(list)-1 DO BEGIN
     pre = ''
     pre = strmid(list[n],0,strpos(list[n],'_gf.sav'))
-    spawn, 'rm '+pre+'_obj'
-    spawn, 'rm '+pre+'_gf.fits'
+    print, 'deleting files '+pre+'_* '
+    spawn, 'rm '+pre+'_*'
     spawn, 'rm '+list[n]
 ENDFOR
 
@@ -21,8 +21,8 @@ IF keyword_set(bd) THEN BEGIN
    FOR n=0,n_elements(listbd)-1 DO BEGIN
       pre = ''
       pre = strmid(listbd[n],0,strpos(listbd[n],'_gf.sav'))
-      spawn, 'rm '+pre+'_obj'
-      spawn, 'rm '+pre+'_gf.fits'
+      print, 'deleting files '+pre+'_* '
+      spawn, 'rm '+pre+'_*'
       spawn, 'rm '+list[n]
    ENDFOR
 ENDIF
