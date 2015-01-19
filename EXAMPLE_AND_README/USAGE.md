@@ -1,4 +1,4 @@
-##GALAPAGOS-2 README (v.2.2.0)
+##GALAPAGOS-2 README (v.2.2.1)
 
 Please read this file for details on input format and new features off the code.  
 Especially read this file regarding your image normalisation and how to set up and run galapagos in the most efficient way.  
@@ -707,3 +707,13 @@ The code is not as effective as it could be. However, most of the time is still 
 - The system introduced in 2.1.7 for reducing the DOF in case of masked images did not work in crowded fields, as in most cases, MOST of the images will be masked out. The scheme has now been changed so it only analyses the pixels within the primaries SExtractor ellipse. This makes setup parameter E23 mean something else (fraction of masked pixels within the primary ellipse), E24 obsolete and renames E25->E24. Sorry for the trouble. I thought the old scheme had fixed the problems, which it had in shallow data. In deep data, it had not.
 - There is more output for progress
 
+**v2.2.1**
+- Galapagos itself unchanged
+- provide some more useful utilities/scripts in the utilities folder with README that can be used to:
+   - check_idl_bridge.pro: check that the IDL bridge works as needed to run on >1 cores
+   - clean_galfit_folder.pro: clean the galapagos output folder after e.g. a system crash
+   - kill_galfit.pro: kill running galfits on your machine
+   - package_objects.pro: package up individual objects (or several) in order to send them to collaborators. 
+   - single_band_comparison.pro:	run a comparison of sinngle-band to multi-band galfit fitting
+
+Please read the README in the utilities folder for details of what the codes do and how to run them
