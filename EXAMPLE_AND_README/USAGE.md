@@ -65,7 +65,7 @@ If you have such a dataset, I would recommend 2 independent runs, e.g. one where
 % Attempt to call undefined method: 'IDL\_IDLBRIDGE::ExecuteTimer'  
 seems to be connected to this)  
 This is how you test this:  
-We provide a script check\_idl\_bridge.pro for this purpose.  
+We provide a script check\_idl\_bridge.pro for this purpose. (please see utility fodler and README therein)  
 Simply run this script in your IDL. 
 It should simply write a file into your home directory called ~/IDL\_bridge\_works, using the IDL_bridge.
 
@@ -605,11 +605,9 @@ In case you even killed running Galfits/GalfitMs (e.g. in ‘top’ or by using 
 Best is you delete everything related to these objects (identified by their SExtractor number in all file names) so Galapagos-2 thinks this object has not yet been tried and does everything properly.   
 If you don’t delete the files (most importantly the *obj file), Galapagos-2 will think that the objecthas been started but the fit crashed! It will then accordingly only ‘read’ out the result (e.g. the sky values) and set flag_galfit == 1 in the output catalogue, but it will NOT retry fitting this object!
 
-There is now a script called ‘clean_galfit_folder.pro; which you can use to delete the files as described above:  
-   - looks for SAV files in the galfit folders  
-   - removes the save file and the obj file of the same object  
-   - (leaves everything else like masks,constraint files, …. These files will be overwritten then anyway)
-
+There is now a script called ‘clean_galfit_folder.pro; which you can use to delete the files as described above.
+Please find details about this in the README in the utilities subfolder.
+ 
  ---
 #### G) VERSION HISTORY
 
@@ -702,7 +700,7 @@ The code is not as effective as it could be. However, most of the time is still 
 **v2.1.8**
 - bug fix: If Galapagos can not determnine a sky background (e.g. input tiles are too small, masks are too big, objects too dense,...), it uses fall-back values instead. One of these values was (useful in single-band fitting) the SExtractor values. As in multi-band fitting, this value will be from some co-added image (or a different band in most cases), this is not very wise. Instead, Galapagos avoids this now by using a median[skypixels] in the entire image if this happens.
 - added flag /bridgejournal to Galapagos. This writes a journal for all bridge processes into files (in a 'journal' folder in the output folder), which is handy for debugging. WARNING! As these files will contain the GalfitM output stream, these files become HUGE (>1MB per galaxy fit in my test examples, so easily hundreds of MB or even GB for large surveys), which at some point will slow down the fitting. Thi feature should hence only be used for debugging purposes and NOT once the code succesfully runs. Please restart in this case without this flag being set.
-- added a script to run automatic single-vs-multi-band comparison (single_band_comparison.pro and two little scripts needed by this to run) for any galapagos style (sky first, then objects) GalfitM setup file. The only input needed is the multi-band file, all information is found in there. The fits will still need to find the input files, obviously, so needs to be run on the same machine. The script is trivial to run, does not interfere with Galapagos output files and creates both a little FITS table with the comparision results for the object and, if wanted, a simple plot showing the comparison. This script is NOT run from within GALAPAGOS, but can easily be run by a user. Please look at the script for more details and options.
+- (see utilities folder and README therein) added a script to run automatic single-vs-multi-band comparison (single_band_comparison.pro and two little scripts needed by this to run) for any galapagos style (sky first, then objects) GalfitM setup file. The only input needed is the multi-band file, all information is found in there. The fits will still need to find the input files, obviously, so needs to be run on the same machine. The script is trivial to run, does not interfere with Galapagos output files and creates both a little FITS table with the comparision results for the object and, if wanted, a simple plot showing the comparison. This script is NOT run from within GALAPAGOS, but can easily be run by a user. Please look at the script for more details and options.
 - removes PA constraints from constraints file as those are not needed anymore in GalfitM
 
 **v2.2.0**
