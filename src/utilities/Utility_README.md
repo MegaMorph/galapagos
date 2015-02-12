@@ -143,4 +143,14 @@ All files are created in the same folder as the \*obj file used to start the scr
 These files do *not* interfere with Galapagos output files and hence can be run while Galaagos is still running, if desired.
 
 ### create_output_from_obj.pro and create_output_from_fits.pro
-These scripts allows the user to re-create the galfit output files again.
+These scripts allows the user to re-create the galfit output files again, but with different content.
+
+Starting from either an object file or a fits file (to be exact, this routine uses the *galfit.??.band file matching that filename, which has the highest number, e.g. from the run which CREATED the fits file), they allow the user to re-create the galfit results, but allows for different components in the output file.
+
+create_output_from_obj.pro actually re-runs the fit, with different output layers switched on, hence is pretty slow, especially for objects with many neighbours.
+create_output_from_fits.pro starts where the fit finished and holds all values fixed (hence only creating the output itself), hence is pretty fast.
+
+These routines are handy as they allow the user to run galapagos itself with creating only the minimal neccessary output in the galfit output file, saving a VAST amount of disk space (especially when compared to 'components' being used).
+The user can create the needed output (e.g. components) easily with these scripts only for the objects where they are actually required, e.g. when used in any further analysis.
+
+WARNING: When using create_output_from_fits.pro without renaming the output file (keyword 'namepost') the fit will overwrite the original GALFIT output file. While this is not generally a problem, it BECOMES a problem when Galapagos is still running or could be re-run. THe fit results will not change, but some of the other parameters will, e.g. degree of freedom in the fit (for obvisou reasons). So if there's a chance that you'd need to read out the results from GALFIT again using Galapagos, please rename your files and look at the renamed ones instead!!
