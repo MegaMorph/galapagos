@@ -154,3 +154,7 @@ These routines are handy as they allow the user to run galapagos itself with cre
 The user can create the needed output (e.g. components) easily with these scripts only for the objects where they are actually required, e.g. when used in any further analysis.
 
 WARNING: When using create_output_from_fits.pro without renaming the output file (keyword 'namepost') the fit will overwrite the original GALFIT output file. While this is not generally a problem, it BECOMES a problem when Galapagos is still running or could be re-run. THe fit results will not change, but some of the other parameters will, e.g. degree of freedom in the fit (for obvisou reasons). So if there's a chance that you'd need to read out the results from GALFIT again using Galapagos, please rename your files and look at the renamed ones instead!!
+
+### tiling_helper.pro
+This can be run on one of the Galapagos output files (table_before_start.sav) which is created after the SExtractor stage.
+It simply display how many objects are being fit in each of the images, making a uniform splitup into different batch areas somewhat simpler.
