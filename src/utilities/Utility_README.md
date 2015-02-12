@@ -141,3 +141,6 @@ This script is NOT run from within GALAPAGOS, but can easily be run by the user 
 
 All files are created in the same folder as the \*obj file used to start the script and get *similar* names.
 These files do *not* interfere with Galapagos output files and hence can be run while Galaagos is still running, if desired.
+
+### create_output_from_obj.pro and create_output_from_fits.pro
+These scripts allows the user to re-create the galfit output files again.
