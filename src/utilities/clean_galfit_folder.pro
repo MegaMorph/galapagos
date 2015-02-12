@@ -29,6 +29,8 @@ ENDIF
 
 ; remove all files of objects that have obj* files, but no *gf.fits
 ; files after a certain timestamp
+print, '  '
+print, '  '
 
 ;has to be done folder by folder because of number of files
 IF keyword_set(max_file_age) THEN BEGIN
