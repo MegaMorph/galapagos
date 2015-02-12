@@ -326,6 +326,10 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
                   ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
                   ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
   spawn, sexcommand_cs
+; create reg file for cold catalogue
+  sex2ds9reg, coldcat, outpath_file[tile,0]+setup.outparam, $
+              outpath_file[tile,0]+'cold.reg', 8, color='cyan', tag = 'cold'
+
   IF multi EQ 3 THEN BEGIN
      print, 'starting hot sex'
      sexcommand_hs = setup.sexexe+' '+image+','+image+' -c '+hot+ $
@@ -335,6 +339,9 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
                      ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
                      ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+hotseg
      spawn, sexcommand_hs
+; create reg file for hot catalogue
+     sex2ds9reg, hotcat, outpath_file[tile,0]+setup.outparam, $
+                 outpath_file[tile,0]+'hot.reg', 6, color='red', tag = 'hot'
   ENDIF
   
 ;read in hotcat and coldcat
@@ -449,6 +456,10 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
      spawn, 'cp '+hotcat+' '+outcat+' '
      spawn, 'cp '+hotseg+' '+outseg+' '
   ENDELSE
+
+; create reg file for combined catalogue
+  sex2ds9reg, outcat, outpath_file[tile,0]+setup.outparam, $
+              outpath_file[tile,0]+'combined.reg', 12, color='yellow', tag = 'hot'
   
   IF setup.outonly THEN $
      file_delete, hotcat, coldcat, hotseg, coldseg, /quiet, /allow_nonexistent, /noexpand_path
@@ -4137,7 +4148,7 @@ jump_over_this_1:
         readcol, setup.batch, batch, format = 'A', comment = '#', /silent
         print, 'batch file detected, only doing the following image:'
         IF n_elements(batch) GT 0 THEN BEGIN
-           
+
            FOR f=0ul, n_elements(batch)-1 DO BEGIN
               print, batch[f]
               dum = where(table.frame[0] EQ batch[f], ct)
