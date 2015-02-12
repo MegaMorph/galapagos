@@ -46,7 +46,7 @@ IDL>> clean_galfit_folder, '/path/to/your/output/folder'   ;(the content of setu
 
 The script removes all files connected to the objects that were currently busy either in the IDL\_Bridge itself or in Galfit, by:
    - looking for *sav files in the galfit folders  
-   - removeing the \*sav file and the \*obj file of the same object  
+   - removing the \*sav file and the \*obj file of the same object  
    - (and leaves everything else like masks,constraint files, …. These files will be overwritten then anyway)
 
 If you don’t delete these files (most importantly the *obj file), Galapagos-2 will think that the objecthas been started 
