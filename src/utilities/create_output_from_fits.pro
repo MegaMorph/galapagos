@@ -1,4 +1,4 @@
-pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost
+pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost, overwrite=overwrite
 ; .run create_output_from_fits.pro
 ; create_output_from_fits, '/Users/haeussler/Documents/Dropbox/Arianna_Fits/414.556/414.556_gf.fits','blank,input,model,residual,psf','~/megamorph/galfit/exec/galfitm-1.2.0-osx'
 
@@ -17,6 +17,7 @@ pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost
 ; THIS would also be independent of this *galfit.??.band file existing and would only depend on the fits file itself
 ; much more complicated to make that file, though, as the header is
 ; complicated and can contain multiple objects.
+  if not keyword_set(namepost) then namepost = 'changed_content'
   
   spawn, 'pwd', infolder
   IF strpos(fits,'/') NE -1 THEN BEGIN
@@ -26,11 +27,16 @@ pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost
   ENDIF
 
 ; find all matching galfit.??.band files and select newest
-  spawn, 'ls '+strmid(fits,0,strpos(fits,'.fits'))+'.galfit.*.band', list
+  spawn, 'ls '+strmid(fits,0,strpos(fits,'.fits'))+'.galfit.*', list
+
+; throw away all the files ending in 'band' or 'output'
+  list = list[where(strmid(list,4,/reverse_offset) NE '.band')]
+  list = list[where(strmid(list,6,/reverse_offset) NE '_output')]
+  
   list2 = list
+; isolate counting number
   FOR i=0,n_elements(list)-1 DO BEGIN
-     list2[i] = strmid(list[i], 0,strpos(list[i],'.band'))
-     list2[i] = strmid(list2[i], strpos(list2[i],'.',/reverse_search)+1)
+     list2[i] = strmid(list,strpos(list,'.',/reverse_search)+1)
   ENDFOR
   list2 = fix(list2)
 ; select latest file (file with highest number)
@@ -62,8 +68,9 @@ pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost
 ; if line is normal setup line
      IF strpos(content,',') EQ -1 AND strtrim(line,2) NE '# INITIAL FITTING PARAMETERS' THEN BEGIN
 ; change output file name if requested
-        IF strpos(strtrim(line, 2), 'B) ') EQ 0 AND keyword_set(namepost) THEN BEGIN
-           outfile_name = strmid(content,0,strpos(content,'.fits'))+'_'+namepost+'.fits'
+        IF strpos(strtrim(line, 2), 'B) ') EQ 0 THEN BEGIN
+           IF keyword_set(overwrite) THEN outfile_name = content
+           IF NOT keyword_set(overwrite) THEN outfile_name = strmid(content,0,strpos(content,'.fits'))+'_'+namepost+'.fits'
            printf, filew, start+' '+outfile_name+'            '+comment
         ENDIF ELSE IF strpos(strtrim(line, 2), 'W) ') EQ 0 THEN BEGIN
            printf, filew, start+' '+layers+'       '+comment
@@ -71,16 +78,17 @@ pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost
      ENDIF
      
 ; if line is mwl setup line
-     IF strpos(content,',') NE -1 AND strpos(content,'band') EQ -1  THEN BEGIN
+     IF strpos(content,',') NE -1 AND strpos(content,'cheb') EQ -1  THEN BEGIN
         content_elements = strsplit(content,',',/extract)
         printf, filew, line
      ENDIF
 
 ; if line is mwl parameter line
-     IF strpos(content,',') NE -1 AND strpos(content,'band') NE -1  THEN BEGIN
+     IF strpos(content,',') NE -1 AND strpos(content,'cheb') NE -1  THEN BEGIN
         content_numbers = strtrim(strmid(content,0,strpos(content,' ')),2)
+        content_dof = strtrim(strmid(content,strpos(content,' ')),2)
 ; change DOG
-        printf, filew, start+' '+content_numbers+' 0 band      '+comment
+        printf, filew, start+' '+content_numbers+' 0 cheb '+comment
      ENDIF
 
   ENDWHILE
@@ -91,8 +99,8 @@ pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost
 
 ; run fit with free parameters
   spawn, gal_exe+' '+newfile
-  spawn, 'rm fit.log '+newfile
+;  spawn, 'rm fit.log '+newfile
 
-   CD, infolder
+  CD, infolder
  
 end
