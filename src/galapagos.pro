@@ -2033,7 +2033,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   nn = where(table[objects].mag_best GT 80, n_nn)
   IF n_nn GT 0 THEN BEGIN
      good_mag = where(table[objects].mag_best LT 80, ngood_mag)
-     IF ngood_mag EQ 0 THEN table[objects[nn]].mag_best = zero_pt $
+     IF ngood_mag EQ 0 THEN table[objects[nn]].mag_best = zero_pt[0] $
      ELSE $
         table[objects[nn]].mag_best = max(table[objects[good_mag]].mag_best)+2
   ENDIF
