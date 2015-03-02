@@ -3062,6 +3062,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'y_galfit_cheb', res_cheb.COMP2_YC, 'yerr_galfit_cheb', res_cheb.COMP2_YC_ERR, $
                                  'sky_galfit_cheb', res_cheb.COMP1_SKY, $
                                  'initfile', strtrim(fit_info.initfile,2), $
+                                 'logfile', strtrim(fit_info.logfile,2), $
                                  'constrnt', strtrim(fit_info.constrnt,2), $
                                  'fitsect', strtrim(fit_info.fitsect,2), $
                                  'convbox', strtrim(fit_info.convbox,2), $
@@ -3137,6 +3138,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'y_galfit_cheb_b', res_cheb.COMP3_YC, 'yerr_galfit_cheb_b', res_cheb.COMP3_YC_ERR, $
                                  'sky_galfit_cheb_bd', res_cheb.COMP1_SKY, $
                                  'initfile_bd', strtrim(fit_info.initfile,2), $
+                                 'logfile_bd', strtrim(fit_info.logfile,2), $
                                  'constrnt_bd', strtrim(fit_info.constrnt,2), $
                                  'psf_galfit_band_bd', strtrim(band_info.psf, 2), $
                                  'chisq_galfit_bd', fit_info.chisq, $
@@ -3201,6 +3203,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'y_galfit_cheb', fltarr(nband), 'yerr_galfit_cheb', fltarr(nband)+99999., $
                                  'sky_galfit_cheb', fltarr(nband)-999., $
                                  'initfile', ' ', $
+                                 'logfile', ' ', $
                                  'constrnt', ' ', $
                                  'psf_galfit_band', psf, $
                                  'chisq_galfit', -99., $
@@ -3271,6 +3274,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'y_galfit_cheb_b', fltarr(nband), 'yerr_galfit_cheb_b', fltarr(nband)+99999., $
                                  'sky_galfit_cheb_bd', fltarr(nband)-999., $
                                  'initfile_bd', ' ', $
+                                 'logfile_bd', ' ', $
                                  'constrnt_bd', ' ', $
                                  'psf_galfit_band_bd', psf, $
                                  'chisq_galfit_bd', -99., $
@@ -5115,7 +5119,7 @@ loopend_bd:
               params, $
               'TILE','ORG_IMAGE_BAND',$
               'SKY_GALA_BAND','SKY_SIG_BAND','SKY_RAD_BAND','SKY_FLAG_BAND',$
-              'GALFIT_VERSION','FILE_GALFIT','INITFILE','CONSTRNT','PSF_GALFIT_BAND',$
+              'GALFIT_VERSION','FILE_GALFIT','INITFILE','CONSTRNT','LOGFILE','PSF_GALFIT_BAND',$
               'FLAG_GALFIT','FITSECT','CONVBOX','NGOOD_GALFIT_BAND','NMASK_GALFIT_BAND',$
               'NITER_GALFIT','NEIGH_GALFIT','CHISQ_GALFIT','NFREE_GALFIT','NFIX_GALFIT',$
               'NDOF_GALFIT','CHI2NU_GALFIT','FIRSTCON_GALFIT','LASTCON_GALFIT','CPUTIME_SETUP_GALFIT',$
@@ -5128,7 +5132,7 @@ loopend_bd:
               'N_GALFIT_DEG','N_GALFIT_BAND' ,'NERR_GALFIT_BAND' ,'N_GALFIT_CHEB','NERR_GALFIT_CHEB',$
               'Q_GALFIT_DEG','Q_GALFIT_BAND','QERR_GALFIT_BAND' ,'Q_GALFIT_CHEB','QERR_GALFIT_CHEB',$
               'PA_GALFIT_DEG','PA_GALFIT_BAND','PAERR_GALFIT_BAND','PA_GALFIT_CHEB','PAERR_GALFIT_CHEB',$
-              'GALFIT_VERSION_BD','FILE_GALFIT_BD','INITFILE_BD','CONSTRNT_BD','PSF_GALFIT_BAND_BD',$
+              'GALFIT_VERSION_BD','FILE_GALFIT_BD','INITFILE_BD','CONSTRNT_BD','LOGFILE_BD','PSF_GALFIT_BAND_BD',$
               'FLAG_GALFIT_BD','NITER_GALFIT_BD','NEIGH_GALFIT_BD','CHISQ_GALFIT_BD','NFREE_GALFIT_BD',$
               'NFIX_GALFIT_BD','NDOF_GALFIT_BD','CHI2NU_GALFIT_BD','FIRSTCON_GALFIT_BD','LASTCON_GALFIT_BD',$
               'CPUTIME_SETUP_GALFIT_BD','CPUTIME_FIT_GALFIT_BD','CPUTIME_TOTAL_GALFIT_BD' ,$
