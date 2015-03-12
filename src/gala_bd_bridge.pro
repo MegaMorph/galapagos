@@ -58,16 +58,11 @@
 ; ls gala_gama_bd1* | xargs -L1 qsub
 
 
-;PRO bd_fit, out_file, out_file_bd, setup, obj_file, obj_file_bd,
-;   constr_file, constr_file_bd, no_fit=no_fit
 PRO gala_bd_bridge, filein
    restore, filein
    
 ;obj_fitstab_file = out_file_bd+'.fits'
    in_file = out_file+'.fits'
-   
-;   num = '21_17.346'
-;   obj_fitstab_file = '/home/barden/Desktop/multi/BD_objects/t'+num+'_gf.fits'
    
    tab = mrdfits(in_file, 'FINAL_BAND', /silent)
    
@@ -78,13 +73,9 @@ PRO gala_bd_bridge, filein
    if nband eq 1 then bandstr = ' '
    if nband gt 1 then bandstr = 'band'
    
-   tmp = mrdfits(in_file, 'MODEL_'+band_str[0], model, /silent)
-   
 ;extract info from SS-fit
    forward_function read_sersic_results
    ss_mult = read_sersic_results(in_file, nband)
-   
-;print, obj_fitstab_file, ss_mult.MAG_GALFIT_BAND[0]
    
 ;   obj_file = strrep(obj_file, '/home/boris/', '')
    openw, filew, obj_file_bd, /get_lun
@@ -326,14 +317,10 @@ PRO gala_bd_bridge, filein
  
    printf, filew, ' Z) 0                  # output image (see above)'
    
-   maxcomp = 2
-   REPEAT BEGIN
-       maxcomp++
-       a = where(strpos(model,strtrim(maxcomp, 2)+'_PA_R') eq 0, ct)
-   ENDREP UNTIL ct LE 0
-   maxcomp--
-                                ;maxcomp=2 means primary only
-   
+; new routine checks ss_mult (from fits table) instead
+   maxcomp = ss_mult.neigh_galfit+2
+
+;maxcomp=2 means primary only
    IF maxcomp GT 2 THEN BEGIN
        FOR comp=0, maxcomp-3 DO BEGIN
            printf, filew
