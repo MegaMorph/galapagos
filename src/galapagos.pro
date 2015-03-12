@@ -1628,7 +1628,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
      printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
              sky_flag
      close, 1
-     print, 'sky estimated by getsky_loop as '+strtrim(new_sky,2)+' +/- '+strtrim(new_sky_sig,2)
+     print, 'sky estimated by getsky_loop as '+strtrim(new_sky,2)+' +/- '+strtrim(new_sky_sig,2)+' at radius '+strtrim(sky_rad,2)
  ENDIF
 END
 
