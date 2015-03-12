@@ -326,6 +326,10 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
                   ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
                   ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
   spawn, sexcommand_cs
+; create reg file for cold catalogue
+  sex2ds9reg, coldcat, outpath_file[tile,0]+setup.outparam, $
+              outpath_file[tile,0]+'cold.reg', 8, color='cyan', tag = 'cold'
+
   IF multi EQ 3 THEN BEGIN
      print, 'starting hot sex'
      sexcommand_hs = setup.sexexe+' '+image+','+image+' -c '+hot+ $
@@ -335,6 +339,9 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
                      ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
                      ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+hotseg
      spawn, sexcommand_hs
+; create reg file for hot catalogue
+     sex2ds9reg, hotcat, outpath_file[tile,0]+setup.outparam, $
+                 outpath_file[tile,0]+'hot.reg', 6, color='red', tag = 'hot'
   ENDIF
   
 ;read in hotcat and coldcat
@@ -449,6 +456,10 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
      spawn, 'cp '+hotcat+' '+outcat+' '
      spawn, 'cp '+hotseg+' '+outseg+' '
   ENDELSE
+
+; create reg file for combined catalogue
+  sex2ds9reg, outcat, outpath_file[tile,0]+setup.outparam, $
+              outpath_file[tile,0]+'combined.reg', 12, color='yellow', tag = 'hot'
   
   IF setup.outonly THEN $
      file_delete, hotcat, coldcat, hotseg, coldseg, /quiet, /allow_nonexistent, /noexpand_path
@@ -2022,7 +2033,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   nn = where(table[objects].mag_best GT 80, n_nn)
   IF n_nn GT 0 THEN BEGIN
      good_mag = where(table[objects].mag_best LT 80, ngood_mag)
-     IF ngood_mag EQ 0 THEN table[objects[nn]].mag_best = zero_pt $
+     IF ngood_mag EQ 0 THEN table[objects[nn]].mag_best = zero_pt[0] $
      ELSE $
         table[objects[nn]].mag_best = max(table[objects[good_mag]].mag_best)+2
   ENDIF
@@ -3051,6 +3062,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'y_galfit_cheb', res_cheb.COMP2_YC, 'yerr_galfit_cheb', res_cheb.COMP2_YC_ERR, $
                                  'sky_galfit_cheb', res_cheb.COMP1_SKY, $
                                  'initfile', strtrim(fit_info.initfile,2), $
+                                 'logfile', strtrim(fit_info.logfile,2), $
                                  'constrnt', strtrim(fit_info.constrnt,2), $
                                  'fitsect', strtrim(fit_info.fitsect,2), $
                                  'convbox', strtrim(fit_info.convbox,2), $
@@ -3125,6 +3137,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'y_galfit_cheb_b', res_cheb.COMP3_YC, 'yerr_galfit_cheb_b', res_cheb.COMP3_YC_ERR, $
                                  'sky_galfit_cheb_bd', res_cheb.COMP1_SKY, $
                                  'initfile_bd', strtrim(fit_info.initfile,2), $
+                                 'logfile_bd', strtrim(fit_info.logfile,2), $
                                  'constrnt_bd', strtrim(fit_info.constrnt,2), $
                                  'psf_galfit_band_bd', strtrim(band_info.psf, 2), $
                                  'chisq_galfit_bd', fit_info.chisq, $
@@ -3189,6 +3202,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'y_galfit_cheb', fltarr(nband), 'yerr_galfit_cheb', fltarr(nband)+99999., $
                                  'sky_galfit_cheb', fltarr(nband)-999., $
                                  'initfile', ' ', $
+                                 'logfile', ' ', $
                                  'constrnt', ' ', $
                                  'psf_galfit_band', psf, $
                                  'chisq_galfit', -99., $
@@ -3259,6 +3273,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'y_galfit_cheb_b', fltarr(nband), 'yerr_galfit_cheb_b', fltarr(nband)+99999., $
                                  'sky_galfit_cheb_bd', fltarr(nband)-999., $
                                  'initfile_bd', ' ', $
+                                 'logfile_bd', ' ', $
                                  'constrnt_bd', ' ', $
                                  'psf_galfit_band_bd', psf, $
                                  'chisq_galfit_bd', -99., $
@@ -3639,8 +3654,8 @@ PRO start_log, logfile, message
 END
 
 PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal = bridgejournal, jump1=jump1, jump2=jump2, mac=mac
-  galapagos_version = 'GALAPAGOS-v2.2.1'
-  galapagos_date = '(January 6th, 2015)'
+  galapagos_version = 'GALAPAGOS-v2.2.3'
+  galapagos_date = '(February 12th, 2015)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)
@@ -4136,7 +4151,7 @@ jump_over_this_1:
         readcol, setup.batch, batch, format = 'A', comment = '#', /silent
         print, 'batch file detected, only doing the following image:'
         IF n_elements(batch) GT 0 THEN BEGIN
-           
+
            FOR f=0ul, n_elements(batch)-1 DO BEGIN
               print, batch[f]
               dum = where(table.frame[0] EQ batch[f], ct)
@@ -5103,7 +5118,7 @@ loopend_bd:
               params, $
               'TILE','ORG_IMAGE_BAND',$
               'SKY_GALA_BAND','SKY_SIG_BAND','SKY_RAD_BAND','SKY_FLAG_BAND',$
-              'GALFIT_VERSION','FILE_GALFIT','INITFILE','CONSTRNT','PSF_GALFIT_BAND',$
+              'GALFIT_VERSION','FILE_GALFIT','INITFILE','CONSTRNT','LOGFILE','PSF_GALFIT_BAND',$
               'FLAG_GALFIT','FITSECT','CONVBOX','NGOOD_GALFIT_BAND','NMASK_GALFIT_BAND',$
               'NITER_GALFIT','NEIGH_GALFIT','CHISQ_GALFIT','NFREE_GALFIT','NFIX_GALFIT',$
               'NDOF_GALFIT','CHI2NU_GALFIT','FIRSTCON_GALFIT','LASTCON_GALFIT','CPUTIME_SETUP_GALFIT',$
@@ -5116,7 +5131,7 @@ loopend_bd:
               'N_GALFIT_DEG','N_GALFIT_BAND' ,'NERR_GALFIT_BAND' ,'N_GALFIT_CHEB','NERR_GALFIT_CHEB',$
               'Q_GALFIT_DEG','Q_GALFIT_BAND','QERR_GALFIT_BAND' ,'Q_GALFIT_CHEB','QERR_GALFIT_CHEB',$
               'PA_GALFIT_DEG','PA_GALFIT_BAND','PAERR_GALFIT_BAND','PA_GALFIT_CHEB','PAERR_GALFIT_CHEB',$
-              'GALFIT_VERSION_BD','FILE_GALFIT_BD','INITFILE_BD','CONSTRNT_BD','PSF_GALFIT_BAND_BD',$
+              'GALFIT_VERSION_BD','FILE_GALFIT_BD','INITFILE_BD','CONSTRNT_BD','LOGFILE_BD','PSF_GALFIT_BAND_BD',$
               'FLAG_GALFIT_BD','NITER_GALFIT_BD','NEIGH_GALFIT_BD','CHISQ_GALFIT_BD','NFREE_GALFIT_BD',$
               'NFIX_GALFIT_BD','NDOF_GALFIT_BD','CHI2NU_GALFIT_BD','FIRSTCON_GALFIT_BD','LASTCON_GALFIT_BD',$
               'CPUTIME_SETUP_GALFIT_BD','CPUTIME_FIT_GALFIT_BD','CPUTIME_TOTAL_GALFIT_BD' ,$

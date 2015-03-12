@@ -46,7 +46,7 @@ IDL>> clean_galfit_folder, '/path/to/your/output/folder'   ;(the content of setu
 
 The script removes all files connected to the objects that were currently busy either in the IDL\_Bridge itself or in Galfit, by:
    - looking for *sav files in the galfit folders  
-   - removeing the \*sav file and the \*obj file of the same object  
+   - removing the \*sav file and the \*obj file of the same object  
    - (and leaves everything else like masks,constraint files, …. These files will be overwritten then anyway)
 
 If you don’t delete these files (most importantly the *obj file), Galapagos-2 will think that the objecthas been started 
@@ -141,3 +141,21 @@ This script is NOT run from within GALAPAGOS, but can easily be run by the user 
 
 All files are created in the same folder as the \*obj file used to start the script and get *similar* names.
 These files do *not* interfere with Galapagos output files and hence can be run while Galaagos is still running, if desired.
+
+### create_output_from_obj.pro and create_output_from_fits.pro
+These scripts allows the user to re-create the galfit output files again, but with different content.
+
+Starting from either an object file or a fits file (to be exact, this routine uses the *galfit.?? file matching that filename, which has the highest number, e.g. from the run which CREATED the fits file), they allow the user to re-create the galfit results, but allows for different components in the output file.
+
+create_output_from_obj.pro actually re-runs the fit, with different output layers switched on, hence is pretty slow, especially for objects with many neighbours.
+create_output_from_fits.pro starts where the fit finished and holds all values fixed (hence only creating the output itself), hence is pretty fast.
+
+These routines are handy as they allow the user to run galapagos itself with creating only the minimal neccessary output in the galfit output file, saving a VAST amount of disk space (especially when compared to 'components' being used).
+The user can create the needed output (e.g. components) easily with these scripts only for the objects where they are actually required, e.g. when used in any further analysis.
+
+create_output_from_obj.pro does NOT change the output file name as the fit is free and contains the same information as the original fit, just additional layers of images.
+create_output_from_fits.pro as standard changes the output filename to *_changed_content.fits, but can be user-s[pecified by defining 'namepost'. /overwrite can be used to explicitely overwrite the original output file (to save disk space). WARNING however: When using create_output_from_fits.pro with keyword /overwrite the fit will overwrite the original GALFIT output file. While this is not generally a problem, it becomes a problem when Galapagos is still running or could be re-run. The fit results will not change, but some of the other parameters will, e.g. degree of freedom in the fit (for obvisou reasons). So if there's a chance that you'd need to read out the results from GALFIT again using Galapagos, please don't use this option and look at the renamed files instead!!
+
+### tiling_helper.pro
+This can be run on one of the Galapagos output files (table_before_start.sav) which is created after the SExtractor stage.
+It simply display how many objects are being fit in each of the images, making a uniform splitup into different batch areas somewhat simpler.

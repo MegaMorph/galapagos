@@ -21,7 +21,7 @@ PRO single_comparison_all, mwl_startfile, galfit=galfit, bd=bd, ps=ps, original_
   IF keyword_set(original_fit) THEN BEGIN
      print, 'carrying out the original fit'
      spawn, galfit+' '+mwl_startfile
-     spawn, 'rm fit.log galfit.??'
+     spawn, 'rm fit.log'
   ENDIF
   
 ; create eps figure with results
@@ -48,7 +48,7 @@ PRO single_comparison_all_np, mwl_startfile, galfit=galfit, bd=bd, original_fit=
   IF keyword_set(original_fit) THEN BEGIN
      print, 'carrying out the original fit'
      spawn, galfit+' '+mwl_startfile
-     spawn, 'rm fit.log galfit.??'
+     spawn, 'rm fit.log'
   ENDIF
 
 ; create eps figure with results
@@ -92,7 +92,7 @@ PRO single_band_comparison, mwl_startfile, band=band, galfit=galfit, np=np
      IF keyword_set(galfit) THEN BEGIN
         print, 'carrying out the fit'
         spawn, galfit+' '+newfile
-        spawn, 'rm fit.log galfit.??'
+        spawn, 'rm fit.log'
      ENDIF
   ENDFOR
 
@@ -104,7 +104,7 @@ PRO single_band_comparison, mwl_startfile, band=band, galfit=galfit, np=np
      IF keyword_set(galfit) THEN BEGIN
         print, 'carrying out the fit'
         spawn, galfit+' '+newfile
-        spawn, 'rm fit.log galfit.??'
+        spawn, 'rm fit.log'
      ENDIF
   ENDIF
 
@@ -246,23 +246,23 @@ PRO plot_single_mwl_comparison, mwl_startfile, bd=bd, np=np, ps=ps
   FREE_LUN, filer
   
 ; create structure for results
-  res = create_struct('wavelength', wavelengths, $
-                      'x', fltarr(nband)-99., 'xerr', fltarr(nband)-99., $
-                      'y', fltarr(nband)-99., 'yerr', fltarr(nband)-99., $
-                      'mag', fltarr(nband)-99., 'magerr', fltarr(nband)-99., $
-                      're', fltarr(nband)-99., 'reerr', fltarr(nband)-99., $
-                      'n', fltarr(nband)-99., 'nerr' , fltarr(nband)-99., $
-                      'q', fltarr(nband)-99., 'qerr', fltarr(nband)-99., $
-                      'pa', fltarr(nband)-99., 'paerr', fltarr(nband)-99., $
-                      'sky', fltarr(nband)-99., $
-                      'x_single', fltarr(nband)-99., 'xerr_single', fltarr(nband)-99., $
-                      'y_single', fltarr(nband)-99., 'yerr_single', fltarr(nband)-99., $
-                      'mag_single', fltarr(nband)-99., 'magerr_single', fltarr(nband)-99., $
-                      're_single', fltarr(nband)-99., 'reerr_single', fltarr(nband)-99., $
-                      'n_single', fltarr(nband)-99., 'nerr_single' , fltarr(nband)-99., $
-                      'q_single', fltarr(nband)-99., 'qerr_single', fltarr(nband)-99., $
-                      'pa_single', fltarr(nband)-99., 'paerr_single', fltarr(nband)-99., $
-                      'sky_single', fltarr(nband)-99.)
+  res = create_struct('wavelength', float(wavelengths), $
+                      'x', fltarr(nband)-999., 'xerr', fltarr(nband)-999., $
+                      'y', fltarr(nband)-999., 'yerr', fltarr(nband)-999., $
+                      'mag', fltarr(nband)-999., 'magerr', fltarr(nband)-999., $
+                      're', fltarr(nband)-999., 'reerr', fltarr(nband)-999., $
+                      'n', fltarr(nband)-999., 'nerr' , fltarr(nband)-999., $
+                      'q', fltarr(nband)-999., 'qerr', fltarr(nband)-999., $
+                      'pa', fltarr(nband)-999., 'paerr', fltarr(nband)-999., $
+                      'sky', fltarr(nband)-999., $
+                      'x_single', fltarr(nband)-999., 'xerr_single', fltarr(nband)-999., $
+                      'y_single', fltarr(nband)-999., 'yerr_single', fltarr(nband)-999., $
+                      'mag_single', fltarr(nband)-999., 'magerr_single', fltarr(nband)-999., $
+                      're_single', fltarr(nband)-999., 'reerr_single', fltarr(nband)-999., $
+                      'n_single', fltarr(nband)-999., 'nerr_single' , fltarr(nband)-999., $
+                      'q_single', fltarr(nband)-999., 'qerr_single', fltarr(nband)-999., $
+                      'pa_single', fltarr(nband)-999., 'paerr_single', fltarr(nband)-999., $
+                      'sky_single', fltarr(nband)-999.)
   IF keyword_set(np) THEN BEGIN
      tags = ['x_np', 'xerr_np', 'y_np', 'yerr_np', 'mag_np', $
              'magerr_np', 're_np', 'reerr_np', 'n_np', 'nerr_np', $
@@ -270,12 +270,12 @@ PRO plot_single_mwl_comparison, mwl_startfile, bd=bd, np=np, ps=ps
              'x_single_np', 'xerr_single_np', 'y_single_np', 'yerr_single_np', 'mag_single_np', $
              'magerr_single_np', 're_single_np', 'reerr_single_np', 'n_single_np', 'nerr_single_np', $
              'q_single_np', 'qerr_single_np', 'pa_single_np', 'paerr_single_np']
-     values = ['fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-               'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-               'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-               'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-               'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-               'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.']
+     values = ['fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+               'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+               'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+               'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+               'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+               'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.']
      add_tags, res, tags, values, res2
      res = res2
      delvarx, res2
@@ -288,12 +288,12 @@ PRO plot_single_mwl_comparison, mwl_startfile, bd=bd, np=np, ps=ps
              'x_d_single', 'xerr_d_single', 'y_d_single', 'yerr_d_single', 'mag_d_single', $
              'magerr_d_single', 're_d_single', 'reerr_d_single', 'n_d_single', 'nerr_d_single', $
              'q_d_single', 'qerr_d_single', 'pa_d_single', 'paerr_d_single']
-     values = ['fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-               'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-               'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-               'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-               'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-               'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.']
+     values = ['fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+               'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+               'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+               'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+               'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+               'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.']
      add_tags, res, tags, values, res2
      res = res2
      delvarx, res2
@@ -304,12 +304,12 @@ PRO plot_single_mwl_comparison, mwl_startfile, bd=bd, np=np, ps=ps
                 'x_d_single_np', 'xerr_d_single_np', 'y_d_single_np', 'yerr_d_single_np', 'mag_d_single_np', $
                 'magerr_d_single_np', 're_d_single_np', 'reerr_d_single_np', 'n_d_single_np', 'nerr_d_single_np', $
                 'q_d_single_np', 'qerr_d_single_np', 'pa_d_single_np', 'paerr_d_single_np']
-        values = ['fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-                  'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-                  'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-                  'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-                  'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', $
-                  'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.', 'fltarr('+strtrim(nband,2)+')-99.']
+        values = ['fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+                  'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+                  'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+                  'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+                  'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', $
+                  'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.', 'fltarr('+strtrim(nband,2)+')-999.']
         add_tags, res, tags, values, res2
         res = res2
         delvarx, res2
@@ -360,46 +360,47 @@ PRO plot_single_mwl_comparison, mwl_startfile, bd=bd, np=np, ps=ps
 
 ; read all single_band fits and put in structure
   FOR i=0,nband-1 DO BEGIN
-     single_res = mrdfits(strmid(init_filename,0,strpos(init_filename,'.fits'))+'_'+bandnames[i]+'.fits','FINAL_BAND', /silent)
-     res.x_single[i]   = single_res.comp2_xc  & res.xerr_single[i]   = single_res.comp2_xc_err
-     res.y_single[i]   = single_res.comp2_yc  & res.yerr_single[i]   = single_res.comp2_yc_err
-     res.mag_single[i] = single_res.comp2_mag & res.magerr_single[i] = single_res.comp2_mag_err
-     res.re_single[i]  = single_res.comp2_re  & res.reerr_single[i]  = single_res.comp2_re_err
-     res.n_single[i]   = single_res.comp2_n   & res.nerr_single[i]   = single_res.comp2_n_err
-     res.q_single[i]   = single_res.comp2_ar  & res.qerr_single[i]   = single_res.comp2_ar_err
-     res.pa_single[i]  = single_res.comp2_pa  & res.paerr_single[i]  = single_res.comp2_pa_err
-     res.sky_single[i] = single_res.comp1_sky
-
-     IF keyword_set(np) THEN BEGIN
-        single_res_np = mrdfits(strmid(init_filename,0,strpos(init_filename,'.fits'))+'_'+bandnames[i]+'_np.fits','FINAL_BAND', /silent)
-        res.x_single_np[i]   = single_res_np.comp2_xc  & res.xerr_single_np[i]   = single_res_np.comp2_xc_err
-        res.y_single_np[i]   = single_res_np.comp2_yc  & res.yerr_single_np[i]   = single_res_np.comp2_yc_err
-        res.mag_single_np[i] = single_res_np.comp2_mag & res.magerr_single_np[i] = single_res_np.comp2_mag_err
-        res.re_single_np[i]  = single_res_np.comp2_re  & res.reerr_single_np[i]  = single_res_np.comp2_re_err
-        res.n_single_np[i]   = single_res_np.comp2_n   & res.nerr_single_np[i]   = single_res_np.comp2_n_err
-        res.q_single_np[i]   = single_res_np.comp2_ar  & res.qerr_single_np[i]   = single_res_np.comp2_ar_err
-        res.pa_single_np[i]  = single_res_np.comp2_pa  & res.paerr_single_np[i]  = single_res_np.comp2_pa_err
-     ENDIF
-
-     IF keyword_set(bd) THEN BEGIN
-        res.x_d_single[i]   = single_res.comp3_xc  & res.xerr_d_single[i]   = single_res.comp3_xc_err
-        res.y_d_single[i]   = single_res.comp3_yc  & res.yerr_d_single[i]   = single_res.comp3_yc_err
-        res.mag_d_single[i] = single_res.comp3_mag & res.magerr_d_single[i] = single_res.comp3_mag_err
-        res.re_d_single[i]  = single_res.comp3_re  & res.reerr_d_single[i]  = single_res.comp3_re_err
-        res.n_d_single[i]   = single_res.comp3_n   & res.nerr_d_single[i]   = single_res.comp3_n_err
-        res.q_d_single[i]   = single_res.comp3_ar  & res.qerr_d_single[i]   = single_res.comp3_ar_err
-        res.pa_d_single[i]  = single_res.comp3_pa  & res.paerr_d_single[i]  = single_res.comp3_pa_err
+     IF file_test(strmid(init_filename,0,strpos(init_filename,'.fits'))+'_'+bandnames[i]+'.fits') THEN BEGIN
+        single_res = mrdfits(strmid(init_filename,0,strpos(init_filename,'.fits'))+'_'+bandnames[i]+'.fits','FINAL_BAND', /silent)
+        res.x_single[i]   = single_res.comp2_xc  & res.xerr_single[i]   = single_res.comp2_xc_err
+        res.y_single[i]   = single_res.comp2_yc  & res.yerr_single[i]   = single_res.comp2_yc_err
+        res.mag_single[i] = single_res.comp2_mag & res.magerr_single[i] = single_res.comp2_mag_err
+        res.re_single[i]  = single_res.comp2_re  & res.reerr_single[i]  = single_res.comp2_re_err
+        res.n_single[i]   = single_res.comp2_n   & res.nerr_single[i]   = single_res.comp2_n_err
+        res.q_single[i]   = single_res.comp2_ar  & res.qerr_single[i]   = single_res.comp2_ar_err
+        res.pa_single[i]  = single_res.comp2_pa  & res.paerr_single[i]  = single_res.comp2_pa_err
+        res.sky_single[i] = single_res.comp1_sky
+        
         IF keyword_set(np) THEN BEGIN
-           res.x_d_single_np[i]   = single_res.comp3_xc  & res.xerr_d_single_np[i]   = single_res.comp3_xc_err
-           res.y_d_single_np[i]   = single_res.comp3_yc  & res.yerr_d_single_np[i]   = single_res.comp3_yc_err
-           res.mag_d_single_np[i] = single_res.comp3_mag & res.magerr_d_single_np[i] = single_res.comp3_mag_err
-           res.re_d_single_np[i]  = single_res.comp3_re  & res.reerr_d_single_np[i]  = single_res.comp3_re_err
-           res.n_d_single_np[i]   = single_res.comp3_n   & res.nerr_d_single_np[i]   = single_res.comp3_n_err
-           res.q_d_single_np[i]   = single_res.comp3_ar  & res.qerr_d_single_np[i]   = single_res.comp3_ar_err
-           res.pa_d_single_np[i]  = single_res.comp3_pa  & res.paerr_d_single_np[i]  = single_res.comp3_pa_err
+           single_res_np = mrdfits(strmid(init_filename,0,strpos(init_filename,'.fits'))+'_'+bandnames[i]+'_np.fits','FINAL_BAND', /silent)
+           res.x_single_np[i]   = single_res_np.comp2_xc  & res.xerr_single_np[i]   = single_res_np.comp2_xc_err
+           res.y_single_np[i]   = single_res_np.comp2_yc  & res.yerr_single_np[i]   = single_res_np.comp2_yc_err
+           res.mag_single_np[i] = single_res_np.comp2_mag & res.magerr_single_np[i] = single_res_np.comp2_mag_err
+           res.re_single_np[i]  = single_res_np.comp2_re  & res.reerr_single_np[i]  = single_res_np.comp2_re_err
+           res.n_single_np[i]   = single_res_np.comp2_n   & res.nerr_single_np[i]   = single_res_np.comp2_n_err
+           res.q_single_np[i]   = single_res_np.comp2_ar  & res.qerr_single_np[i]   = single_res_np.comp2_ar_err
+           res.pa_single_np[i]  = single_res_np.comp2_pa  & res.paerr_single_np[i]  = single_res_np.comp2_pa_err
+        ENDIF
+        
+        IF keyword_set(bd) THEN BEGIN
+           res.x_d_single[i]   = single_res.comp3_xc  & res.xerr_d_single[i]   = single_res.comp3_xc_err
+           res.y_d_single[i]   = single_res.comp3_yc  & res.yerr_d_single[i]   = single_res.comp3_yc_err
+           res.mag_d_single[i] = single_res.comp3_mag & res.magerr_d_single[i] = single_res.comp3_mag_err
+           res.re_d_single[i]  = single_res.comp3_re  & res.reerr_d_single[i]  = single_res.comp3_re_err
+           res.n_d_single[i]   = single_res.comp3_n   & res.nerr_d_single[i]   = single_res.comp3_n_err
+           res.q_d_single[i]   = single_res.comp3_ar  & res.qerr_d_single[i]   = single_res.comp3_ar_err
+           res.pa_d_single[i]  = single_res.comp3_pa  & res.paerr_d_single[i]  = single_res.comp3_pa_err
+           IF keyword_set(np) THEN BEGIN
+              res.x_d_single_np[i]   = single_res.comp3_xc  & res.xerr_d_single_np[i]   = single_res.comp3_xc_err
+              res.y_d_single_np[i]   = single_res.comp3_yc  & res.yerr_d_single_np[i]   = single_res.comp3_yc_err
+              res.mag_d_single_np[i] = single_res.comp3_mag & res.magerr_d_single_np[i] = single_res.comp3_mag_err
+              res.re_d_single_np[i]  = single_res.comp3_re  & res.reerr_d_single_np[i]  = single_res.comp3_re_err
+              res.n_d_single_np[i]   = single_res.comp3_n   & res.nerr_d_single_np[i]   = single_res.comp3_n_err
+              res.q_d_single_np[i]   = single_res.comp3_ar  & res.qerr_d_single_np[i]   = single_res.comp3_ar_err
+              res.pa_d_single_np[i]  = single_res.comp3_pa  & res.paerr_d_single_np[i]  = single_res.comp3_pa_err
+           ENDIF
         ENDIF
      ENDIF
-
   ENDFOR 
 
 ; SS plots
@@ -419,88 +420,99 @@ PRO plot_single_mwl_comparison, mwl_startfile, bd=bd, np=np, ps=ps
      !x.margin=[7.0,1.0]
      multiplot, [1,4], /init
      multiplot
-
-     factm = 20
-     fact = 10
-     magrange = [res.mag-factm*res.magerr,res.mag+factm*res.magerr,res.mag_single-factm*res.magerr_single,res.mag_single+factm*res.magerr_single]
-     rerange = [res.re-fact*res.reerr,res.re+fact*res.reerr,res.re_single-fact*res.reerr_single,res.re_single+fact*res.reerr_single]
-     nrange = [res.n-fact*res.nerr,res.n+fact*res.nerr,res.n_single-fact*res.nerr_single,res.n_single+fact*res.nerr_single]
-     qrange = [res.q-fact*res.qerr,res.q+fact*res.qerr,res.q_single-fact*res.qerr_single,res.q_single+fact*res.qerr_single]
-     parange = [res.pa-fact*res.paerr,res.pa+fact*res.paerr,res.pa_single-fact*res.paerr_single,res.pa_single+fact*res.paerr_single]
+     wlrange = [min(res.wavelength)-0.1*(max(res.wavelength)-min(res.wavelength)),max(res.wavelength)+0.1*(max(res.wavelength)-min(res.wavelength))]
+     
+     factm = 2
+     fact = 2
+     sok = where(res.mag_single ne -999.)
+;     magrange = [res.mag-factm*res.magerr,res.mag+factm*res.magerr,res.mag_single-factm*res.magerr_single,res.mag_single+factm*res.magerr_single]
+     magrange = [min(res.mag)-2, max(res.mag)+2, min(res.mag_single[sok])-2, max(res.mag_single[sok])+2]
+;     rerange = [res.re-fact*res.reerr,res.re+fact*res.reerr,res.re_single-fact*res.reerr_single,res.re_single+fact*res.reerr_single]
+     rerange = [min(res.re)*0.95, max(res.re)*1.05, min(res.re_single[sok])*0.95, max(res.re_single[sok])*1.05]
+;     nrange = [res.n-fact*res.nerr,res.n+fact*res.nerr,res.n_single-fact*res.nerr_single,res.n_single+fact*res.nerr_single]
+     nrange = [min(res.n)*0.8, max(res.n)*1.2, min(res.n_single[sok])*0.8, max(res.n_single[sok])*1.2]
+;     qrange = [res.q-fact*res.qerr,res.q+fact*res.qerr,res.q_single-fact*res.qerr_single,res.q_single+fact*res.qerr_single]
+     qrange = [min(res.q)*0.95, max(res.q)*1.05<1., min(res.q_single[sok])*0.95, max(res.q_single[sok])*1.05<1.]
+;     parange = [res.pa-fact*res.paerr,res.pa+fact*res.paerr,res.pa_single-fact*res.paerr_single,res.pa_single+fact*res.paerr_single]
+     parange = [min(res.pa)*0.95, max(res.pa)*1.05, min(res.pa_single[sok])*0.95, max(res.pa_single[sok])*1.05]
      IF keyword_set(np) THEN BEGIN
+;        magrange = [res.mag-factm*res.magerr,res.mag+factm*res.magerr,res.mag_single-factm*res.magerr_single,res.mag_single+factm*res.magerr_single,res.mag_np-factm*res.magerr_np,res.mag_np+factm*res.magerr_np,res.mag_single_np-factm*res.magerr_single_np,res.mag_single_np+factm*res.magerr_single_np]
         magrange = [res.mag-factm*res.magerr,res.mag+factm*res.magerr,res.mag_single-factm*res.magerr_single,res.mag_single+factm*res.magerr_single,res.mag_np-factm*res.magerr_np,res.mag_np+factm*res.magerr_np,res.mag_single_np-factm*res.magerr_single_np,res.mag_single_np+factm*res.magerr_single_np]
+;        rerange = [res.re-fact*res.reerr,res.re+fact*res.reerr,res.re_single-fact*res.reerr_single,res.re_single+fact*res.reerr_single,res.re_np-fact*res.reerr_np,res.re_np+fact*res.reerr_np,res.re_single_np-fact*res.reerr_single_np,res.re_single_np+fact*res.reerr_single_np]
         rerange = [res.re-fact*res.reerr,res.re+fact*res.reerr,res.re_single-fact*res.reerr_single,res.re_single+fact*res.reerr_single,res.re_np-fact*res.reerr_np,res.re_np+fact*res.reerr_np,res.re_single_np-fact*res.reerr_single_np,res.re_single_np+fact*res.reerr_single_np]
+;        nrange = [res.n-fact*res.nerr,res.n+fact*res.nerr,res.n_single-fact*res.nerr_single,res.n_single+fact*res.nerr_single,res.n_np-fact*res.nerr_np,res.n+fact*res.nerr_np,res.n_single_np-fact*res.nerr_single_np,res.n_single_np+fact*res.nerr_single_np]
         nrange = [res.n-fact*res.nerr,res.n+fact*res.nerr,res.n_single-fact*res.nerr_single,res.n_single+fact*res.nerr_single,res.n_np-fact*res.nerr_np,res.n+fact*res.nerr_np,res.n_single_np-fact*res.nerr_single_np,res.n_single_np+fact*res.nerr_single_np]
+;        qrange = [res.q-fact*res.qerr,res.q+fact*res.qerr,res.q_single-fact*res.qerr_single,res.q_single+fact*res.qerr_single,res.q_np-fact*res.qerr_np,res.q+fact*res.qerr_np,res.q_single_np-fact*res.qerr_single_np,res.q_single_np+fact*res.qerr_single_np]
         qrange = [res.q-fact*res.qerr,res.q+fact*res.qerr,res.q_single-fact*res.qerr_single,res.q_single+fact*res.qerr_single,res.q_np-fact*res.qerr_np,res.q+fact*res.qerr_np,res.q_single_np-fact*res.qerr_single_np,res.q_single_np+fact*res.qerr_single_np]
+;        parange = [res.pa-fact*res.paerr,res.pa+fact*res.paerr,res.pa_single-fact*res.paerr_single,res.pa_single+fact*res.paerr_single,res.pa_np-fact*res.paerr_np,res.pa_np+fact*res.paerr_np,res.pa_single_np-fact*res.paerr_single_np,res.pa_single_np+fact*res.paerr_single_np]
         parange = [res.pa-fact*res.paerr,res.pa+fact*res.paerr,res.pa_single-fact*res.paerr_single,res.pa_single+fact*res.paerr_single,res.pa_np-fact*res.paerr_np,res.pa_np+fact*res.paerr_np,res.pa_single_np-fact*res.paerr_single_np,res.pa_single_np+fact*res.paerr_single_np]
      ENDIF
 
-     plot, res.wavelength, res.mag_single, psym=1,/nodata, yrange=[max(magrange),min(magrange)]
-     oplot, res.wavelength, res.mag_single, col=135, linestyle=2
-     oplot, res.wavelength, res.mag_single, psym=1, col=135
-     errplot, res.wavelength, res.mag_single-factm*res.magerr_single, res.mag_single+factm*res.magerr_single, col=135
-     oplot, res.wavelength, res.mag, col=235
+     plot, res.wavelength[sok], res.mag_single[sok], psym=1,/nodata, yrange=[max(magrange),min(magrange)],xrange=wlrange,xstyle=1
+;     oplot, res.wavelength[sok], res.mag_single[sok], col=135, linestyle=2
+     oplot, res.wavelength[sok], res.mag_single[sok], psym=4, col=135
+     errplot, res.wavelength[sok], res.mag_single[sok]-factm*res.magerr_single[sok], res.mag_single[sok]+factm*res.magerr_single[sok], col=135
+;     oplot, res.wavelength, res.mag, col=235
      oplot, res.wavelength, res.mag, psym=1, col=235
      errplot, res.wavelength, res.mag-factm*res.magerr, res.mag+factm*res.magerr, col=235
      legend, ['single band +-'+strtrim(factm,2)+'sigma','multi band +-'+strtrim(factm,2)+'sigma'], textcolors=[135,235], charsize=1., /bottom, /right
      IF keyword_set(np) THEN BEGIN
-        oplot, res.wavelength, res.mag_single_np, col=135, linestyle=1
-        oplot, res.wavelength, res.mag_single_np, psym=1, col=135
-        errplot, res.wavelength, res.mag_single_np-factm*res.magerr_single_np, res.mag_single_np+factm*res.magerr_single_np, col=135
-        oplot, res.wavelength, res.mag_np, col=235, linestyle=1
+;        oplot, res.wavelength[sok], res.mag_single_np[sok], col=135, linestyle=1
+        oplot, res.wavelength[sok], res.mag_single_np[sok], psym=4, col=135
+        errplot, res.wavelength[sok], res.mag_single_np[sok]-factm*res.magerr_single_np[sok], res.mag_single_np[sok]+factm*res.magerr_single_np[sok], col=135
+;        oplot, res.wavelength, res.mag_np, col=235, linestyle=1
         oplot, res.wavelength, res.mag_np, psym=1, col=235
         errplot, res.wavelength, res.mag_np-factm*res.magerr_np, res.mag_np+factm*res.magerr_np, col=235
      ENDIF
      multiplot
 
-     plot, res.wavelength, res.re_single, psym=1,/nodata, yrange=[min(rerange),max(rerange)]
-     oplot, res.wavelength, res.re_single, col=135, linestyle=2
-     oplot, res.wavelength, res.re_single, psym=1, col=135
-     errplot, res.wavelength, res.re_single-fact*res.reerr_single, res.re_single+fact*res.reerr_single, col=135
-     oplot, res.wavelength, res.re, col=235
+     plot, res.wavelength[sok], res.re_single[sok], psym=1,/nodata, yrange=[min(rerange),max(rerange)],xrange=wlrange,xstyle=1,/ylog
+;     oplot, res.wavelength[sok], res.re_single[sok], col=135, linestyle=2
+     oplot, res.wavelength[sok], res.re_single[sok], psym=4, col=135
+     errplot, res.wavelength[sok], res.re_single[sok]-fact*res.reerr_single[sok], res.re_single[sok]+fact*res.reerr_single[sok], col=135
+;     oplot, res.wavelength, res.re, col=235
      oplot, res.wavelength, res.re, psym=1, col=235
      errplot, res.wavelength, res.re-fact*res.reerr, res.re+fact*res.reerr, col=235
      legend, ['single band +-'+strtrim(fact,2)+'sigma','multi band +-'+strtrim(fact,2)+'sigma'], textcolors=[135,235], charsize=1., /bottom, /right
      IF keyword_set(np) THEN BEGIN
-        oplot, res.wavelength, res.re_single_np, col=135, linestyle=1
-        oplot, res.wavelength, res.re_single_np, psym=1, col=135
+;        oplot, res.wavelength, res.re_single_np, col=135, linestyle=1
+        oplot, res.wavelength, res.re_single_np, psym=4, col=135
         errplot, res.wavelength, res.re_single_np-fact*res.reerr_single_np, res.re_single_np+fact*res.reerr_single_np, col=135
-        oplot, res.wavelength, res.re_np, col=235, linestyle=1
+;        oplot, res.wavelength, res.re_np, col=235, linestyle=1
         oplot, res.wavelength, res.re_np, psym=1, col=235
         errplot, res.wavelength, res.re_np-fact*res.reerr_np, res.re_np+fact*res.reerr_np, col=235
      ENDIF
      multiplot
-         
-     plot, res.wavelength, res.n_single, psym=1,/nodata, yrange=[min(nrange),max(nrange)]
-     oplot, res.wavelength, res.n_single, col=135, linestyle=2
-     oplot, res.wavelength, res.n_single, psym=1, col=135
-     errplot, res.wavelength, res.n_single-fact*res.nerr_single, res.n_single+fact*res.nerr_single, col=135
-     oplot, res.wavelength, res.n, col=235
+     plot, res.wavelength[sok], res.n_single[sok], psym=1,/nodata, yrange=[min(nrange),max(nrange)],xrange=wlrange,xstyle=1
+;     oplot, res.wavelength[sok], res.n_single[sok], col=135, linestyle=2
+     oplot, res.wavelength[sok], res.n_single[sok], psym=4, col=135
+     errplot, res.wavelength[sok], res.n_single[sok]-fact*res.nerr_single[sok], res.n_single[sok]+fact*res.nerr_single[sok], col=135
+;     oplot, res.wavelength, res.n, col=235
      oplot, res.wavelength, res.n, psym=1, col=235
      errplot, res.wavelength, res.n-fact*res.nerr, res.n+fact*res.nerr, col=235
      IF keyword_set(np) THEN BEGIN
-        oplot, res.wavelength, res.n_single_np, col=135, linestyle=1
-        oplot, res.wavelength, res.n_single_np, psym=1, col=135
+;        oplot, res.wavelength, res.n_single_np, col=135, linestyle=1
+        oplot, res.wavelength, res.n_single_np, psym=4, col=135
         errplot, res.wavelength, res.n_single_np-fact*res.nerr_single_np, res.n_single_np+fact*res.nerr_single_np, col=135
-        oplot, res.wavelength, res.n_np, col=235, linestyle=1
+;        oplot, res.wavelength, res.n_np, col=235, linestyle=1
         oplot, res.wavelength, res.n_np, psym=1, col=235
         errplot, res.wavelength, res.n_np-fact*res.nerr_np, res.n_np+fact*res.nerr_np, col=235
         legend, ['with nonparametric'], psym=0, linestyle=1, charsize=1., /bottom, /right
      ENDIF
      multiplot
  
-     plot, res.wavelength, res.q_single, psym=1,/nodata, yrange=[min(qrange),max(qrange)]
-     oplot, res.wavelength, res.q_single, col=135, linestyle=2
-     oplot, res.wavelength, res.q_single, psym=1, col=135
-     errplot, res.wavelength, res.q_single-fact*res.qerr_single, res.q_single+fact*res.qerr_single, col=135
-     oplot, res.wavelength, res.q, col=235
+     plot, res.wavelength[sok], res.q_single[sok], psym=1,/nodata, yrange=[min(qrange),max(qrange)],xrange=wlrange,xstyle=1
+;     oplot, res.wavelength[sok], res.q_single[sok], col=135, linestyle=2
+     oplot, res.wavelength[sok], res.q_single[sok], psym=4, col=135
+     errplot, res.wavelength[sok], res.q_single[sok]-fact*res.qerr_single[sok], res.q_single[sok]+fact*res.qerr_single[sok], col=135
+;     oplot, res.wavelength, res.q, col=235
      oplot, res.wavelength, res.q, psym=1, col=235
      errplot, res.wavelength, res.q-fact*res.qerr, res.q+fact*res.qerr, col=235
      IF keyword_set(np) THEN BEGIN
-        oplot, res.wavelength, res.q_single_np, col=135, linestyle=1
-        oplot, res.wavelength, res.q_single_np, psym=1, col=135
+;        oplot, res.wavelength, res.q_single_np, col=135, linestyle=1
+        oplot, res.wavelength, res.q_single_np, psym=4, col=135
         errplot, res.wavelength, res.q_single_np-fact*res.qerr_single_np, res.q_single_np+fact*res.qerr_single_np, col=135
-        oplot, res.wavelength, res.q_np, col=235, linestyle=1
+;        oplot, res.wavelength, res.q_np, col=235, linestyle=1
         oplot, res.wavelength, res.q_np, psym=1, col=235
         errplot, res.wavelength, res.q_np-fact*res.qerr_np, res.q_np+fact*res.qerr_np, col=235
      ENDIF
