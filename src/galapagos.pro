@@ -3316,28 +3316,113 @@ FUNCTION read_sersic_results_old_galfit, obj, bd=bd
   IF file_test(obj) THEN BEGIN
      hd = headfits(obj, exten = 2)
      mag0 = sxpar(hd, '2_MAG')
-     mag = float(strmid(mag0, 0, strpos(mag0, '+/-')))
-     magerr = float(strmid(mag0, strpos(mag0, '+/-')+3, strlen(mag0)))
+; cut number and error
+     mag = strtrim(strmid(mag0, 0, strpos(mag0, '+/-')),2)
+     magerr = strtrim(strmid(mag0, strpos(mag0, '+/-')+3, strlen(mag0)),2)
+; correct '*' in the values, substitue with ' '
+     mag = strtrim(strrep(mag,'*',' '),2)
+     magerr = strtrim(strrep(magerr,'*',' '),2)
+     mag = strtrim(strrep(mag,'[',' '),2)
+     magerr = strtrim(strrep(magerr,']',' '),2)
+     mag = strtrim(strrep(mag,'[',' '),2)
+     magerr = strtrim(strrep(magerr,']',' '),2)
+; correct 'nan' in the values
+     IF mag eq 'nan' THEN mag = !VALUES.F_NAN ELSE mag = float(mag)
+     IF magerr eq 'nan' THEN magerr = !VALUES.F_NAN ELSE magerr = float(magerr)
+
      re0 = sxpar(hd, '2_RE')
-     re = float(strmid(re0, 0, strpos(re0, '+/-')))
-     reerr = float(strmid(re0, strpos(re0, '+/-')+3, strlen(re0)))
+     re = strtrim(strmid(re0, 0, strpos(re0, '+/-')),2)
+     reerr = strtrim(strmid(re0, strpos(re0, '+/-')+3, strlen(re0)),2)
+; correct '*' in the values, substitue with ' '
+     re = strtrim(strrep(re,'*',' '),2)
+     reerr = strtrim(strrep(reerr,'*',' '),2)
+     re = strtrim(strrep(re,'[',' '),2)
+     reerr = strtrim(strrep(reerr,']',' '),2)
+     re = strtrim(strrep(re,'[',' '),2)
+     reerr = strtrim(strrep(reerr,']',' '),2)
+; correct 'nan' in the values
+     IF re eq 'nan' THEN re = !VALUES.F_NAN ELSE re = float(re)
+     IF reerr eq 'nan' THEN reerr = !VALUES.F_NAN ELSE reerr = float(reerr)
+
      n0 = sxpar(hd, '2_N')
-     n = float(strmid(n0, 0, strpos(n0, '+/-')))
-     nerr = float(strmid(n0, strpos(n0, '+/-')+3, strlen(n0)))
+     n = strtrim(strmid(n0, 0, strpos(n0, '+/-')),2)
+     nerr = strtrim(strmid(n0, strpos(n0, '+/-')+3, strlen(n0)),2)
+; correct '*' in the values, substitue with ' '
+     n = strtrim(strrep(n,'*',' '),2)
+     nerr = strtrim(strrep(nerr,'*',' '),2)
+     n = strtrim(strrep(n,'[',' '),2)
+     nerr = strtrim(strrep(nerr,']',' '),2)
+     n = strtrim(strrep(n,'[',' '),2)
+     nerr = strtrim(strrep(nerr,']',' '),2)
+; correct 'nan' in the values
+     IF n eq 'nan' THEN n = !VALUES.F_NAN ELSE n = float(n)
+     IF nerr eq 'nan' THEN nerr = !VALUES.F_NAN ELSE nerr = float(nerr)
+
      q0 = sxpar(hd, '2_AR')
-     q = float(strmid(q0, 0, strpos(q0, '+/-')))
-     qerr = float(strmid(q0, strpos(q0, '+/-')+3, strlen(q0)))
+     q = strtrim(strmid(q0, 0, strpos(q0, '+/-')),2)
+     qerr = strtrim(strmid(q0, strpos(q0, '+/-')+3, strlen(q0)),2)
+; correct '*' in the values, substitue with ' '
+     q = strtrim(strrep(q,'*',' '),2)
+     qerr = strtrim(strrep(qerr,'*',' '),2)
+     q = strtrim(strrep(q,'[',' '),2)
+     qerr = strtrim(strrep(qerr,']',' '),2)
+     q = strtrim(strrep(q,'[',' '),2)
+     qerr = strtrim(strrep(qerr,']',' '),2)
+; correct 'nan' in the values
+     IF q eq 'nan' THEN q = !VALUES.F_NAN ELSE q = float(q)
+     IF qerr eq 'nan' THEN qerr = !VALUES.F_NAN ELSE qerr = float(qerr)
+
      pa0 = sxpar(hd, '2_PA')
-     pa = float(strmid(pa0, 0, strpos(pa0, '+/-')))
-     paerr = float(strmid(pa0, strpos(pa0, '+/-')+3, strlen(pa0)))
+     pa = strtrim(strmid(pa0, 0, strpos(pa0, '+/-')),2)
+     paerr = strtrim(strmid(pa0, strpos(pa0, '+/-')+3, strlen(pa0)),2)
+; correct '*' in the values, substitue with ' '
+     pa = strtrim(strrep(pa,'*',' '),2)
+     paerr = strtrim(strrep(paerr,'*',' '),2)
+     pa = strtrim(strrep(pa,'[',' '),2)
+     paerr = strtrim(strrep(paerr,']',' '),2)
+     pa = strtrim(strrep(pa,'[',' '),2)
+     paerr = strtrim(strrep(paerr,']',' '),2)
+; correct 'nan' in the values
+     IF pa eq 'nan' THEN pa = !VALUES.F_NAN ELSE pa = float(pa)
+     IF paerr eq 'nan' THEN paerr = !VALUES.F_NAN ELSE paerr = float(paerr)
+
      x0 = sxpar(hd, '2_XC')
-     x = float(strmid(x0, 0, strpos(x0, '+/-')))
-     xerr = float(strmid(x0, strpos(x0, '+/-')+3, strlen(x0)))
+     x = strtrim(strmid(x0, 0, strpos(x0, '+/-')),2)
+     xerr = strtrim(strmid(x0, strpos(x0, '+/-')+3, strlen(x0)),2)
+; correct '*' in the values, substitue with ' '
+     x = strtrim(strrep(x,'*',' '),2)
+     xerr = strtrim(strrep(xerr,'*',' '),2)
+     x = strtrim(strrep(x,'[',' '),2)
+     xerr = strtrim(strrep(xerr,']',' '),2)
+     x = strtrim(strrep(x,'[',' '),2)
+     xerr = strtrim(strrep(xerr,']',' '),2)
+; correct 'nan' in the values
+     IF x eq 'nan' THEN x = !VALUES.F_NAN ELSE x = float(x)
+     IF xerr eq 'nan' THEN xerr = !VALUES.F_NAN ELSE xerr = float(xerr)
+
      y0 = sxpar(hd, '2_YC')
-     y = float(strmid(y0, 0, strpos(y0, '+/-')))
-     yerr = float(strmid(y0, strpos(y0, '+/-')+3, strlen(y0)))
+     y = strtrim(strmid(y0, 0, strpos(y0, '+/-')),2)
+     yerr = strtrim(strmid(y0, strpos(y0, '+/-')+3, strlen(y0)),2)
+; correct '*' in the values, substitue with ' '
+     y = strtrim(strrep(y,'*',' '),2)
+     yerr = strtrim(strrep(yerr,'*',' '),2)
+     y = strtrim(strrep(y,'[',' '),2)
+     yerr = strtrim(strrep(yerr,']',' '),2)
+     y = strtrim(strrep(y,'[',' '),2)
+     yerr = strtrim(strrep(yerr,']',' '),2)
+; correct 'nan' in the values
+     IF y eq 'nan' THEN y = !VALUES.F_NAN ELSE y = float(y)
+     IF yerr eq 'nan' THEN yerr = !VALUES.F_NAN ELSE yerr = float(yerr)
+
      s0 = sxpar(hd, '1_SKY')
-     sky = float(strmid(s0, 1, strpos(s0, ']')))
+     sky = strtrim(strmid(s0, 1, strpos(s0, ']')),2)
+; correct '*' in the values, substitue with ' '
+     sky = strtrim(strrep(sky,'*',' '),2)
+     sky = strtrim(strrep(sky,'[',' '),2)
+     sky = strtrim(strrep(sky,'[',' '),2)
+; correct 'nan' in the values
+     IF sky eq 'nan' THEN sky = !VALUES.F_NAN ELSE sky = float(sky)
+
      psf0 = sxpar(hd, 'PSF') 
      psf= strtrim(psf0, 2)
 ; find number of neighbours
