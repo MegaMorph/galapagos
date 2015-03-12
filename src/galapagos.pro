@@ -3077,7 +3077,6 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'N_GALFIT_DEG', total(res_cheb.comp2_n_fit), $
                                  'Q_GALFIT_DEG', total(res_cheb.comp2_ar_fit), $
                                  'PA_GALFIT_DEG', total(res_cheb.comp2_pa_fit))
-; NEIGH_GALFIT HAS TO BE ADAPTED! WHY??
      ENDIF
      IF keyword_set(bd) THEN BEGIN
         feedback = create_struct('mag_galfit_d', result[0].COMP2_MAG, 'magerr_galfit_d',result[0].COMP2_MAG_ERR, $
@@ -3326,7 +3325,7 @@ FUNCTION read_sersic_results_old_galfit, obj, bd=bd
      sky = float(strmid(s0, 1, strpos(s0, ']')))
      psf0 = sxpar(hd, 'PSF') 
      psf= strtrim(psf0, 2)
-; find number of neighbors
+; find number of neighbours
      comp=0
      REPEAT comp = comp +1 UNTIL sxpar(hd, 'COMP_'+strtrim(comp,2)) eq '0'
      neigh_galfit = comp-3
