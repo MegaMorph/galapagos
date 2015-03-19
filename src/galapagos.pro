@@ -1628,7 +1628,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
      printf, 1, new_sky, new_sky_sig, sky_rad, table[current_obj].mag_best, $
              sky_flag
      close, 1
-     print, 'sky estimated by getsky_loop as '+strtrim(new_sky,2)+' +/- '+strtrim(new_sky_sig,2)
+     print, 'sky estimated by getsky_loop as '+strtrim(new_sky,2)+' +/- '+strtrim(new_sky_sig,2)+' at radius '+strtrim(sky_rad,2)
  ENDIF
 END
 
@@ -2033,7 +2033,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   nn = where(table[objects].mag_best GT 80, n_nn)
   IF n_nn GT 0 THEN BEGIN
      good_mag = where(table[objects].mag_best LT 80, ngood_mag)
-     IF ngood_mag EQ 0 THEN table[objects[nn]].mag_best = zero_pt $
+     IF ngood_mag EQ 0 THEN table[objects[nn]].mag_best = zero_pt[0] $
      ELSE $
         table[objects[nn]].mag_best = max(table[objects[good_mag]].mag_best)+2
   ENDIF
@@ -3062,6 +3062,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'y_galfit_cheb', res_cheb.COMP2_YC, 'yerr_galfit_cheb', res_cheb.COMP2_YC_ERR, $
                                  'sky_galfit_cheb', res_cheb.COMP1_SKY, $
                                  'initfile', strtrim(fit_info.initfile,2), $
+                                 'logfile', strtrim(fit_info.logfile,2), $
                                  'constrnt', strtrim(fit_info.constrnt,2), $
                                  'fitsect', strtrim(fit_info.fitsect,2), $
                                  'convbox', strtrim(fit_info.convbox,2), $
@@ -3088,7 +3089,6 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'N_GALFIT_DEG', total(res_cheb.comp2_n_fit), $
                                  'Q_GALFIT_DEG', total(res_cheb.comp2_ar_fit), $
                                  'PA_GALFIT_DEG', total(res_cheb.comp2_pa_fit))
-; NEIGH_GALFIT HAS TO BE ADAPTED! WHY??
      ENDIF
      IF keyword_set(bd) THEN BEGIN
         feedback = create_struct('mag_galfit_d', result[0].COMP2_MAG, 'magerr_galfit_d',result[0].COMP2_MAG_ERR, $
@@ -3137,6 +3137,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'y_galfit_cheb_b', res_cheb.COMP3_YC, 'yerr_galfit_cheb_b', res_cheb.COMP3_YC_ERR, $
                                  'sky_galfit_cheb_bd', res_cheb.COMP1_SKY, $
                                  'initfile_bd', strtrim(fit_info.initfile,2), $
+                                 'logfile_bd', strtrim(fit_info.logfile,2), $
                                  'constrnt_bd', strtrim(fit_info.constrnt,2), $
                                  'psf_galfit_band_bd', strtrim(band_info.psf, 2), $
                                  'chisq_galfit_bd', fit_info.chisq, $
@@ -3201,6 +3202,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'y_galfit_cheb', fltarr(nband), 'yerr_galfit_cheb', fltarr(nband)+99999., $
                                  'sky_galfit_cheb', fltarr(nband)-999., $
                                  'initfile', ' ', $
+                                 'logfile', ' ', $
                                  'constrnt', ' ', $
                                  'psf_galfit_band', psf, $
                                  'chisq_galfit', -99., $
@@ -3271,6 +3273,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'y_galfit_cheb_b', fltarr(nband), 'yerr_galfit_cheb_b', fltarr(nband)+99999., $
                                  'sky_galfit_cheb_bd', fltarr(nband)-999., $
                                  'initfile_bd', ' ', $
+                                 'logfile_bd', ' ', $
                                  'constrnt_bd', ' ', $
                                  'psf_galfit_band_bd', psf, $
                                  'chisq_galfit_bd', -99., $
@@ -3313,31 +3316,116 @@ FUNCTION read_sersic_results_old_galfit, obj, bd=bd
   IF file_test(obj) THEN BEGIN
      hd = headfits(obj, exten = 2)
      mag0 = sxpar(hd, '2_MAG')
-     mag = float(strmid(mag0, 0, strpos(mag0, '+/-')))
-     magerr = float(strmid(mag0, strpos(mag0, '+/-')+3, strlen(mag0)))
+; cut number and error
+     mag = strtrim(strmid(mag0, 0, strpos(mag0, '+/-')),2)
+     magerr = strtrim(strmid(mag0, strpos(mag0, '+/-')+3, strlen(mag0)),2)
+; correct '*' in the values, substitue with ' '
+     mag = strtrim(strrep(mag,'*',' '),2)
+     magerr = strtrim(strrep(magerr,'*',' '),2)
+     mag = strtrim(strrep(mag,'[',' '),2)
+     magerr = strtrim(strrep(magerr,']',' '),2)
+     mag = strtrim(strrep(mag,'[',' '),2)
+     magerr = strtrim(strrep(magerr,']',' '),2)
+; correct 'nan' in the values
+     IF mag eq 'nan' THEN mag = !VALUES.F_NAN ELSE mag = float(mag)
+     IF magerr eq 'nan' THEN magerr = !VALUES.F_NAN ELSE magerr = float(magerr)
+
      re0 = sxpar(hd, '2_RE')
-     re = float(strmid(re0, 0, strpos(re0, '+/-')))
-     reerr = float(strmid(re0, strpos(re0, '+/-')+3, strlen(re0)))
+     re = strtrim(strmid(re0, 0, strpos(re0, '+/-')),2)
+     reerr = strtrim(strmid(re0, strpos(re0, '+/-')+3, strlen(re0)),2)
+; correct '*' in the values, substitue with ' '
+     re = strtrim(strrep(re,'*',' '),2)
+     reerr = strtrim(strrep(reerr,'*',' '),2)
+     re = strtrim(strrep(re,'[',' '),2)
+     reerr = strtrim(strrep(reerr,']',' '),2)
+     re = strtrim(strrep(re,'[',' '),2)
+     reerr = strtrim(strrep(reerr,']',' '),2)
+; correct 'nan' in the values
+     IF re eq 'nan' THEN re = !VALUES.F_NAN ELSE re = float(re)
+     IF reerr eq 'nan' THEN reerr = !VALUES.F_NAN ELSE reerr = float(reerr)
+
      n0 = sxpar(hd, '2_N')
-     n = float(strmid(n0, 0, strpos(n0, '+/-')))
-     nerr = float(strmid(n0, strpos(n0, '+/-')+3, strlen(n0)))
+     n = strtrim(strmid(n0, 0, strpos(n0, '+/-')),2)
+     nerr = strtrim(strmid(n0, strpos(n0, '+/-')+3, strlen(n0)),2)
+; correct '*' in the values, substitue with ' '
+     n = strtrim(strrep(n,'*',' '),2)
+     nerr = strtrim(strrep(nerr,'*',' '),2)
+     n = strtrim(strrep(n,'[',' '),2)
+     nerr = strtrim(strrep(nerr,']',' '),2)
+     n = strtrim(strrep(n,'[',' '),2)
+     nerr = strtrim(strrep(nerr,']',' '),2)
+; correct 'nan' in the values
+     IF n eq 'nan' THEN n = !VALUES.F_NAN ELSE n = float(n)
+     IF nerr eq 'nan' THEN nerr = !VALUES.F_NAN ELSE nerr = float(nerr)
+
      q0 = sxpar(hd, '2_AR')
-     q = float(strmid(q0, 0, strpos(q0, '+/-')))
-     qerr = float(strmid(q0, strpos(q0, '+/-')+3, strlen(q0)))
+     q = strtrim(strmid(q0, 0, strpos(q0, '+/-')),2)
+     qerr = strtrim(strmid(q0, strpos(q0, '+/-')+3, strlen(q0)),2)
+; correct '*' in the values, substitue with ' '
+     q = strtrim(strrep(q,'*',' '),2)
+     qerr = strtrim(strrep(qerr,'*',' '),2)
+     q = strtrim(strrep(q,'[',' '),2)
+     qerr = strtrim(strrep(qerr,']',' '),2)
+     q = strtrim(strrep(q,'[',' '),2)
+     qerr = strtrim(strrep(qerr,']',' '),2)
+; correct 'nan' in the values
+     IF q eq 'nan' THEN q = !VALUES.F_NAN ELSE q = float(q)
+     IF qerr eq 'nan' THEN qerr = !VALUES.F_NAN ELSE qerr = float(qerr)
+
      pa0 = sxpar(hd, '2_PA')
-     pa = float(strmid(pa0, 0, strpos(pa0, '+/-')))
-     paerr = float(strmid(pa0, strpos(pa0, '+/-')+3, strlen(pa0)))
+     pa = strtrim(strmid(pa0, 0, strpos(pa0, '+/-')),2)
+     paerr = strtrim(strmid(pa0, strpos(pa0, '+/-')+3, strlen(pa0)),2)
+; correct '*' in the values, substitue with ' '
+     pa = strtrim(strrep(pa,'*',' '),2)
+     paerr = strtrim(strrep(paerr,'*',' '),2)
+     pa = strtrim(strrep(pa,'[',' '),2)
+     paerr = strtrim(strrep(paerr,']',' '),2)
+     pa = strtrim(strrep(pa,'[',' '),2)
+     paerr = strtrim(strrep(paerr,']',' '),2)
+; correct 'nan' in the values
+     IF pa eq 'nan' THEN pa = !VALUES.F_NAN ELSE pa = float(pa)
+     IF paerr eq 'nan' THEN paerr = !VALUES.F_NAN ELSE paerr = float(paerr)
+
      x0 = sxpar(hd, '2_XC')
-     x = float(strmid(x0, 0, strpos(x0, '+/-')))
-     xerr = float(strmid(x0, strpos(x0, '+/-')+3, strlen(x0)))
+     x = strtrim(strmid(x0, 0, strpos(x0, '+/-')),2)
+     xerr = strtrim(strmid(x0, strpos(x0, '+/-')+3, strlen(x0)),2)
+; correct '*' in the values, substitue with ' '
+     x = strtrim(strrep(x,'*',' '),2)
+     xerr = strtrim(strrep(xerr,'*',' '),2)
+     x = strtrim(strrep(x,'[',' '),2)
+     xerr = strtrim(strrep(xerr,']',' '),2)
+     x = strtrim(strrep(x,'[',' '),2)
+     xerr = strtrim(strrep(xerr,']',' '),2)
+; correct 'nan' in the values
+     IF x eq 'nan' THEN x = !VALUES.F_NAN ELSE x = float(x)
+     IF xerr eq 'nan' THEN xerr = !VALUES.F_NAN ELSE xerr = float(xerr)
+
      y0 = sxpar(hd, '2_YC')
-     y = float(strmid(y0, 0, strpos(y0, '+/-')))
-     yerr = float(strmid(y0, strpos(y0, '+/-')+3, strlen(y0)))
+     y = strtrim(strmid(y0, 0, strpos(y0, '+/-')),2)
+     yerr = strtrim(strmid(y0, strpos(y0, '+/-')+3, strlen(y0)),2)
+; correct '*' in the values, substitue with ' '
+     y = strtrim(strrep(y,'*',' '),2)
+     yerr = strtrim(strrep(yerr,'*',' '),2)
+     y = strtrim(strrep(y,'[',' '),2)
+     yerr = strtrim(strrep(yerr,']',' '),2)
+     y = strtrim(strrep(y,'[',' '),2)
+     yerr = strtrim(strrep(yerr,']',' '),2)
+; correct 'nan' in the values
+     IF y eq 'nan' THEN y = !VALUES.F_NAN ELSE y = float(y)
+     IF yerr eq 'nan' THEN yerr = !VALUES.F_NAN ELSE yerr = float(yerr)
+
      s0 = sxpar(hd, '1_SKY')
-     sky = float(strmid(s0, 1, strpos(s0, ']')))
+     sky = strtrim(strmid(s0, 1, strpos(s0, ']')),2)
+; correct '*' in the values, substitue with ' '
+     sky = strtrim(strrep(sky,'*',' '),2)
+     sky = strtrim(strrep(sky,'[',' '),2)
+     sky = strtrim(strrep(sky,'[',' '),2)
+; correct 'nan' in the values
+     IF sky eq 'nan' THEN sky = !VALUES.F_NAN ELSE sky = float(sky)
+
      psf0 = sxpar(hd, 'PSF') 
      psf= strtrim(psf0, 2)
-; find number of neighbors
+; find number of neighbours
      comp=0
      REPEAT comp = comp +1 UNTIL sxpar(hd, 'COMP_'+strtrim(comp,2)) eq '0'
      neigh_galfit = comp-3
@@ -3651,8 +3739,8 @@ PRO start_log, logfile, message
 END
 
 PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal = bridgejournal, jump1=jump1, jump2=jump2, mac=mac, just_the_one=just_the_one
-  galapagos_version = 'GALAPAGOS-v2.2.3'
-  galapagos_date = '(February 12th, 2015)'
+  galapagos_version = 'GALAPAGOS-v2.2.5'
+  galapagos_date = '(March 12th, 2015)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)
@@ -5118,7 +5206,7 @@ loopend_bd:
               params, $
               'TILE','ORG_IMAGE_BAND',$
               'SKY_GALA_BAND','SKY_SIG_BAND','SKY_RAD_BAND','SKY_FLAG_BAND',$
-              'GALFIT_VERSION','FILE_GALFIT','INITFILE','CONSTRNT','PSF_GALFIT_BAND',$
+              'GALFIT_VERSION','FILE_GALFIT','INITFILE','CONSTRNT','LOGFILE','PSF_GALFIT_BAND',$
               'FLAG_GALFIT','FITSECT','CONVBOX','NGOOD_GALFIT_BAND','NMASK_GALFIT_BAND',$
               'NITER_GALFIT','NEIGH_GALFIT','CHISQ_GALFIT','NFREE_GALFIT','NFIX_GALFIT',$
               'NDOF_GALFIT','CHI2NU_GALFIT','FIRSTCON_GALFIT','LASTCON_GALFIT','CPUTIME_SETUP_GALFIT',$
@@ -5131,7 +5219,7 @@ loopend_bd:
               'N_GALFIT_DEG','N_GALFIT_BAND' ,'NERR_GALFIT_BAND' ,'N_GALFIT_CHEB','NERR_GALFIT_CHEB',$
               'Q_GALFIT_DEG','Q_GALFIT_BAND','QERR_GALFIT_BAND' ,'Q_GALFIT_CHEB','QERR_GALFIT_CHEB',$
               'PA_GALFIT_DEG','PA_GALFIT_BAND','PAERR_GALFIT_BAND','PA_GALFIT_CHEB','PAERR_GALFIT_CHEB',$
-              'GALFIT_VERSION_BD','FILE_GALFIT_BD','INITFILE_BD','CONSTRNT_BD','PSF_GALFIT_BAND_BD',$
+              'GALFIT_VERSION_BD','FILE_GALFIT_BD','INITFILE_BD','CONSTRNT_BD','LOGFILE_BD','PSF_GALFIT_BAND_BD',$
               'FLAG_GALFIT_BD','NITER_GALFIT_BD','NEIGH_GALFIT_BD','CHISQ_GALFIT_BD','NFREE_GALFIT_BD',$
               'NFIX_GALFIT_BD','NDOF_GALFIT_BD','CHI2NU_GALFIT_BD','FIRSTCON_GALFIT_BD','LASTCON_GALFIT_BD',$
               'CPUTIME_SETUP_GALFIT_BD','CPUTIME_FIT_GALFIT_BD','CPUTIME_TOTAL_GALFIT_BD' ,$

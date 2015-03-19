@@ -26,6 +26,7 @@ PRO define_addcol, addcol, nband, bd_fit = bd_fit, read_bd = read_bd
             ['NDOF_GALFIT','0l'], ['NFREE_GALFIT','0l'], $
             ['NFIX_GALFIT','0l'], ['CHI2NU_GALFIT','0.'], $
             ['INITFILE', '" "'], ['CONSTRNT', '" "'], $
+            ['LOGFILE', '" "'], $
             ['FITSECT', '" "'], ['CONVBOX', '" "'], $
             ['CPUTIME_SETUP_GALFIT', '0.'], ['CPUTIME_FIT_GALFIT', '0.'], $
             ['CPUTIME_TOTAL_GALFIT', '0.'], $
@@ -70,7 +71,7 @@ PRO define_addcol, addcol, nband, bd_fit = bd_fit, read_bd = read_bd
                                                               ['NDOF_GALFIT_BD','0l'], ['NFREE_GALFIT_BD','0l'], $
                                                               ['NFIX_GALFIT_BD','0l'], ['CHI2NU_GALFIT_BD','0.'], $
                                                               ['INITFILE_BD', '" "'], ['CONSTRNT_BD', '" "'], $
-                                                              ['FILE_GALFIT_BD', '" "'],$
+                                                              ['LOGFILE_BD', '" "'], ['FILE_GALFIT_BD', '" "'],$
                                                               ['CPUTIME_SETUP_GALFIT_BD', '0.'], ['CPUTIME_FIT_GALFIT_BD', '0.'], $
                                                               ['CPUTIME_TOTAL_GALFIT_BD', '0.'], $
                                                               ['X_GALFIT_D', '0.'], ['XERR_GALFIT_D', '0.'], $
