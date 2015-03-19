@@ -3650,7 +3650,7 @@ PRO start_log, logfile, message
   free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal = bridgejournal, jump1=jump1, jump2=jump2, mac=mac
+PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal = bridgejournal, jump1=jump1, jump2=jump2, mac=mac, just_the_one=just_the_one
   galapagos_version = 'GALAPAGOS-v2.2.3'
   galapagos_date = '(February 12th, 2015)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
@@ -4175,6 +4175,9 @@ jump_over_this_1:
 ;figure out which object to do next
 loopstart:
         todo=where(table.flag_galfit EQ 0 AND table.do_list EQ 1 AND table.do_batch EQ 1, ctr)
+        
+        IF keyword_set(just_the_one) THEN todo = todo[0:1]
+
         IF ctr EQ 0 THEN BEGIN
            FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
            GOTO, loopend
