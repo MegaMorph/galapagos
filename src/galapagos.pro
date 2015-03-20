@@ -2472,7 +2472,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      printf, 1, ''
      close, 1
      
-     dum = where(fix EQ '1', ct)
+     dum = where(fix EQ 1, ct)
      IF ct GT 0 THEN BEGIN
 ;write constraint file
         openu, 1, constr_file, /append
