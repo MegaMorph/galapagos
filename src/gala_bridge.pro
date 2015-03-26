@@ -173,12 +173,12 @@ PRO gala_bridge, filein, bd_fit = bd_fit
      print, 'degrees of freedom is '+strtrim(maxdeg,2)+' and everything else also seems fine.'
      print, 'starting the fit at '+systime(0)
      IF setup.nice THEN BEGIN
-        IF setup.gal_kill_time eq 0 THEN spawn, 'nice '+setup.galexe+' '+obj_file+' &> '+obj_file+'.out'
-        IF setup.gal_kill_time ne 0 THEN spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "nice '+setup.galexe+' '+obj_file+'"'+' &> '+obj_file+'.out'
+        IF setup.gal_kill_time eq 0 THEN spawn, 'nice '+setup.galexe+' -imax 100'+' '+obj_file+' &> '+obj_file+'.out'
+        IF setup.gal_kill_time ne 0 THEN spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "nice '+setup.galexe+' -imax 100'+' '+obj_file+'"'+' &> '+obj_file+'.out'
      ENDIF
      IF NOT setup.nice THEN BEGIN
-        IF setup.gal_kill_time eq 0 THEN spawn, setup.galexe+' '+obj_file+' &> '+obj_file+'.out'
-        IF setup.gal_kill_time ne 0 THEN spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "'+setup.galexe+' '+obj_file+'"'+' &> '+obj_file+'.out'
+        IF setup.gal_kill_time eq 0 THEN spawn, setup.galexe+' -imax 100'+' '+obj_file+' &> '+obj_file+'.out'
+        IF setup.gal_kill_time ne 0 THEN spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "'+setup.galexe+' -imax 100'+' '+obj_file+'"'+' &> '+obj_file+'.out'
      ENDIF
      
 ;     spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
