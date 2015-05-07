@@ -219,6 +219,7 @@ PRO gala_bd_bridge, filein
      '  '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
    printf, filew, pa_d
    
+   printf, filew, 'F1) 0.01  '+pa_d+'  3  1  # lopsidedness'
    printf, filew, ' Z) 0                  # output image (see above)'
    
 ; BULGE PARAMETERS
@@ -314,7 +315,8 @@ PRO gala_bd_bridge, filein
      '    '+strtrim((setup.cheb_b[6]+1)<maxdeg,2)+ $
      '  '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
    printf, filew, pa_b
- 
+
+   printf, filew, 'F1) 0.01  '+pa_b+'  3  1  # lopsidedness'
    printf, filew, ' Z) 0                  # output image (see above)'
    
 ; new routine checks ss_mult (from fits table) instead
