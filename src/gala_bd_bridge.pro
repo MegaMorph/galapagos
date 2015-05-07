@@ -414,6 +414,7 @@ PRO gala_bd_bridge, filein
    printf, ut
    printf, ut, '           2_3 x offset'
    printf, ut, '           2_3 y offset'
+   printf, ut, '           2_3 f1p offset'
    
    printf, ut
    free_lun, ut
