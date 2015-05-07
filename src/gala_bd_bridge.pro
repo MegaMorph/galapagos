@@ -425,13 +425,13 @@ PRO gala_bd_bridge, filein
    IF NOT setup.bd_hpc THEN BEGIN
        IF file_test(out_file_bd+'.fits') eq 0 then begin
            IF setup.nice THEN BEGIN
-               if setup.gal_kill_time eq 0 then spawn, 'nice '+setup.galexe+' '+obj_file_bd
-               if setup.gal_kill_time ne 0 then spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "nice '+setup.galexe+' '+obj_file_bd+'"'
+               if setup.gal_kill_time eq 0 then spawn, 'nice '+setup.galexe+' '+obj_file_bd+' &> '+obj_file_bd+'.out'
+               if setup.gal_kill_time ne 0 then spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "nice '+setup.galexe+' '+obj_file_bd+'"'+' &> '+obj_file_bd+'.out'
            ENDIF
            
            IF not setup.nice THEN BEGIN
-               if setup.gal_kill_time eq 0 then spawn, setup.galexe+' '+obj_file_bd
-               if setup.gal_kill_time ne 0 then spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "'+setup.galexe+' '+obj_file_bd+'"'
+               if setup.gal_kill_time eq 0 then spawn, setup.galexe+' '+obj_file_bd+' &> '+obj_file_bd+'.out'
+               if setup.gal_kill_time ne 0 then spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "'+setup.galexe+' '+obj_file_bd+'"'+' &> '+obj_file_bd+'.out'
            ENDIF
            wait, 1
        ENDIF
