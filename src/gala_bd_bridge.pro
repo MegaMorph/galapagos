@@ -419,23 +419,26 @@ PRO gala_bd_bridge, filein
                                 ;run galfit
    cd, galfit_path
 
+   outputpost = ''
+   IF setup.galfitoutput THEN outputpost = ' &> '+obj_file_bd+'.out'
+   
    IF NOT setup.bd_hpc THEN BEGIN
-       IF file_test(out_file_bd+'.fits') eq 0 then begin
-           IF setup.nice THEN BEGIN
-               if setup.gal_kill_time eq 0 then spawn, 'nice '+setup.galexe+' '+obj_file_bd
-               if setup.gal_kill_time ne 0 then spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "nice '+setup.galexe+' '+obj_file_bd+'"'
-           ENDIF
-           
-           IF not setup.nice THEN BEGIN
-               if setup.gal_kill_time eq 0 then spawn, setup.galexe+' '+obj_file_bd
-               if setup.gal_kill_time ne 0 then spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "'+setup.galexe+' '+obj_file_bd+'"'
-           ENDIF
-           wait, 1
-       ENDIF
+      IF file_test(out_file_bd+'.fits') eq 0 then begin
+         IF setup.nice THEN BEGIN
+            IF setup.gal_kill_time EQ 0 THEN spawn, 'nice '+setup.galexe+' '+obj_file_bd+outputpost
+            IF setup.gal_kill_time NE 0 THEN spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "nice '+setup.galexe+' '+obj_file_bd+'"'+outputpost
+         ENDIF
+         
+         IF NOT setup.nice THEN BEGIN
+            IF setup.gal_kill_time EQ 0 THEN spawn, setup.galexe+' '+obj_file_bd+outputpost
+            IF setup.gal_kill_time NE 0 THEN spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "'+setup.galexe+' '+obj_file_bd+'"'+outputpost
+         ENDIF
+         wait, 1
+      ENDIF
 ;       spawn, 'rm '+galfit_path+'/galfit.[0123456789]*'
-       spawn, 'rm ~/galfit.[0123456789]*'
+      spawn, 'rm ~/galfit.[0123456789]*'
    ENDIF
    file_delete, filein
-   
+  
 END
 

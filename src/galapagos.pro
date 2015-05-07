@@ -1874,8 +1874,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      printf, 1, j, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
      printf, 1, j, ' mag 0 to 40'
 ;     printf, 1, j, ' pa -360 to 360'
-     printf, 1, j, ' x '+strtrim(-xmax)+' '+strtrim(xmax)
-     printf, 1, j, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
+     printf, 1, j, ' x '+strtrim(-xmax/10.)+' '+strtrim(xmax/10.)
+     printf, 1, j, ' y '+strtrim(-ymax/10.)+' '+strtrim(ymax/10.)
   ENDFOR
   close, 1
 ;ENDIF
@@ -2482,8 +2482,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         printf, 1, ctr, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
         printf, 1, ctr, ' mag 0 to 40'
 ;        printf, 1, ctr, ' pa -360 to 360'
-        printf, 1, ctr, ' x '+strtrim(-xmax)+' '+strtrim(xmax)
-        printf, 1, ctr, ' y '+strtrim(-ymax)+' '+strtrim(ymax)
+        printf, 1, ctr, ' x '+strtrim(-xmax/5.)+' '+strtrim(xmax/5.)
+        printf, 1, ctr, ' y '+strtrim(-ymax/5.)+' '+strtrim(ymax/5.)
         close, 1
      ENDIF
      ctr += 1
@@ -2592,7 +2592,8 @@ PRO read_setup, setup_file, setup
                         'bd_psf_corr', strarr(2), $
                         'docombine', 0, $
                         'docombinebd', 0, $
-                        'cat', '')
+                        'cat', '', $
+                        'galfitoutput', 0)
   
 ;   setup.enlarge = -1
 ;   setup.exclude_rad = -1
@@ -3738,9 +3739,9 @@ PRO start_log, logfile, message
   free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal = bridgejournal, jump1=jump1, jump2=jump2, mac=mac
-  galapagos_version = 'GALAPAGOS-v2.2.5'
-  galapagos_date = '(March 12th, 2015)'
+PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2, mac=mac
+  galapagos_version = 'GALAPAGOS-v2.2.6'
+  galapagos_date = '(May 7th, 2015)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)
@@ -3764,6 +3765,8 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal =
 ;read in the setup file
   read_setup, setup_file, setup
   print, 'using batch file '+setup.batch
+; add additional values
+  IF keyword_set(galfitoutput) THEN setup.galfitoutput = 1
   
 ;copy setup file to output folder for future reference
   date=systime(0)
