@@ -219,6 +219,7 @@ PRO gala_bd_bridge, filein
      '  '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
    printf, filew, pa_d
    
+   pa_d = string(median([ss_mult.PA_GALFIT_BAND]))
    printf, filew, 'F1) 0.01  '+pa_d+'  3  1  # lopsidedness'
    printf, filew, ' Z) 0                  # output image (see above)'
    
@@ -316,6 +317,7 @@ PRO gala_bd_bridge, filein
      '  '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
    printf, filew, pa_b
 
+   pa_b = string(median([ss_mult.PA_GALFIT_BAND]))
    printf, filew, 'F1) 0.01  '+pa_b+'  3  1  # lopsidedness'
    printf, filew, ' Z) 0                  # output image (see above)'
    
