@@ -214,12 +214,13 @@ PRO gala_bd_bridge, filein
    endif else pa_d = string(ss_mult.PA_GALFIT_BAND, $
                             format = '('+string(nband)+'(A,","))')
    pa_d = strtrim(strcompress(pa_d, /remove_all), 2)
-   pa_d = ' 10) '+strmid(pa_d, 0, strlen(pa_d)-1)+ $
+   pa_d = strmid(pa_d, 0, strlen(pa_d)-1)
+   pa_d_line = ' 10) '+pa_d+ $
      '    '+strtrim((setup.cheb_d[6]+1)<maxdeg,2)+ $
      '  '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
-   printf, filew, pa_d
-   
-   printf, filew, 'F1) 0.01  '+pa_d+'  3  1  # lopsidedness'
+   printf, filew, pa_d_line
+
+   printf, filew, 'F1) 0.01  '+pa_d+'  3  1  '+bandstr+'  # lopsidedness'
    printf, filew, ' Z) 0                  # output image (see above)'
    
 ; BULGE PARAMETERS
@@ -311,12 +312,13 @@ PRO gala_bd_bridge, filein
    endif else pa_b = string(ss_mult.PA_GALFIT_BAND, $
                             format = '('+string(nband)+'(A,","))')
    pa_b = strtrim(strcompress(pa_b, /remove_all), 2)
-   pa_b = ' 10) '+strmid(pa_b, 0, strlen(pa_b)-1)+ $
+   pa_b = strmid(pa_b, 0, strlen(pa_b)-1)
+   pa_b_line = ' 10) '+pa_b+ $
      '    '+strtrim((setup.cheb_b[6]+1)<maxdeg,2)+ $
      '  '+bandstr+'       # position angle (PA) [Degrees: Up=0, Left=90]'
-   printf, filew, pa_b
+   printf, filew, pa_b_line
 
-   printf, filew, 'F1) 0.01  '+pa_b+'  3  1  # lopsidedness'
+   printf, filew, 'F1) 0.01  '+pa_b+'  3  1  '+bandstr+'  # lopsidedness'
    printf, filew, ' Z) 0                  # output image (see above)'
    
 ; new routine checks ss_mult (from fits table) instead
