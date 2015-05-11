@@ -416,7 +416,8 @@ PRO gala_bd_bridge, filein
    printf, ut
    printf, ut, '           2_3 x offset'
    printf, ut, '           2_3 y offset'
-   printf, ut, '           2_3 f1p offset'
+; The following constraint causes a segfault in galfitm-1.3.7
+;   printf, ut, '           2_3 f1p offset'
    
    printf, ut
    free_lun, ut
