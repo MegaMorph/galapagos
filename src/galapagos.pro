@@ -3096,8 +3096,8 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'n_galfit_d', result[0].COMP2_N, 'nerr_galfit_d' ,result[0].COMP2_N_ERR, $
                                  'q_galfit_d', result[0].COMP2_AR, 'qerr_galfit_d', result[0].COMP2_AR_ERR, $
                                  'pa_galfit_d', result[0].COMP2_PA, 'paerr_galfit_d', result[0].COMP2_PA_ERR, $
-                                 'f1a_galfit_d', result[0].COMP2_F1A, 'f1aerr_galfit_d', result[0].COMP2_F1A_ERR, $
-                                 'f1p_galfit_d', result[0].COMP2_F1P, 'f1perr_galfit_d', result[0].COMP2_F1P_ERR, $
+                                 'f1a_galfit_d', result[0].COMP2_F1, 'f1aerr_galfit_d', result[0].COMP2_F1_ERR, $
+                                 'f1p_galfit_d', result[0].COMP2_F1PA, 'f1perr_galfit_d', result[0].COMP2_F1PA_ERR, $
                                  'x_galfit_d', result[0].COMP2_XC, 'xerr_galfit_d', result[0].COMP2_XC_ERR, $
                                  'y_galfit_d', result[0].COMP2_YC, 'yerr_galfit_d', result[0].COMP2_YC_ERR, $
                                  'mag_galfit_b', result[0].COMP3_MAG, 'magerr_galfit_b',result[0].COMP3_MAG_ERR, $
@@ -3105,8 +3105,8 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'n_galfit_b', result[0].COMP3_N, 'nerr_galfit_b' ,result[0].COMP3_N_ERR, $
                                  'q_galfit_b', result[0].COMP3_AR, 'qerr_galfit_b', result[0].COMP3_AR_ERR, $
                                  'pa_galfit_b', result[0].COMP3_PA, 'paerr_galfit_b', result[0].COMP3_PA_ERR, $
-                                 'f1a_galfit_b', result[0].COMP3_F1A, 'f1aerr_galfit_b', result[0].COMP3_F1A_ERR, $
-                                 'f1p_galfit_b', result[0].COMP3_F1P, 'f1perr_galfit_b', result[0].COMP3_F1P_ERR, $
+                                 'f1a_galfit_b', result[0].COMP3_F1, 'f1aerr_galfit_b', result[0].COMP3_F1_ERR, $
+                                 'f1p_galfit_b', result[0].COMP3_F1PA, 'f1perr_galfit_b', result[0].COMP3_F1PA_ERR, $
                                  'x_galfit_b', result[0].COMP3_XC, 'xerr_galfit_b', result[0].COMP3_XC_ERR, $
                                  'y_galfit_b', result[0].COMP3_YC, 'yerr_galfit_b', result[0].COMP3_YC_ERR, $
                                  'psf_galfit_bd', strtrim(band_info[0].psf,2), 'sky_galfit_bd', result[0].COMP1_SKY, $
@@ -3115,8 +3115,8 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'n_galfit_band_d', result.COMP2_N, 'nerr_galfit_band_d' ,result.COMP2_N_ERR, $
                                  'q_galfit_band_d', result.COMP2_AR, 'qerr_galfit_band_d', result.COMP2_AR_ERR, $
                                  'pa_galfit_band_d', result.COMP2_PA, 'paerr_galfit_band_d', result.COMP2_PA_ERR, $
-                                 'f1a_galfit_band_d', result.COMP2_F1A, 'f1aerr_galfit_band_d', result.COMP2_F1A_ERR, $
-                                 'f1p_galfit_band_d', result.COMP2_F1P, 'f1perr_galfit_band_d', result.COMP2_F1P_ERR, $
+                                 'f1a_galfit_band_d', result.COMP2_F1, 'f1aerr_galfit_band_d', result.COMP2_F1_ERR, $
+                                 'f1p_galfit_band_d', result.COMP2_F1PA, 'f1perr_galfit_band_d', result.COMP2_F1PA_ERR, $
                                  'x_galfit_band_d', result.COMP2_XC, 'xerr_galfit_band_d', result.COMP2_XC_ERR, $
                                  'y_galfit_band_d', result.COMP2_YC, 'yerr_galfit_band_d', result.COMP2_YC_ERR, $
                                  'mag_galfit_band_b', result.COMP3_MAG, 'magerr_galfit_band_b',result.COMP3_MAG_ERR, $
@@ -3124,8 +3124,8 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'n_galfit_band_b', result.COMP3_N, 'nerr_galfit_band_b' ,result.COMP3_N_ERR, $
                                  'q_galfit_band_b', result.COMP3_AR, 'qerr_galfit_band_b', result.COMP3_AR_ERR, $
                                  'pa_galfit_band_b', result.COMP3_PA, 'paerr_galfit_band_b', result.COMP3_PA_ERR, $
-                                 'f1a_galfit_band_b', result.COMP3_F1A, 'f1aerr_galfit_band_b', result.COMP3_F1A_ERR, $
-                                 'f1p_galfit_band_b', result.COMP3_F1P, 'f1perr_galfit_band_b', result.COMP3_F1P_ERR, $
+                                 'f1a_galfit_band_b', result.COMP3_F1, 'f1aerr_galfit_band_b', result.COMP3_F1_ERR, $
+                                 'f1p_galfit_band_b', result.COMP3_F1PA, 'f1perr_galfit_band_b', result.COMP3_F1PA_ERR, $
                                  'x_galfit_band_b', result.COMP3_XC, 'xerr_galfit_band_b', result.COMP3_XC_ERR, $
                                  'y_galfit_band_b', result.COMP3_YC, 'yerr_galfit_band_b', result.COMP3_YC_ERR, $
                                  'sky_galfit_band_bd', result.COMP1_SKY, $
@@ -3134,8 +3134,8 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'n_galfit_cheb_d', res_cheb.COMP2_N, 'nerr_galfit_cheb_d' ,res_cheb.COMP2_N_ERR, $
                                  'q_galfit_cheb_d', res_cheb.COMP2_AR, 'qerr_galfit_cheb_d', res_cheb.COMP2_AR_ERR, $
                                  'pa_galfit_cheb_d', res_cheb.COMP2_PA, 'paerr_galfit_cheb_d', res_cheb.COMP2_PA_ERR, $
-                                 'f1a_galfit_cheb_d', res_cheb.COMP2_F1A, 'f1aerr_galfit_cheb_d', res_cheb.COMP2_F1A_ERR, $
-                                 'f1p_galfit_cheb_d', res_cheb.COMP2_F1P, 'f1perr_galfit_cheb_d', res_cheb.COMP2_F1P_ERR, $
+                                 'f1a_galfit_cheb_d', res_cheb.COMP2_F1, 'f1aerr_galfit_cheb_d', res_cheb.COMP2_F1_ERR, $
+                                 'f1p_galfit_cheb_d', res_cheb.COMP2_F1PA, 'f1perr_galfit_cheb_d', res_cheb.COMP2_F1PA_ERR, $
                                  'x_galfit_cheb_d', res_cheb.COMP2_XC, 'xerr_galfit_cheb_d', res_cheb.COMP2_XC_ERR, $
                                  'y_galfit_cheb_d', res_cheb.COMP2_YC, 'yerr_galfit_cheb_d', res_cheb.COMP2_YC_ERR, $
                                  'mag_galfit_cheb_b', res_cheb.COMP3_MAG, 'magerr_galfit_cheb_b',res_cheb.COMP3_MAG_ERR, $
@@ -3143,8 +3143,8 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'n_galfit_cheb_b', res_cheb.COMP3_N, 'nerr_galfit_cheb_b' ,res_cheb.COMP3_N_ERR, $
                                  'q_galfit_cheb_b', res_cheb.COMP3_AR, 'qerr_galfit_cheb_b', res_cheb.COMP3_AR_ERR, $
                                  'pa_galfit_cheb_b', res_cheb.COMP3_PA, 'paerr_galfit_cheb_b', res_cheb.COMP3_PA_ERR, $
-                                 'f1a_galfit_cheb_b', res_cheb.COMP3_F1A, 'f1aerr_galfit_cheb_b', res_cheb.COMP3_F1A_ERR, $
-                                 'f1p_galfit_cheb_b', res_cheb.COMP3_F1P, 'f1perr_galfit_cheb_b', res_cheb.COMP3_F1P_ERR, $
+                                 'f1a_galfit_cheb_b', res_cheb.COMP3_F1, 'f1aerr_galfit_cheb_b', res_cheb.COMP3_F1_ERR, $
+                                 'f1p_galfit_cheb_b', res_cheb.COMP3_F1PA, 'f1perr_galfit_cheb_b', res_cheb.COMP3_F1PA_ERR, $
                                  'x_galfit_cheb_b', res_cheb.COMP3_XC, 'xerr_galfit_cheb_b', res_cheb.COMP3_XC_ERR, $
                                  'y_galfit_cheb_b', res_cheb.COMP3_YC, 'yerr_galfit_cheb_b', res_cheb.COMP3_YC_ERR, $
                                  'sky_galfit_cheb_bd', res_cheb.COMP1_SKY, $
@@ -3172,8 +3172,8 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'N_GALFIT_DEG_B', total(res_cheb.comp3_n_fit), $
                                  'Q_GALFIT_DEG_B', total(res_cheb.comp3_ar_fit), $
                                  'PA_GALFIT_DEG_B', total(res_cheb.comp3_pa_fit), $
-                                 'F1A_GALFIT_DEG_B', total(res_cheb.comp3_f1a_fit), $
-                                 'F1P_GALFIT_DEG_B', total(res_cheb.comp3_f1p_fit), $
+                                 'F1A_GALFIT_DEG_B', total(res_cheb.comp3_f1_fit), $
+                                 'F1P_GALFIT_DEG_B', total(res_cheb.comp3_f1pa_fit), $
                                  'X_GALFIT_DEG_D', total(res_cheb.comp2_xc_fit), $
                                  'Y_GALFIT_DEG_D', total(res_cheb.comp2_yc_fit), $
                                  'MAG_GALFIT_DEG_D', total(res_cheb.comp2_mag_fit), $
@@ -3181,8 +3181,8 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'N_GALFIT_DEG_D', total(res_cheb.comp2_n_fit), $
                                  'Q_GALFIT_DEG_D', total(res_cheb.comp2_ar_fit), $
                                  'PA_GALFIT_DEG_D', total(res_cheb.comp2_pa_fit), $
-                                 'F1A_GALFIT_DEG_D', total(res_cheb.comp2_f1a_fit), $
-                                 'F1P_GALFIT_DEG_D', total(res_cheb.comp2_f1p_fit))
+                                 'F1A_GALFIT_DEG_D', total(res_cheb.comp2_f1_fit), $
+                                 'F1P_GALFIT_DEG_D', total(res_cheb.comp2_f1pa_fit))
      ENDIF
 ; to include:
 ; there is more band_info which is not used yet (band, wl, datain,
