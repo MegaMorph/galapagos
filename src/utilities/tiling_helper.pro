@@ -6,8 +6,9 @@ PRO tiling_helper, cat, targets=targets, radius=radius, grid=grid
 ; target list in RA&DEC
 ; tiling_helper, '/mnt/usersVol1/haeussler/vgala/table_before_start.sav', targets='/mnt/usersVol1/haeussler/vgala/setups/setup_2015_Jun_8/targets.primus_vvds_clusters_neigh', radius=2.5
 
+; SAV VERSION RETURNS DIFFERENT RESULT (but same total number)! E.g. cat sorted differently?
 ; if target list has already been correlated by Galapagos
-; tiling_helper, '/mnt/usersVol1/haeussler/vgala/table_before_start.sav', targets='/mnt/usersVol1/haeussler/vgala/setups/setup_2015_Jun_8/targets.primus_vvds_clusters_neigh', radius=2.5
+; tiling_helper, '/mnt/usersVol1/haeussler/vgala/table_before_start.sav', targets='/mnt/usersVol1/haeussler/vgala/primary_list_targets.primus_vvds_clusters_neigh.sav', radius=2.5
 
   restore, cat
  
@@ -48,11 +49,11 @@ PRO tiling_helper, cat, targets=targets, radius=radius, grid=grid
 ; only do this when the sav file does not exist or is older than the
 ; sextractor table!2
      print, 'correlating SExtractor catalogue to source list. Might take some time'
-     readcol, targets, do_ra, do_dec, format='F,F', comment='#';, /SILENT   
      
-     IF strmid(targets,3,/reverse_offset) EQ 'sav' THEN BEGIN
+     IF strmid(targets,3,/reverse_offset) EQ '.sav' THEN BEGIN
         restore, targets
      ENDIF ELSE BEGIN
+        readcol, targets, do_ra, do_dec, format='F,F', comment='#' ;, /SILENT   
         srccor, sexcat.alpha_j2000/15., sexcat.delta_j2000, do_ra/15., do_dec, $
                 radius, tab_i, do_i, OPTION=0, /SPHERICAL , /SILENT
      ENDELSE
@@ -61,7 +62,6 @@ PRO tiling_helper, cat, targets=targets, radius=radius, grid=grid
      delvarx, tab_i
 
   ENDELSE
-
 ; go through all filenames and find number of objects to be fitted.
   total = 0
   todo = 0
@@ -78,6 +78,7 @@ PRO tiling_helper, cat, targets=targets, radius=radius, grid=grid
         namecut[i] = strmid(namecut[i],0,(strpos(namecut[i],'_',/reverse_search)))
         xhere = fix(strmid(namecut[i],(strpos(namecut[i],'_',/reverse_search))+1)) 
         cntarr[xhere-1,yhere-1] = cntdo
+        stop
       ENDIF
   ENDFOR
 

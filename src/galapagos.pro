@@ -1,16 +1,5 @@
-;@~/megamorph_dev/astro-megamorph/galapagos/mrd_struct.pro
-;@~/megamorph_dev/astro-megamorph/galapagos/mrdfits.pro
-;@~/megamorph_dev/astro-megamorph/galapagos/mrd_hread.pro
-;@~/megamorph_dev/astro-megamorph/galapagos/valid_num.pro
-;@~/megamorph_dev/astro-megamorph/galapagos/mwrfits.pro
-;@~/megamorph_dev/astro-megamorph/galapagos/fxaddpar.pro
-;@~/megamorph_dev/astro-megamorph/galapagos/fxposit.pro
-;@~/megamorph_dev/astro-megamorph/galapagos/fxmove.pro
-;@~/megamorph_dev/astro-megamorph/galapagos/writefits.pro
-;@~/megamorph_dev/astro-megamorph/galapagos/kill_galfit.pro
-;@~/megamorph_dev/astro-megamorph/galapagos/gala_bd_bridge.pro
-;Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting
-;Objects from SExtractor
+; GALAPAGOS: 
+;     Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting Objects from SExtractor
 ; Multi-Wavelength Version, requires Galfit4 for multi-band fitting.
 ; Backwards compatible to work with Galfit3 on 1-band data
 ;==============================================================================
@@ -2838,7 +2827,7 @@ bad_input:
 END
 
 PRO read_image_files, setup, save_folder, silent=silent
-; reads in the image file and returns the results to galapagos
+; reads in the image file and returns the results to main routine
 ; count number of columns in file
   lineone = ''
   openr, 1, setup.files
@@ -3021,6 +3010,30 @@ PRO read_image_files, setup, save_folder, silent=silent
      ENDFOR 
   ENDIF
   IF ncolf NE 6 AND ncolf NE 5 AND ncolf NE 4 THEN message, 'Invalid Entry in '+setup.files
+  
+; now check whether all images exist
+  image_exist = file_test(setup.images)
+  weight_exist = file_test(setup.weights)
+  im_non_exist = where(image_exist EQ 0, cntimne)
+  wh_non_exist = where(weight_exist EQ 0, cntwhne)
+  IF cntimne NE 0 THEN BEGIN
+     stopnow=1
+     print, ' '
+     print, 'there is at least one image missing as currently defined (typo?)'
+     print, 'missing images:'
+     forprint, setup.images(im_non_exist), textout=1
+  ENDIF
+  IF cntwhne NE 0 THEN BEGIN
+     stopnow=1
+     print, ' '
+     print, 'there is at least one weight image missing as currently defined (typo?)'
+     print, 'missing weights:'
+     forprint, setup.images(wh_non_exist), textout=1
+  ENDIF
+  
+  IF (cntimne NE 0) OR (cntwhne NE 0) THEN stop
+  IF (cntimne EQ 0) AND (cntwhne EQ 0) THEN print, 'all images and weights have been checked to exist'
+
 END
 
 FUNCTION read_sersic_results, obj, nband, bd=bd
