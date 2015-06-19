@@ -11,6 +11,7 @@ PRO sex2ds9reg, sexcat, param, regfile, radius, num=num, $
 ;sex2ds9reg, '/data/data2/stages/gala/a901-01/a01.outcat', '/data/data2/stages/gala/a901-01/a01.outparam', '/data/data2/stages/gala/a901-01/a01.reg', 0.5, tag = '01'
 
    tab = read_sex_table(sexcat, param, add_column=add_column)
+   print, 'catalogue contains a total of '+strtrim(n_elements(tab.alpha_J2000),2)+' objects '
 
    openw, 1, regfile
    printf, 1, '# Region file format: DS9 version 3.0'

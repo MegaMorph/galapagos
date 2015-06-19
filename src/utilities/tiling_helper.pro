@@ -78,7 +78,6 @@ PRO tiling_helper, cat, targets=targets, radius=radius, grid=grid
         namecut[i] = strmid(namecut[i],0,(strpos(namecut[i],'_',/reverse_search)))
         xhere = fix(strmid(namecut[i],(strpos(namecut[i],'_',/reverse_search))+1)) 
         cntarr[xhere-1,yhere-1] = cntdo
-        stop
       ENDIF
   ENDFOR
 
@@ -87,10 +86,10 @@ PRO tiling_helper, cat, targets=targets, radius=radius, grid=grid
    IF keyword_set(grid) THEN BEGIN  
       print, ' '
       print, 'Totals by column (x):'
-      FOR c=0,n_elements(cntarr[1,*])-1 DO print, total(cntarr[c,*])      
+      FOR c=0,n_elements(cntarr[*,1])-1 DO print, total(cntarr[c,*])      
       print, ' '
       print, 'Totals by row (y):'
-      FOR r=0,n_elements(cntarr[*,1])-1 DO print, total(cntarr[*,r])
+      FOR r=0,n_elements(cntarr[1,*])-1 DO print, total(cntarr[*,r])
       print, ' '
       print, cntarr
    ENDIF
