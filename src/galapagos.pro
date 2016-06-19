@@ -1833,7 +1833,7 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, mask_file_primary, im_f
   corner = [pxlo, pylo]
 END
 
-PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, sigma_file, $
+PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, sigma_file, $ 
                     constr_file, mask_file, mask_file_primary, psf_file, out_file, sky_file, $
                     conv_box, zero_pt, plate_scl, num_contrib, frame_contrib, $
                     current, out_cat, out_param, out_stamps, conmaxre, $
