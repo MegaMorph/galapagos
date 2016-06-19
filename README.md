@@ -26,18 +26,11 @@ For an extensive README and help of usage, please read USAGE.md in the EXAMPLE_A
 If you have additions, request or questions to/about this code, please email us under BorisHaeussler.astro@gmail.com
 
 This code or previous version thereof is used in the following papers:  
-[Häußler et al., 2013, MNRAS, 430, 330](http://adsabs.harvard.edu/abs/2013MNRAS.430..330H) (please cite when using the code)
-
-[Lani et al., 2013, MNRAS, 435, 207](http://adsabs.harvard.edu/abs/2013MNRAS.435..207L)
-
-[Cerulo et al., 2014, MNRAS, 439, 2790](http://adsabs.harvard.edu/abs/2014MNRAS.439.2790C)
-
-[Vulcani et al., 2014, MNRAS, 441, 1340](http://adsabs.harvard.edu/abs/2014MNRAS.441.1340V)
-
-[Kennedy et al., 2015, MNRAS, 454, 806](http://adsabs.harvard.edu/abs/2015MNRAS.454..806K)
-
-[Maier et al., A&A, 590, 108](http://adsabs.harvard.edu/abs/2016A%26A...590A.108M)
-
-[Kennedy et al., 2016, MNRAS](http://adsabs.harvard.edu/doi/10.1093/mnras/stw1176)
-
+[Häußler et al., 2013, MNRAS, 430, 330](http://adsabs.harvard.edu/abs/2013MNRAS.430..330H) (please cite when using the code)  
+[Lani et al., 2013, MNRAS, 435, 207](http://adsabs.harvard.edu/abs/2013MNRAS.435..207L)  
+[Cerulo et al., 2014, MNRAS, 439, 2790](http://adsabs.harvard.edu/abs/2014MNRAS.439.2790C)  
+[Vulcani et al., 2014, MNRAS, 441, 1340](http://adsabs.harvard.edu/abs/2014MNRAS.441.1340V)  
+[Kennedy et al., 2015, MNRAS, 454, 806](http://adsabs.harvard.edu/abs/2015MNRAS.454..806K)  
+[Maier et al., A&A, 590, 108](http://adsabs.harvard.edu/abs/2016A%26A...590A.108M)  
+[Kennedy et al., 2016, MNRAS](http://adsabs.harvard.edu/doi/10.1093/mnras/stw1176)  
 [Huertas-Company et al., 2016, MNRAS](http://arxiv.org/abs/1606.04952)
