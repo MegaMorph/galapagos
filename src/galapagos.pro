@@ -3738,7 +3738,7 @@ PRO start_log, logfile, message
   free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal = bridgejournal, jump1=jump1, jump2=jump2, mac=mac, just_the_one=just_the_one
+PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal = bridgejournal, jump1=jump1, jump2=jump2, mac=mac, just_the_one=just_the_one, skipchecks=skipchecks
   galapagos_version = 'GALAPAGOS-v2.2.5'
   galapagos_date = '(March 12th, 2015)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
@@ -4128,7 +4128,7 @@ jump_over_this_1:
 ; check if psf in setup file is an image or a list and read into
 ; structure used
      print, 'reading PSFs'
-     readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband, save_folder
+     readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband, save_folder, skipchecks=skipchecks
      
      IF keyword_set(logfile) THEN $
         update_log, logfile, systime()+': Setting up objects list to be fit...'

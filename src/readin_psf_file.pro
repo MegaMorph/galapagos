@@ -1,4 +1,4 @@
-pro readin_psf_file, files, sex_ra, sex_dec, images, psf_struct, nband, save_folder
+pro readin_psf_file, files, sex_ra, sex_dec, images, psf_struct, nband, save_folder, skipchecks=skipchecks
 ; for each band individually:
 ; 4 possibilities (for now)
 ; fits name: sinfilif file[0] eq ' ' then file=file[1:n_elements(file)-1]
@@ -120,10 +120,12 @@ try_again:
                 stop
             endif
             if check eq 0 then print, 'All tiles have an assigned PSF file'
-            for p=0,n_elements(psf)-1 do begin
-                if file_test(strtrim(psf[p],2)) ne 1 then print, 'file '+strtrim(psf[p],2)+' (and maybe others) does not exist, is your path in the PSF files set correctly?'
-                if file_test(strtrim(psf[p],2)) ne 1 then stop
-            endfor
+            if not keyword_set(skipchecks) then begin
+               for p=0,n_elements(psf)-1 do begin
+                  if file_test(strtrim(psf[p],2)) ne 1 then print, 'file '+strtrim(psf[p],2)+' (and maybe others) does not exist, is your path in the PSF files set correctly?'
+                  if file_test(strtrim(psf[p],2)) ne 1 then stop
+               endfor
+            endif
         endif
         
 ; if 3 columns, choose closest PSF
@@ -135,10 +137,12 @@ try_again:
             psf_struct.dec[b,0:n_elements(ra)-1] = dec
             psf_struct.psffile[b,0:n_elements(ra)-1] = psf        
 ;         print, n_elements(ra)
-            for p=0,n_elements(psf)-1 do begin
-                if file_test(strtrim(psf[p],2)) ne 1 then print, 'file '+strtrim(psf[p],2)+' (and maybe others) does not exist, is your path in the PSF files set correctly?'
-                if file_test(strtrim(psf[p],2)) ne 1 then stop
-            endfor
+            if not keyword_set(skipchecks) then begin
+               for p=0,n_elements(psf)-1 do begin
+                  if file_test(strtrim(psf[p],2)) ne 1 then print, 'file '+strtrim(psf[p],2)+' (and maybe others) does not exist, is your path in the PSF files set correctly?'
+                  if file_test(strtrim(psf[p],2)) ne 1 then stop
+               endfor
+            endif
         endif
         
     endelse
