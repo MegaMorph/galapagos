@@ -105,6 +105,30 @@ FUNCTION integer2string, num, digits0, array = array
   return, str
 END
 
+FUNCTION get_obj_files, setup
+; TRYING TO SPEED UP FILE_TEST...
+; BUILD A LIST OF GALFIT OBJECT FILES TO ALLOW A QUICK CHECK USING
+; GALFIT_FILE_TEST
+; TODO: REPLACE HARDCODED DIR AND FILE NAMES WITH ENTIRES FROM GALA.SETUP
+  file = 'galfit_file_list'
+  lscmd = 'find ' + setup.outdir + ' -path */'+setup.galfit_out_path+'*_'+strtrim(setup.galfit_out,2)+'.fits -printf "%f\n" > '+file
+  spawn, lscmd
+  nrow = n_lines(file)
+  label = ['filename']
+  value = ''
+  table = mrd_struct(label, value, nrow, /no_execute)
+  fill_struct, table, file
+  return, table
+; INCOMPLETE!
+
+  
+FUNCTION galfit_file_test, filename, table
+; TRYING TO SPEED UP FILE_TEST...
+; LOOK UP THE FILENAME IN THE PRE-BUILT LIST, IF IT IS THERE, RETURN TRUE,
+; OTHERWISE DO A FILE_TEST AND RETURN THE RESULT.
+  dum = where(table.frame[0] EQ batch[f], ct)
+; INCOMPLETE!
+  
 FUNCTION read_sex_param, file, nrow, no_add = no_add, add_column = add_column
 ;create a structure with tags based on a SExtractor parameter FILE
 ;(including path). The length of the structure array is determined by
