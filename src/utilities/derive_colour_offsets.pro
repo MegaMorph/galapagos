@@ -62,7 +62,7 @@ PRO derive_colour_offsets, setup_file, image_number
  
   refcat = mrdfits(cat_name[0],1,/silent)
   
-  print, 'you should be able to use these offsets, mean, sigma, #objects'
+  print, 'you should be able to use these offsets: zero_point, image, mean, sigma, #objects'
   FOR b=1,nband DO BEGIN
      cat = mrdfits(cat_name[b],1,/silent)
      resistant_mean, cat.mag_best-refcat.mag_best, 3., m, s, r
@@ -70,7 +70,7 @@ PRO derive_colour_offsets, setup_file, image_number
      sigma[b] = s
      rej[b] = r
      sigma[b] *= sqrt(n_elements(cat.mag_best)-1-rej[b])
-     print, images[image_number,b], offset[b], '  ', sigma[b], '  ', strtrim(n_elements(cat.mag_best)-rej[b],2)
+     print, strtrim(setup.zp[b],2), ' ', images[image_number,b], '  ', offset[b], '  ', sigma[b], '  ', strtrim(n_elements(cat.mag_best)-rej[b],2)
 
   ENDFOR
 
