@@ -3805,7 +3805,6 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
 ;==============================================================================   
 ;read input files into arrays
   read_image_files, setup, save_folder
-  nband = setup.nband
   images = setup.images
   weights = setup.weights
   outpath = setup.outpath

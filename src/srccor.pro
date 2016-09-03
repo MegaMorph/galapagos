@@ -182,6 +182,7 @@ FOR i=0L,max(ind2) DO BEGIN
       remove,ww,ind1,ind2      ; Now delete the deletion list from
                                ; the original index arrays.
       IF n_elements(ind2) ne (csave-count+1) THEN MESSAGE,'Logic error 2'
+;      IF n_elements(ind2) ne (csave-count+1) THEN stop
       IF n_elements(ind1) ne (csave-count+1) THEN MESSAGE,'Logic error 3'
       IF n_elements(ind2) ne n_elements(ind1) THEN MESSAGE,'Logic error 4'
    ENDIF
