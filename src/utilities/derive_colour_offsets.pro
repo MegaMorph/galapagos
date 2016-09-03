@@ -1,5 +1,5 @@
 @galapagos.pro
-PRO derive_colour_offsets, setup_file, image_number
+PRO derive_colour_offsets, setup_file, image_number, hot=hot
 ; this code helps to derive the numbers to be put into one of the
 ; setup files which defines the 'typical colours' of objects, so
 ; Galfit can start good starting parameters for magnitudes.
@@ -29,6 +29,10 @@ PRO derive_colour_offsets, setup_file, image_number
   images = setup.images
   weights = setup.weights
   nband = setup.nband
+  sexsetup = setup.cold
+  post= 'cold'
+  if keyword_set(hot) then sexsetup = setup.hot
+  if keyword_set(hot) then post='hot'
 
 ; run sextractor over all images
 ; detection in first band, measurements in each band, including first
@@ -37,9 +41,9 @@ PRO derive_colour_offsets, setup_file, image_number
   cat_name = strarr(nband+1)
   checkimage_name = strarr(nband+1)
   FOR b=0,nband DO BEGIN
-     cat_name[b] = save_folder +'/derive_offset_'+strtrim(image_number,2)+'_band_'+strtrim(b,2)+'_cat.fits'
-     checkimage_name[b] = save_folder +'/derive_offset_'+strtrim(image_number,2)+'_band_'+strtrim(b,2)+'_check.fits'
-     sexcommand = setup.sexexe+' '+images[image_number,0] + ',' + images[image_number,b]+' -c '+setup.hot+ $
+     cat_name[b] = save_folder +'/derive_offset_'+strtrim(image_number,2)+'_band_'+strtrim(b,2)+'_cat_'+post+'.fits'
+     checkimage_name[b] = save_folder +'/derive_offset_'+strtrim(image_number,2)+'_band_'+strtrim(b,2)+'_check'+post+'.fits'
+     sexcommand = setup.sexexe+' '+images[image_number,0] + ',' + images[image_number,b]+' -c '+sexsetup+ $
                   ' -CATALOG_NAME '+cat_name[b]+' -CATALOG_TYPE FITS_1.0' + $
                   ' -PARAMETERS_NAME '+setup.sexout+ $
                   ' -WEIGHT_IMAGE '+weights[image_number,0] + ',' + weights[image_number,b]+ $
