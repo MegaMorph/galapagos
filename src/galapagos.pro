@@ -5171,7 +5171,7 @@ loopend_bd:
         tiles = uniq(tile, sort(tile))
         flag = intarr(n_elements(out))
         FOR i=0ul, n_elements(tiles)-1 DO BEGIN
-           print, tile[tiles[i]]
+           print, 'cleaning bad objects from output catalog, now from tile '+tile[tiles[i]]
            tileidx = where(tile EQ tile[tiles[i]], ct)
            IF ct GT 0 THEN BEGIN
               catidx = where(out.org_image EQ tile[tiles[i]], ct1)
