@@ -1,5 +1,5 @@
 @galapagos.pro
-PRO derive_colour_offsets, setup_file, image_number
+PRO derive_colour_offsets, setup_file, image_number, hot=hot, image=image, weight=weight
 ; this code helps to derive the numbers to be put into one of the
 ; setup files which defines the 'typical colours' of objects, so
 ; Galfit can start good starting parameters for magnitudes.
@@ -18,6 +18,9 @@ PRO derive_colour_offsets, setup_file, image_number
 ; setup_files (in line counting) that are used for this test. This has
 ; to be an area where all (!) filters contain data, e.g. all images
 ; are filled. The bigger the images, the better the statistics
+;
+; can be started with manually defining the image, then 'image' and
+; 'weight' have to be the arrays for all bands
 
 ;read in the setup file
   read_setup, setup_file, setup
@@ -29,52 +32,96 @@ PRO derive_colour_offsets, setup_file, image_number
   images = setup.images
   weights = setup.weights
   nband = setup.nband
+  sexsetup = setup.cold
+  post= 'cold'
+  if keyword_set(hot) then sexsetup = setup.hot
+  if keyword_set(hot) then post='hot'
+
+  if keyword_set(image) then begin
+     images = strarr(1,nband+1)
+     weights = strarr(1,nband+1)
+     images[0,*] = image
+     if not keyword_set(weight) then begin
+       print, 'If defining images by hand, both images and weights have to be defined'
+       stop
+     endif
+     weights[0,*] = weight
+     image_number = 0
+  ENDIF
 
 ; run sextractor over all images
+
 ; detection in first band, measurements in each band, including first
-  IF setup.sex_rms EQ 0 THEN weight_type = 'MAP_WEIGHT'
-  IF setup.sex_rms EQ 1 THEN weight_type = 'MAP_RMS'
   cat_name = strarr(nband+1)
   checkimage_name = strarr(nband+1)
+  weight_type = strarr(nband+1)
+  weight_type[*] ='MAP_WEIGHT' 
+  IF setup.sex_rms EQ 1 THEN weight_type[0] = 'MAP_RMS'
   FOR b=0,nband DO BEGIN
-     cat_name[b] = save_folder +'/derive_offset_'+strtrim(image_number,2)+'_band_'+strtrim(b,2)+'_cat.fits'
-     checkimage_name[b] = save_folder +'/derive_offset_'+strtrim(image_number,2)+'_band_'+strtrim(b,2)+'_check.fits'
-     sexcommand = setup.sexexe+' '+images[image_number,0] + ',' + images[image_number,b]+' -c '+setup.hot+ $
+     cat_name[b] = save_folder +'/derive_offset_'+strtrim(image_number,2)+'_band_'+strtrim(b,2)+'_cat_'+post+'.fits'
+     checkimage_name[b] = save_folder +'/derive_offset_'+strtrim(image_number,2)+'_band_'+strtrim(b,2)+'_check'+post+'.fits'
+     sexcommand = setup.sexexe+' '+images[image_number,0] + ',' + images[image_number,b]+' -c '+sexsetup+ $
                   ' -CATALOG_NAME '+cat_name[b]+' -CATALOG_TYPE FITS_1.0' + $
                   ' -PARAMETERS_NAME '+setup.sexout+ $
                   ' -WEIGHT_IMAGE '+weights[image_number,0] + ',' + weights[image_number,b]+ $
-                  ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+strtrim(setup.zp[b],2)+ $
+                  ' -WEIGHT_TYPE '+weight_type[0]+','+weight_type[b]+' -MAG_ZEROPOINT '+strtrim(setup.zp[b],2)+ $
                   ' -CHECKIMAGE_TYPE '+setup.chktype+' -CHECKIMAGE_NAME '+ checkimage_name[b]
-     
+
      IF file_test(cat_name[b]) EQ 0 THEN BEGIN
         PRINT, ' '
         print, 'sextracting '+images[image_number,0] + ',' + images[image_number,b]
-        print, ' using setup file '+setup.cold
+        print, ' using setup file '+sexsetup
         print, ' -> catalogue '+ cat_name[b]
+;print, sexcommand
         spawn, sexcommand
      ENDIF ELSE print, 'catalogue '+cat_name[b]+' already exists. Skipping'
      
   ENDFOR
 
   offset = fltarr(nband+1)+0.
+  med = fltarr(nband+1)+0.
+  offset_acc = fltarr(nband+1)+0.
   sigma = fltarr(nband+1)+0.
   rej = intarr(nband+1)+0
  
   refcat = mrdfits(cat_name[0],1,/silent)
   
-  print, 'you should be able to use these offsets: zero_point, image, mean, sigma, #objects'
+
+; SAMPLE SELECTION 1
+; define sample by simply checking each band individually for
+; magnitudes (data) and only using the ones where all bands show good values
+  sample = intarr(n_elements(refcat.mag_best))+1
+  print, strtrim(total(sample),2)+' objects in catalogue'
+; filter nonsense magnitudes
+  wh = where(refcat.mag_best gt 30, count)
+  if count gt 0 then sample[wh] = 0
+  print, strtrim(total(sample),2)+' objects left after cleaning for magnitudes in reference catalogue'
   FOR b=1,nband DO BEGIN
      cat = mrdfits(cat_name[b],1,/silent)
-     resistant_mean, cat.mag_best-refcat.mag_best, 3., m, s, r
+; filter nonsense magnitudes
+     wh = where(cat.mag_best gt 30, count)
+     if count gt 0 then sample[wh] = 0
+     print, strtrim(total(fix(sample)),2)+' objects left after combining with band '+strtrim(b,2)
+  ENDFOR
+  sample = where(sample eq 1)
+
+
+  print, 'you should be able to use these offsets: zero_point, image, median, mean, accuracy, sigma, #objects after sigma clipping'
+  print, 'Given the double peak profile, the resistant mean values are probably dangerous, I recommend median instead'
+  FOR b=1,nband DO BEGIN
+     cat = mrdfits(cat_name[b],1,/silent)
+;     wh = where(cat.mag_best lt 50)
+     plothist, cat[sample].mag_best-refcat[sample].mag_best,xrange=[-1,4],bin=0.05
+     wait, 2
+     resistant_mean, cat[sample].mag_best-refcat[sample].mag_best, 5., m, s, r
+     med[b] = median(cat[sample].mag_best-refcat[sample].mag_best)
      offset[b] = m
+     offset_acc[b] = s
      sigma[b] = s
      rej[b] = r
-     sigma[b] *= sqrt(n_elements(cat.mag_best)-1-rej[b])
-     print, strtrim(setup.zp[b],2), ' ', images[image_number,b], '  ', offset[b], '  ', sigma[b], '  ', strtrim(n_elements(cat.mag_best)-rej[b],2)
-
+     sigma[b] *= sqrt(n_elements(sample)-1-rej[b])
+     print, strtrim(setup.zp[b],2), ' ', images[image_number,b], '  ', med[b], '  ', offset[b], '  ', offset_acc[b], '  ', sigma[b], '  ', strtrim(n_elements(sample)-rej[b],2)
   ENDFOR
-
-stop
 
 
 END
