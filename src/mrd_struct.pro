@@ -75,7 +75,8 @@
 ;       Fix use of STRUCTYP with /NO_EXECUTE  W. Landsman June 2005
 ;       Assume since V6.0 (lmgr function available), remove 131 string length
 ;             limit for execute    W. Landsman Jun 2009 
-;      Restore EXECUTE limit (sigh...)   W. Landsman July 2009 
+;      Restore EXECUTE limit (sigh...)   W. Landsman July 2009
+;      added the capability to create STRING arrays. B.Haeussler 2015
 ;-
 
 ; Check that the number of names is the same as the number of values.

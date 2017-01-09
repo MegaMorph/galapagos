@@ -4158,6 +4158,10 @@ jump_over_this_1:
      ENDIF ELSE BEGIN
 ; only do this when the sav file does not exist or is older than the
 ; sextractor table!
+        IF NOT file_test(setup.srclist) THEN BEGIN
+           print, "your target list in D21 does not exist. Please provide a valid file name of use 'none' or an empty string to indicate that this feature should not be used"
+           stop
+        ENDIF
         srclist_name = strtrim(strmid(setup.srclist, strpos(setup.srclist,'/',/reverse_search)+1),2)
         sav_file_test = file_info(setup.outdir+'primary_list_'+srclist_name+'.sav')
         sex_file_test = file_info(setup.outdir+setup.sexcomb)
@@ -4611,6 +4615,10 @@ jump_over_this_2:
      ENDIF ELSE BEGIN
 ; only do this when the sav file does not exist or is older than the
 ; sextractor table!
+        IF NOT file_test(setup.bd_srclist) THEN BEGIN
+           print, "your target list in F04 does not exist. Please provide a valid file name of use 'none' or an empty string to indicate that this feature should not be used"
+           stop
+        ENDIF
         bd_srclist_name = strtrim(strmid(setup.bd_srclist, strpos(setup.bd_srclist,'/',/reverse_search)+1),2)
         sav_file_test = file_info(setup.outdir+'primary_list_'+bd_srclist_name+'.sav')
         sex_file_test = file_info(setup.outdir+setup.sexcomb)

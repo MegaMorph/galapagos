@@ -61,7 +61,7 @@ D19) 300                       # minimum distance (in arcseconds) between source
 D20) 80                        # minimum distance (in arcseconds) to already blocked objects
                                # (to make sure that no faint object next to a very bright one is fit. standard value: D20)/3. )
 D21) /path/to/target_objects   # optional list containing primary targets (format: RA DEC)
-                               # feature switched off when file does not exist, everything will be fit
+                               # feature switched off when 'none' or an empty string are provided. In this case everything will be fit
 D22) 1.0                       # search/correlation radius for the above list [arcsec]
 #
 # Test for backwards compatibility: D21!
@@ -122,7 +122,7 @@ F00) execute                             # execute the B/D fitting block ('execu
 F01) 0,0,9,0,0,0,0                       # similar to E18 for BULGE (see README for details) 
 F02) 0,0,9,0,-1,0,0                      # similar to E18 for DISK  (see README for details) 
 F03) bd1                                 # additinal output label, e.g. output folder for galfit files: E21+'_'+F03 to keep files ordered
-F04) /path/to/target_objects             # optional list containing primary targets, can be different (a subset) of D22)
+F04) /path/to/target_objects             # optional list containing primary targets, can be different (a subset) of D21
 F05) 1.0                                 # search/correlation radius for the above list
 F06) 18.0                                # additional magnitude limit (sersic fit, main band) down to which B/D will be done
 F07) input,model,residual,component,psf  # See E18, but for B/D fitting (only if galfitm1.2.0 or later is used)
