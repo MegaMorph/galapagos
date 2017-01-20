@@ -1973,7 +1973,10 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      openr, 2, sky_file[b]
      readf, 2, sky, dsky, skyrad, sky_magobj, flag
      close, 2
-     SKY_po=SKY_po+strtrim(round_digit(sky,3,/string,/L64),2)
+
+     IF sky GT 1.0 THEN used_sky = round_digit(sky,3,/string,/L64) $
+     ELSE used_sky = sigfig(sky,4)
+     SKY_po=SKY_po+strtrim(used_sky,2)
      SKY_po2=SKY_po2+'0'
      IF b LT nband THEN SKY_po=SKY_po+','
      IF b LT nband THEN SKY_po2=SKY_po2+','
@@ -3753,8 +3756,8 @@ PRO start_log, logfile, message
 END
 
 PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2, mac=mac
-  galapagos_version = 'GALAPAGOS-v2.2.6'
-  galapagos_date = '(May 7th, 2015)'
+  galapagos_version = 'GALAPAGOS-v2.2.7'
+  galapagos_date = '(January 20th, 2017)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)
