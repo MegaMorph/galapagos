@@ -112,6 +112,7 @@ PRO derive_colour_offsets, setup_file, image_number, hot=hot, image=image, weigh
      cat = mrdfits(cat_name[b],1,/silent)
 ;     wh = where(cat.mag_best lt 50)
      plothist, cat[sample].mag_best-refcat[sample].mag_best,xrange=[-1,4],bin=0.05
+;stop
      wait, 2
      resistant_mean, cat[sample].mag_best-refcat[sample].mag_best, 5., m, s, r
      med[b] = median(cat[sample].mag_best-refcat[sample].mag_best)
