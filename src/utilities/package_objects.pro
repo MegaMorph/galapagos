@@ -1,28 +1,51 @@
 PRO package_objects, object_list, outfolder, notar=notar
 ; .run package_objects.pro
 ; package_objects, ['~/GAMA/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/tile41_26/galfit/t41_26.321_obj','~/GAMA/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/tile41_26/galfit/t41_26.322_obj'], '~/test_package'
-
+  
 ; create output folder
   spawn, 'mkdir -p '+outfolder
-
- FOR O = 0,n_elements(object_list)-1 DO BEGIN
-      obj_new = strmid(object_list[o],strpos(object_list[o],'/',/reverse_search)+1)
-      obj_new = strmid(obj_new,0,strpos(obj_new,'_obj',/reverse_search))
-      outfolder_new = outfolder+'/'+obj_new
-      package_single_object, object_list[o], outfolder_new, /notar
+  
+  FOR o = 0,n_elements(object_list)-1 DO BEGIN
+     obj_new = strmid(object_list[o],strpos(object_list[o],'/',/reverse_search)+1)
+     obj_new = strmid(obj_new,0,strpos(obj_new,'_obj',/reverse_search))
+     outfolder_new = outfolder+'/'+obj_new
+     package_single_object, object_list[o], outfolder_new, /notar
   ENDFOR
-
+  
   IF NOT keyword_set(notar) THEN BEGIN
 ; now pack that folder into a tar file
-      outfolder_base = strmid(outfolder,0,strpos(outfolder,'/',/reverse_search))
-      outfolder_new = strmid(outfolder,strpos(outfolder,'/',/reverse_search)+1)
-      CD, outfolder_base
-      
-      spawn, 'tar -cf '+outfolder_new+'.tar '+outfolder_new
-      spawn, 'rm -r '+outfolder_new
+     outfolder_base = strmid(outfolder,0,strpos(outfolder,'/',/reverse_search))
+     outfolder_new = strmid(outfolder,strpos(outfolder,'/',/reverse_search)+1)
+     CD, outfolder_base
+     
+     spawn, 'tar -cf '+outfolder_new+'.tar '+outfolder_new
+     spawn, 'rm -r '+outfolder_new
   ENDIF
-
+  
 END
+
+PRO package_objects_by_ra_dec, input_cat, ra_dec_cat, radius, outfolder, notar=notar, bd=bd
+
+; read in catalogue
+  cat = mrdfits(input_cat, 1,/silent)
+; read in list of required objects
+  readcol, ra_dec_list, ra, dec, format='F,F', comment='#', /SILENT
+; select objects by RA & DEC
+  srccor, cat.alpha_j2000/15., cat.delta_j2000, ra/15., dec, $
+          radius, cat_i, ra_i, OPTION=0, /SPHERICAL, /SILENT
+
+; select the correct object IDs (single-sersic or B/D)
+  targets_ss = cat[cat_i].initfile
+  targets = targets_ss
+  IF keyword_set(bd) or keyword_set(all) THEN BEGIN
+     targets_bd = cat[cat_i].initfile_bd
+     targets = targets_bd
+  ENDIF
+  IF keyword_set(all) THEN targets = [targets_ss, targets_bd]
+stop  
+  package_objects, targets, outfolder, notar=notar
+END
+
 
 PRO package_single_object, obj, outfolder, notar=notar
 ; .run package_objects.pro
@@ -147,10 +170,10 @@ PRO package_single_object, obj, outfolder, notar=notar
 
   close, filer
   free_lun, filer
-
+  
 ; now go and change the paths in the objects file
   change_paths_in_obj_file, obj, outfolder
-
+  
   IF NOT keyword_set(notar) THEN BEGIN
 ; now pack that folder into a tar file
       outfolder_base = strmid(outfolder,0,strpos(outfolder,'/',/reverse_search))
