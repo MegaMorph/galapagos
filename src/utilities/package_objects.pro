@@ -82,8 +82,14 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
       content_numbers = ' '
       content_descriptor = ' '
       start = strtrim(strmid(line,0,strpos(line,')')+2),2)
-      content = strtrim(strmid(line,strpos(line,')')+2, strpos(line,'#')-strpos(line,')')-2),2)
-      comment = strtrim(strmid(line,strpos(line,'#')),2)
+      IF strpos(line,'#') NE -1 THEN BEGIN
+         content = strtrim(strmid(line,strpos(line,')')+2, strpos(line,'#')-strpos(line,')')-2),2)
+         comment = strtrim(strmid(line,strpos(line,'#')),2)
+      ENDIF ELSE BEGIN
+; if no comment is there
+         content = strtrim(strmid(line,strpos(line,')')+2),2)
+         comment = ' '
+      ENDELSE
 
 ; images
      IF strpos(strtrim(line, 2), 'A) ') EQ 0 THEN BEGIN
@@ -109,7 +115,31 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
               files_to_copy = [files_to_copy,content]
               content_new = strmid(content,strpos(content,'/',/reverse_search)+1)
               files_to_copy_new = [files_to_copy_new,content_new]
-          ENDIF
+ 
+; if this file exists, there also has to be a galfit.xx file for
+; restart purposes. This file is needed, too!
+
+; isolate path first where that file would exist
+              workfolder = strmid(content,0,strpos(content,'/',/REVERSE_SEARCH))
+
+; find all matching galfit.??.band files and select newest
+              spawn, 'ls '+workfolder+'/'+strmid(content_new,0,strpos(content_new,'.fits'))+'.galfit.*', list
+
+; throw away all the files ending in 'band' or 'output'
+              list = list[where(strmid(list,4,/reverse_offset) NE '.band')]
+              list = list[where(strmid(list,6,/reverse_offset) NE '_output')]
+  
+              list2 = list
+; isolate counting number
+              FOR i=0,n_elements(list)-1 DO list2[i] = strmid(list,strpos(list,'.',/reverse_search)+1)
+              list2 = fix(list2)
+; select latest file (file with highest number)
+              wh = where(list2 EQ max(list2))
+              galfit_restart_file = strtrim(list[wh],2)
+              files_to_copy = [files_to_copy,galfit_restart_file]
+              galfit_restart_file_new = strmid(galfit_restart_file,strpos(galfit_restart_file,'/',/reverse_search)+1)
+              files_to_copy_new = [files_to_copy_new,galfit_restart_file_new]
+         ENDIF
       ENDIF
 
 ; sigma image
@@ -184,6 +214,7 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
   
 ; now go and change the paths in the objects file
   change_paths_in_obj_file, obj, outfolder
+  change_paths_in_obj_file, galfit_restart_file,outfolder
   
   IF NOT keyword_set(notar) THEN BEGIN
 ; now pack that folder into a tar file
