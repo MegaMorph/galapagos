@@ -37,7 +37,7 @@ pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost, overwrite
   list2 = list
 ; isolate counting number
   FOR i=0,n_elements(list)-1 DO BEGIN
-     list2[i] = strmid(list,strpos(list,'.',/reverse_search)+1)
+     list2[i] = strmid(list[i],strpos(list[i],'.',/reverse_search)+1)
   ENDFOR
 
   list2 = fix(list2)
