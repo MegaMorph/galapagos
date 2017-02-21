@@ -2,31 +2,62 @@ PRO package_objects, object_list, outfolder, notar=notar
 ; .run package_objects.pro
 ; package_objects, ['~/GAMA/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/tile41_26/galfit/t41_26.321_obj','~/GAMA/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/tile41_26/galfit/t41_26.322_obj'], '~/test_package'
 
+; cut trailing / in folder name
+  IF strmid(outfolder,-1,1) EQ '/' THEN outfolder = strmid(outfolder,0,strpos(outfolder,'/',/reverse_search))
 ; create output folder
   spawn, 'mkdir -p '+outfolder
-
- FOR O = 0,n_elements(object_list)-1 DO BEGIN
-      obj_new = strmid(object_list[o],strpos(object_list[o],'/',/reverse_search)+1)
-      obj_new = strmid(obj_new,0,strpos(obj_new,'_obj',/reverse_search))
-      outfolder_new = outfolder+'/'+obj_new
-      package_single_object, object_list[o], outfolder_new, /notar
+  psffolder = outfolder+'/PSF/'  
+  spawn, 'mkdir -p '+psffolder
+  
+  FOR o = 0,n_elements(object_list)-1 DO BEGIN
+     obj_new = strmid(object_list[o],strpos(object_list[o],'/',/reverse_search)+1)
+     obj_new = strmid(obj_new,0,strpos(obj_new,'_obj',/reverse_search))
+     outfolder_new = outfolder+'/'+obj_new
+     IF strpos(strtrim(outfolder_new, 2), 'bd') NE -1 THEN outfolder_new = strmid(outfolder_new, 0, strpos(outfolder_new, 'bd')-1)
+     package_single_object, object_list[o], outfolder_new, psffolder, /notar
   ENDFOR
-
+  
   IF NOT keyword_set(notar) THEN BEGIN
 ; now pack that folder into a tar file
-      outfolder_base = strmid(outfolder,0,strpos(outfolder,'/',/reverse_search))
-      outfolder_new = strmid(outfolder,strpos(outfolder,'/',/reverse_search)+1)
-      CD, outfolder_base
-      
-      spawn, 'tar -cf '+outfolder_new+'.tar '+outfolder_new
-      spawn, 'rm -r '+outfolder_new
+     outfolder_base = strmid(outfolder,0,strpos(outfolder,'/',/reverse_search))
+     outfolder_new = strmid(outfolder,strpos(outfolder,'/',/reverse_search)+1)
+     CD, outfolder_base
+     
+     spawn, 'tar -cf '+outfolder_new+'.tar '+outfolder_new
+     spawn, 'rm -r '+outfolder_new
   ENDIF
-
+  
 END
 
-PRO package_single_object, obj, outfolder, notar=notar
+PRO package_objects_by_ra_dec, input_cat, ra_dec_cat, radius, outfolder, notar=notar, bd=bd, all=all
+; package_objects_by_ra_dec,'/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/CANDELS_EGS_30mas_f160w_detect_lin.fits','/home/bhaeussl/test_package/ra_list',1.0,'/home/bhaeussl/test_package/'
+
+; read in catalogue
+  print, 'reading catalogue'
+  cat = mrdfits(input_cat, 1,/silent)
+; read in list of required objects
+  readcol, ra_dec_cat, ra, dec, format='F,F', comment='#', /SILENT
+; select objects by RA & DEC
+  print, 'correlating sources'
+  srccor, cat.alpha_j2000/15., cat.delta_j2000, ra/15., dec, $
+          radius, cat_i, ra_i, OPTION=0, /SPHERICAL, /SILENT
+
+; select the correct object IDs (single-sersic or B/D)
+  targets_ss = cat[cat_i].initfile
+  targets = targets_ss
+  IF keyword_set(bd) or keyword_set(all) THEN BEGIN
+     targets_bd = cat[cat_i].initfile_bd
+     targets = targets_bd
+  ENDIF
+  IF keyword_set(all) THEN targets = [targets_ss, targets_bd]
+  package_objects, targets, outfolder, notar=notar
+END
+
+
+PRO package_single_object, obj, outfolder, psffolder, notar=notar
 ; .run package_objects.pro
 ; package_single_object, '~/GAMA/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/tile41_26/galfit/t41_26.321_obj', '~/test_package'
+  obj = strtrim(obj,2)
 
 ;IF n_elements(obj) GT 1 
 ;outfolder
@@ -36,7 +67,6 @@ PRO package_single_object, obj, outfolder, notar=notar
 
 ; copy (and adapt object file)
 ;      obj_new = 
-
   openr, filer, obj, /get_lun
   line = ''
 
@@ -52,8 +82,14 @@ PRO package_single_object, obj, outfolder, notar=notar
       content_numbers = ' '
       content_descriptor = ' '
       start = strtrim(strmid(line,0,strpos(line,')')+2),2)
-      content = strtrim(strmid(line,strpos(line,')')+2, strpos(line,'#')-strpos(line,')')-2),2)
-      comment = strtrim(strmid(line,strpos(line,'#')),2)
+      IF strpos(line,'#') NE -1 THEN BEGIN
+         content = strtrim(strmid(line,strpos(line,')')+2, strpos(line,'#')-strpos(line,')')-2),2)
+         comment = strtrim(strmid(line,strpos(line,'#')),2)
+      ENDIF ELSE BEGIN
+; if no comment is there
+         content = strtrim(strmid(line,strpos(line,')')+2),2)
+         comment = ' '
+      ENDELSE
 
 ; images
      IF strpos(strtrim(line, 2), 'A) ') EQ 0 THEN BEGIN
@@ -79,7 +115,31 @@ PRO package_single_object, obj, outfolder, notar=notar
               files_to_copy = [files_to_copy,content]
               content_new = strmid(content,strpos(content,'/',/reverse_search)+1)
               files_to_copy_new = [files_to_copy_new,content_new]
-          ENDIF
+ 
+; if this file exists, there also has to be a galfit.xx file for
+; restart purposes. This file is needed, too!
+
+; isolate path first where that file would exist
+              workfolder = strmid(content,0,strpos(content,'/',/REVERSE_SEARCH))
+
+; find all matching galfit.??.band files and select newest
+              spawn, 'ls '+workfolder+'/'+strmid(content_new,0,strpos(content_new,'.fits'))+'.galfit.*', list
+
+; throw away all the files ending in 'band' or 'output'
+              list = list[where(strmid(list,4,/reverse_offset) NE '.band')]
+              list = list[where(strmid(list,6,/reverse_offset) NE '_output')]
+  
+              list2 = list
+; isolate counting number
+              FOR i=0,n_elements(list)-1 DO list2[i] = strmid(list,strpos(list,'.',/reverse_search)+1)
+              list2 = fix(list2)
+; select latest file (file with highest number)
+              wh = where(list2 EQ max(list2))
+              galfit_restart_file = strtrim(list[wh],2)
+              files_to_copy = [files_to_copy,galfit_restart_file]
+              galfit_restart_file_new = strmid(galfit_restart_file,strpos(galfit_restart_file,'/',/reverse_search)+1)
+              files_to_copy_new = [files_to_copy_new,galfit_restart_file_new]
+         ENDIF
       ENDIF
 
 ; sigma image
@@ -107,8 +167,12 @@ PRO package_single_object, obj, outfolder, notar=notar
             content_elements_new[el] = strmid(content_elements_new[el],strpos(content_elements_new[el],'/',/reverse_search)+1)
 ; correct naming for PSFs
           content_elements_new = 'PSF_'+bandnames+'_'+content_elements_new
-          files_to_copy = [files_to_copy,content_elements]
-          files_to_copy_new = [files_to_copy_new,content_elements_new]
+          
+          FOR p=0,n_elements(content_elements)-1 DO BEGIN
+             spawn, 'cp '+content_elements[p]+' '+psffolder+'/'+content_elements_new[p]
+          ENDFOR
+;          files_to_copy = [files_to_copy,content_elements]
+;          files_to_copy_new = [files_to_copy_new,content_elements_new]
           
       ENDIF
 ; mask images
@@ -147,10 +211,11 @@ PRO package_single_object, obj, outfolder, notar=notar
 
   close, filer
   free_lun, filer
-
+  
 ; now go and change the paths in the objects file
   change_paths_in_obj_file, obj, outfolder
-
+  change_paths_in_obj_file, galfit_restart_file,outfolder
+  
   IF NOT keyword_set(notar) THEN BEGIN
 ; now pack that folder into a tar file
       outfolder_base = strmid(outfolder,0,strpos(outfolder,'/',/reverse_search))
@@ -221,7 +286,7 @@ PRO change_paths_in_obj_file, obj, outfolder
              IF strpos(content_elements[-1],'kernel') NE -1 THEN $
                content_elements[-1] = strmid(content_elements[-1], 0, strpos(content_elements[-1],'kernel'))
 ; correct naming for PSFs
-             content_elements = 'PSF_'+bandnames+'_'+content_elements
+             content_elements = '../PSF/PSF_'+bandnames+'_'+content_elements
          ENDIF
          FOR el=0,n_elements(content_elements)-1 DO BEGIN
              po = po+content_elements[el]

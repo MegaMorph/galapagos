@@ -3305,7 +3305,8 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'galfit_version_bd', 'crash', $
                                  'firstcon_galfit_bd', -99, $
                                  'lastcon_galfit_bd', -99, $
-                                 'neigh_galfit_bd', -99, 'flag_galfit_bd', 1, $
+                                 'neigh_galfit_bd', -99, $
+                                 'flag_galfit_bd', 1, $
                                  'X_GALFIT_DEG_B', -99, $
                                  'Y_GALFIT_DEG_B', -99, $
                                  'MAG_GALFIT_DEG_B', -99, $
@@ -3732,8 +3733,13 @@ PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = 
            openr, 99, sky_file[b]
            readf, 99, sky, dsky, skyrad, sky_magobj, skyflag
            close, 99
-           table[i].sky_gala_band[b-1] = round_digit(sky,3,/L64)
-           table[i].sky_sig_band[b-1] = round_digit(dsky,5,/L64)
+           IF sky GT 1.0 THEN table[i].sky_gala_band[b-1] = round_digit(sky,3,/L64) $
+              ELSE table[i].sky_gala_band[b-1] = sigfig(sky,4)
+           IF sky GT 1.0 THEN table[i].sky_sig_band[b-1] = round_digit(dsky,6,/L64) $
+              ELSE table[i].sky_sig_band[b-1] = sigfig(dsky,6)
+
+;           table[i].sky_gala_band[b-1] = round_digit(sky,3,/L64)
+;           table[i].sky_sig_band[b-1] = round_digit(dsky,5,/L64)
            table[i].sky_rad_band[b-1] = round_digit(skyrad,5)
            table[i].sky_flag_band[b-1] = round_digit(skyflag,5)
            IF b EQ 1 THEN $

@@ -394,12 +394,12 @@ PRO gala_bd_bridge, filein
    
    printf, ut, '# Component/    parameter   constraint  Comment'
    printf, ut, '# operation                  values'
-   
+
    FOR j=2, maxcomp+1 DO BEGIN
-       printf, ut, '           '+strtrim(j, 2)+' n 0.2 to 8'
-       printf, ut, '           '+strtrim(j, 2)+' re 0.3 to 400'
+       printf, ut, '           '+strtrim(j, 2)+' n '+strtrim(setup.conminn, 2)+' to '+strtrim(setup.conmaxn, 2)
+       printf, ut, '           '+strtrim(j, 2)+' re 0.3 to '+strtrim(setup.conmaxre, 2)
        printf, ut, '           '+strtrim(j, 2)+' q 0.0001 to 1'
-       printf, ut, '           '+strtrim(j, 2)+' mag -5 5'
+       printf, ut, '           '+strtrim(j, 2)+' mag '+strtrim(setup.conminm, 2)+' '+strtrim(setup.conmaxm, 2)
        printf, ut, '           '+strtrim(j, 2)+' mag 0 to 40'
 ;       printf, ut, '           '+strtrim(j, 2)+' pa -360 to 360'
        printf, ut, '           '+strtrim(j, 2)+' x '+ $

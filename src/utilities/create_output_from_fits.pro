@@ -1,4 +1,4 @@
-pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost, overwrite=overwrite
+pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost, overwrite=overwrite,adapt=adapt
 ; .run create_output_from_fits.pro
 ; create_output_from_fits, '/Users/haeussler/Documents/Dropbox/Arianna_Fits/414.556/414.556_gf.fits','blank,input,model,residual,psf','~/megamorph/galfit/exec/galfitm-1.2.0-osx'
 
@@ -32,12 +32,14 @@ pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost, overwrite
 ; throw away all the files ending in 'band' or 'output'
   list = list[where(strmid(list,4,/reverse_offset) NE '.band')]
   list = list[where(strmid(list,6,/reverse_offset) NE '_output')]
-  
+  IF keyword_set(adapt) THEN list = list[where(strmid(list,5,/reverse_offset) EQ '_adapt')]
+
   list2 = list
 ; isolate counting number
   FOR i=0,n_elements(list)-1 DO BEGIN
-     list2[i] = strmid(list,strpos(list,'.',/reverse_search)+1)
+     list2[i] = strmid(list[i],strpos(list[i],'.',/reverse_search)+1)
   ENDFOR
+
   list2 = fix(list2)
 ; select latest file (file with highest number)
   wh = where(list2 EQ max(list2))
