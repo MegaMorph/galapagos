@@ -330,7 +330,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
      spawn, sexcommand_hs
 ; create reg file for hot catalogue
      sex2ds9reg, hotcat, outpath_file[tile,0]+setup.outparam, $
-                 outpath_file[tile,0]+'hot.reg', 6, color='red', tag = 'hot'
+                 outpath_file[tile,0]+'hot.reg', 6, color='yellow', tag = 'hot'
   ENDIF
   
 ;read in hotcat and coldcat
@@ -414,7 +414,8 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
      IF exclude[0, 0] GE 0 THEN BEGIN
         x = reform(exclude[0, *])
         y = reform(exclude[1, *])
-        
+
+        print, 'removing a total of '+strtrim(n_elements(x),2)+' flagged false detections from this tile'
         srccor, x, y, table_all.x_image, table_all.y_image, setup.exclude_rad, l, e, $
                 option = 1, /silent
 ; can invert_index be replaced with a_not_b.pro????  inv2=a_not_b(arr1,arr2)
@@ -448,7 +449,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
 
 ; create reg file for combined catalogue
   sex2ds9reg, outcat, outpath_file[tile,0]+setup.outparam, $
-              outpath_file[tile,0]+'combined.reg', 12, color='yellow', tag = 'hot'
+              outpath_file[tile,0]+'combined.reg', 12, color='red', tag = 'hot'
   
   IF setup.outonly THEN $
      file_delete, hotcat, coldcat, hotseg, coldseg, /quiet, /allow_nonexistent, /noexpand_path
@@ -3920,7 +3921,6 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
         IF ct GT 0 THEN BEGIN
            exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] 
         ENDIF ELSE exclude = [[-1, -1]]
-        
         run_sextractor, setup, images, weights, outpath_file, i, exclude
         
      ENDFOR
@@ -5180,23 +5180,29 @@ loopend_bd:
      ENDFOR
      print, ' '
      
-; add column frame
-     
+; cleaning bad detections from catalog
+     print, 'catalogue has '+strtrim(n_elements(out.tile),2)+' objects'
      IF file_test(setup.bad) THEN BEGIN
-        readcol, setup.bad, tile, x, y, format = 'A,F,F', comment = '#', $
-                 /silent
+        readcol, setup.bad, tile, x, y, format = 'A,F,F', comment = '#', /silent
         tiles = uniq(tile, sort(tile))
         flag = intarr(n_elements(out))
+        print, ' '+strtrim(n_elements(x),2)+' positions to be removed'
         FOR i=0ul, n_elements(tiles)-1 DO BEGIN
            print, 'cleaning bad objects from output catalog, now from tile '+tile[tiles[i]]
            tileidx = where(tile EQ tile[tiles[i]], ct)
+           print, '  '+strtrim(ct,2)+' positions to be removed in this tile (not all have to have objects)'
+; If something in the bad detection list
            IF ct GT 0 THEN BEGIN
-              catidx = where(out.org_image EQ tile[tiles[i]], ct1)
+              catidx = where(out.tile EQ tile[tiles[i]], ct1)
+; if some objects on that same tile
               IF ct1 GT 0 THEN BEGIN
                  srccor, x[tileidx], y[tileidx], out[catidx].x_image, $
                          out[catidx].y_image, setup.exclude_rad, xy, oi, $
                          option = 1, /silent
-                 IF oi[0] GE 0 THEN flag[catidx[oi]] = 1
+                 IF oi[0] GE 0 THEN BEGIN
+                    print, '  '+strtrim(n_elements(oi),2)+' objects deleted'
+                    flag[catidx[oi]] = 1
+                 ENDIF
               ENDIF
            ENDIF
         ENDFOR
@@ -5204,7 +5210,7 @@ loopend_bd:
         IF ct EQ 0 THEN message, 'No objects in output catalogue left' $
         ELSE out = out[good]
      ENDIF 
-     
+
 ; delete duplicate values from table
      out=remove_tags(out,['x_galfit', 'xerr_galfit','y_galfit', 'yerr_galfit','mag_galfit', $
                           'magerr_galfit','re_galfit', 'reerr_galfit','n_galfit', 'nerr_galfit', $
@@ -5223,7 +5229,7 @@ loopend_bd:
      
 ; reorder all columns into useful order
 ; how can I keep ALL Sextractor columns? Use outparam file!
-     readcol, setup.sexout, params, format='A'
+     readcol, setup.sexout, params, format='A',/silent
 ; params (standard)
 ;         'NUMBER',$
 ;         'X_IMAGE','Y_IMAGE','CXX_IMAGE','CYY_IMAGE','CXY_IMAGE',$
@@ -5272,6 +5278,7 @@ loopend_bd:
      out = out2
      delvarx, out2
 ; write out catalogue
+     print, 'catalogue has '+strtrim(n_elements(out.tile),2)+' objects left'
      mwrfits, out, setup.outdir+setup.cat, /silent, /create
   ENDIF
   d = check_math()

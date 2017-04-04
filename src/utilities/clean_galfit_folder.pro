@@ -1,12 +1,25 @@
-pro clean_galfit_folder, path, max_file_age=max_file_age, bd=bd
+@galapagos.pro
+pro clean_galfit_folder, setup_file, max_file_age=max_file_age, bd=bd
 ; timestamp: time in hours backwards from now
+; max_file_age: file age given in HOURS
 ; .run clean_galfit_folder
 ; clean_galfit_folder, '/usersVol1/haeussler/vgala'
 ; clean_galfit_folder,'/mnt/users/haeussler/CANDELS/galapagos/mwl_cosmos_30mas_all_detect',max_file_age=4
-CD, path
 
+; get path from setup file, including /bd folder
+; read setup file first
+read_setup, setup_file, setup
+
+out_path = setup.outdir
+IF keyword_set(bd) THEN BEGIN
+    folder_path = strtrim(strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)
+ENDIF ELSE BEGIN
+    folder_path = strtrim(strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1),2)
+ENDELSE
+
+CD, out_path
 ; remove all files of objects that were active when skipped
-spawn, 'ls */galfit/*sav', list
+spawn, 'ls */'+folder_path+'/*sav', list
 FOR n=0,n_elements(list)-1 DO BEGIN
     pre = ''
     pre = strmid(list[n],0,strpos(list[n],'_gf.sav'))
@@ -14,18 +27,6 @@ FOR n=0,n_elements(list)-1 DO BEGIN
     spawn, 'rm '+pre+'_*'
     IF file_test(list[n]) THEN spawn, 'rm '+list[n]
 ENDFOR
-
-; same for bd folder!
-IF keyword_set(bd) THEN BEGIN
-   spawn, 'ls */galfit_bd*/*sav', listbd
-   FOR n=0,n_elements(listbd)-1 DO BEGIN
-      pre = ''
-      pre = strmid(listbd[n],0,strpos(listbd[n],'_gf.sav'))
-      print, 'deleting files '+pre+'_* '
-      spawn, 'rm '+pre+'_*'
-      IF file_test(list[n]) THEN spawn, 'rm '+list[n]
-   ENDFOR
-ENDIF
 
 ; remove all files of objects that have obj* files, but no *gf.fits
 ; files after a certain timestamp
@@ -35,7 +36,7 @@ print, '  '
 ;has to be done folder by folder because of number of files
 IF keyword_set(max_file_age) THEN BEGIN
 
-   spawn, 'ls -d */galfit', folderlist
+   spawn, 'ls -d */'+folder_path, folderlist
    FOR f=0,n_elements(folderlist)-1 DO BEGIN
       list2=0
       spawn, 'ls '+folderlist[f]+'/*obj', list2
@@ -47,7 +48,6 @@ IF keyword_set(max_file_age) THEN BEGIN
          gf_file_test = file_info(pre+'_gf.fits')
          start_file_test = file_info(list2[n]+'_not_started')
          file_age = (systime(1)-obj_file_test.mtime)/3600.
-
 ; object file exists exist
          IF obj_file_test.exists EQ 1 THEN BEGIN
 ; object has NOT not been started on purpose (*not_started file does NOT exist)
@@ -57,7 +57,7 @@ IF keyword_set(max_file_age) THEN BEGIN
                IF gf_file_test.exists EQ 0 THEN BEGIN
 ; check whether file is old enough (last stable point)
                   IF file_age LT float(max_file_age) THEN BEGIN
-                     print, 'deleting files '+pre+'_* '
+                     print, 'deleting files '+pre+'_* , '+strtrim(file_age,2)+' hours old'
                      spawn, 'rm '+pre+'_* '
                   ENDIF
                ENDIF

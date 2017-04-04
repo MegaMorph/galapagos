@@ -3,22 +3,25 @@ PRO package_objects, object_list, outfolder, notar=notar
 ; package_objects, ['~/GAMA/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/tile41_26/galfit/t41_26.321_obj','~/GAMA/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/tile41_26/galfit/t41_26.322_obj'], '~/test_package'
 
 ; cut trailing / in folder name
-  IF strmid(outfolder,-1,1) EQ '/' THEN outfolder = strmid(outfolder,0,strpos(outfolder,'/',/reverse_search))
+  IF strmid(outfolder,strlen(outfolder)-1) EQ '/' THEN outfolder = strmid(outfolder,0,strpos(outfolder,'/',/reverse_search))
 ; create output folder
   spawn, 'mkdir -p '+outfolder
   psffolder = outfolder+'/PSF/'  
   spawn, 'mkdir -p '+psffolder
   
+     print, ' '
   FOR o = 0,n_elements(object_list)-1 DO BEGIN
+     statusline, 'packaging object '+strtrim(o+1,2)+' of '+strtrim(n_elements(object_list),2)
      obj_new = strmid(object_list[o],strpos(object_list[o],'/',/reverse_search)+1)
      obj_new = strmid(obj_new,0,strpos(obj_new,'_obj',/reverse_search))
      outfolder_new = outfolder+'/'+obj_new
      IF strpos(strtrim(outfolder_new, 2), 'bd') NE -1 THEN outfolder_new = strmid(outfolder_new, 0, strpos(outfolder_new, 'bd')-1)
      package_single_object, object_list[o], outfolder_new, psffolder, /notar
   ENDFOR
-  
+     print, ' '
   IF NOT keyword_set(notar) THEN BEGIN
 ; now pack that folder into a tar file
+     print, 'now packaging into tar file'
      outfolder_base = strmid(outfolder,0,strpos(outfolder,'/',/reverse_search))
      outfolder_new = strmid(outfolder,strpos(outfolder,'/',/reverse_search)+1)
      CD, outfolder_base
@@ -42,15 +45,17 @@ PRO package_objects_by_ra_dec, input_cat, ra_dec_cat, radius, outfolder, notar=n
   srccor, cat.alpha_j2000/15., cat.delta_j2000, ra/15., dec, $
           radius, cat_i, ra_i, OPTION=0, /SPHERICAL, /SILENT
 
-; select the correct object IDs (single-sersic or B/D)
-  targets_ss = cat[cat_i].initfile
-  targets = targets_ss
-  IF keyword_set(bd) or keyword_set(all) THEN BEGIN
-     targets_bd = cat[cat_i].initfile_bd
-     targets = targets_bd
+  IF cat_i[0] NE -1 THEN BEGIN
+  ; select the correct object IDs (single-sersic or B/D)
+    targets_ss = cat[cat_i].initfile
+    targets = targets_ss
+    IF keyword_set(bd) or keyword_set(all) THEN BEGIN
+       targets_bd = cat[cat_i].initfile_bd
+       targets = targets_bd
+    ENDIF
+    IF keyword_set(all) THEN targets = [targets_ss, targets_bd]
+    package_objects, targets, outfolder, notar=notar
   ENDIF
-  IF keyword_set(all) THEN targets = [targets_ss, targets_bd]
-  package_objects, targets, outfolder, notar=notar
 END
 
 
