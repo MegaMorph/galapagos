@@ -73,6 +73,10 @@ If this script tells you that IDL\_IDLBRIDGE is not working, ask your IT departm
 
 6) Please make sure you use an appropriate number for D18. It is explained below, how to find and set this number.
 
+7) due to limitations of string lengths that can be stored in a FITS table (71 characters?), please make sure that your paths are not too long. Avoid fitting in a subfolder of a subfolder of a subfolder,.... Try to make a shortcut from your home directory straight to the galapagos output folder.
+(Also keeps your Galfit start files tidier)
+
+
 #### C)  SETUP AND EXAMPLE SETUP FILE
  
 EXAMPLE.SETUP is the main file.  
@@ -241,7 +245,7 @@ EVERYTHING AFTERWARDS HAS BEEN RENAMED!! i=i+1
 
 
 #####===========STAMP SETUP AND SKYMAP CREATION=========
-**No changes**, other than galapagos can use up to 4 CPUs for creating the stamp files and up to D18) cores for postage stamp cutting in order to speed up the process on large datasets.  
+**No changes**, other than the original galapagos, galapagos-2 can use up to 4 CPUs for creating the stamp files and up to D18) cores for postage stamp cutting in order to speed up the process on large datasets.  
 Set D18) = 1 to switch this feature off (seems to be needed also for a single image in this step, see further down)  
 When sigma maps are provided, the same postage stamps are cut from this image.  
 **WARNING**, see below (D22): If you rerun the postage stamp cutting again for a different sample, the stamp files obviously get overwritten.  
@@ -653,7 +657,7 @@ This has been changed in galfitm-1.1.4 , which now also allows a mixture of imag
 For Galapagos, the entire BAND has to be consistent, though.
 
 **v2.1.1**  
-- Now backwards compatible to IDL7.x , instead of requiring IDL 8, possibly even works for older version. IDL 6.3, introducing IDL_IDLBRIDGE, IS strictly required!!  
+- Now backwards compatible to IDL7.x , instead of requiring IDL 8, possibly even works for older version. IDL 6.3, introducing IDL_IDLBRIDGE, is STRICTLY required!!  
 - some minor bug fixes that could make the code crash (results unaffected, if produced), only internal book-keeping at a position where it didn't really matter  
 - kill_galfit actually works reliably now.  
 - bug fix, B/D fitting now works in batch mode  
@@ -708,7 +712,20 @@ The code is not as effective as it could be. However, most of the time is still 
 - There is more output for progress
 
 **v2.2.1**
-- Galapagos itself unchanged
+- this update comes with a change in setup file, E18 (used for different purpose) and F07 (moving old F07 and following backwards by 1 number).
+- BUGFIX! In galapagos-2.2.0, the B/D part is broken. This has been fixed again. Sorry for that, I missed a typo.
+- incorporating recent changes to GalfitM (v 1.2.0):
+    - as the galfit.xx files are now being named in a more useful fashion
+    - GalfitM v1.2.0 and Galapagos-2 v 2.2.1 allow to define the format of the GalfitM output file. This is useful to either save diskspace or to set up the GalfitM/Galapagos output files for further analysis. In E18 and F07, the user can now specify the format of the galfit output files. This is done in the same string format that Galfit itself uses (the string is in fact, only passed on to Galfit).
+However, NOT ALL (!) galfit values are allowed here!
+        - Valid input: blank (as layer 1 in normal Galfit3 (one band)), input, model, residual, component (individual model components, only useful in case of B/D), sigma (sigma image, either input or created), psf (input psf image), none (no images output, just results fits tables. Useful to save diskspace, Galapagos is unaffected and all imaging information is actually already stored in other files). No matter which order the user puts these, they will always appear in the above order and can easily be identified and accesses by their layer names.
+DEFAULT: blank,input,model,residual (as assumed by GalfitM if no input is specified)
+
+        - POSSIBLE, BUT DON'T MAKE SENSE (as non-parametric fitting is not utilized in Galapagos): nonparam (nonparam image), datasub (input minus nonparam image)
+        - NOT ALLOWED (!!): itertable (table of parameters at each iteration) as this woudl create an output file straight away, which will confuse Galapagos if the fit crashes at a later stage.
+
+**v2.2.2**
+- Galapagos itself was unchanged
 - provide some more useful utilities/scripts in the utilities folder with README that can be used to:
    - check_idl_bridge.pro: check that the IDL bridge works as needed to run on >1 cores
    - clean_galfit_folder.pro: clean the galapagos output folder after e.g. a system crash
@@ -717,3 +734,32 @@ The code is not as effective as it could be. However, most of the time is still 
    - single_band_comparison.pro:	run a comparison of sinngle-band to multi-band galfit fitting
 
 Please read the README in the utilities folder for details of what the codes do and how to run them
+
+**v2.2.3**
+- Galapagos creates some more ds9 region files (for cold, hot and combined for each tile individually)
+- Added 3 more utility scripts.
+    - 2 new utilities to re-create galfit output from
+        - re-running the fit with different file content (slow)
+        - running galfit from the galfit.??.band file with fixed parameters (fast)
+        - These enable the user to run galapagos without output images (setting E18 and F07). If required for further analysis at a later stage, the images, residuals, sub-component etc can be created at a later stage using these scripts.
+    - tiling_helper.pro can be run on an intermediate Galapagos output catalogue (check the utility readme file) and displays the number of objects to be fit in each input tile. This should make finding an optimal batch setup somewhat easier if more parallel capacity is required.
+
+**v2.2.4**
+- create_output_from_fits.pro uses different standard. It now starts from the galfit.xx file instead of galfit.xx.band (as this is more precise) and as default now renames the output file.
+
+**v2.2.5b**
+- One major, two small bugfix:
+    - Major: In case the single-sersic output files do not contain any images (as possible and advised now), the B/D fits would all crash, as one value is read out from the model image header. This number is now read out from somewhere else so this causes no issues anymore.
+    - Minor:
+        - a problem occurred in 1-band fits if some objects had sextractor magnitude 99. This has been fixed now.
+        - Galapagos can now work well with the (official) galfit3 (by Chien Peng) again
+
+**v2.2.7**
+- Fixed a bug in which all sky values turned out to be ==0 as the value was only printed to 3 digits behind the comma/dot. Critical for sky subtracted data in cts/s. Instead, the code now uses >4 SIGNIFICANT digits.
+- added new utility script to automatically derive the colour offsets that need to be defined in file A00). Useful for easy setup
+- Smaller changes:
+    - if the target list does not exist, a warning is printed. 
+    - option \galfitoutput now sends the galfit output into a [ID].out file for checking on e.g. long running or crashed fits
+    - tighter constraints on objects xmax -> xmax/10. for objects ON the postage stamp xmax -> xmax/5. for objects outside the postage stamp ("contributing sources"). This should keep secondary objects from running into the primary or to a position outside of the postage stamp.
+    - update to tiling_helper.pro to return more information to split the survey up into batches.
+    - galapagos now checks that input images and weights exist. Helps to find typos in image names before running the code.
