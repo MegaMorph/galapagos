@@ -18,12 +18,6 @@ PRO create_output_from_obj, obj, layers, gal_exe
   WHILE ~ EOF(filer) DO BEGIN
 ; Read a line of text:
      readf, filer, line
-; split up into parts
-     content_numbers = ' '
-     content_descriptor = ' '
-     start = strtrim(strmid(line,0,strpos(line,')')+2),2)
-     content = strtrim(strmid(line,strpos(line,')')+2, strpos(line,'#')-strpos(line,')')-2),2)
-     comment = strtrim(strmid(line,strpos(line,'#')),2)
      
 ; change format of output file
      IF strpos(strtrim(line, 2), 'W) ') EQ 0 THEN BEGIN
