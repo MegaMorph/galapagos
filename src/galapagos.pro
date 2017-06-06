@@ -2581,7 +2581,7 @@ PRO read_setup, setup_file, setup
                         'bd_hpc_path',' ', $
                         'bd_srclist', '', $
                         'bd_srclistrad', 0.0, $
-                        'bd_maglim', -1., $
+                        'bd_maglim', 99., $
                         'bd_psf_corr', strarr(2), $
                         'docombine', 0, $
                         'docombinebd', 0, $
@@ -2778,7 +2778,8 @@ PRO read_setup, setup_file, setup
         'F04)': IF content EQ 'none' OR content EQ '' THEN setup.bd_srclist = '' $
         ELSE setup.bd_srclist = content
         'F05)': setup.bd_srclistrad = float(content)
-        'F06)': setup.bd_maglim = float(content)
+        'F06)': IF valid_num(content) EQ 1 THEN setup.bd_maglim = float(content) $
+        ELSE setup.bd_maglim = 99.
         'F07)': setup.gal_output_bd = content
         'F08)': setup.bd_hpc = (content EQ 'HPC') ? 1 : 0
         'F09)': setup.bd_hpc_path = set_trailing_slash(content)
