@@ -84,7 +84,7 @@ PRO derive_colour_offsets, setup_file, image_number, hot=hot, image=image, weigh
   sigma = fltarr(nband+1)+0.
   rej = intarr(nband+1)+0
  
-  refcat = mrdfits(cat_name[0],1,/silent)
+  refcat = mrdfits(cat_name[0],1)
   
 
 ; SAMPLE SELECTION 1

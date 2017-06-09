@@ -1,4 +1,4 @@
-PRO package_objects, object_list, outfolder, notar=notar
+PRO package_objects, object_list, outfolder, outname=outname, notar=notar
 ; .run package_objects.pro
 ; package_objects, ['~/GAMA/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/tile41_26/galfit/t41_26.321_obj','~/GAMA/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/tile41_26/galfit/t41_26.322_obj'], '~/test_package'
 
@@ -8,17 +8,26 @@ PRO package_objects, object_list, outfolder, notar=notar
   spawn, 'mkdir -p '+outfolder
   psffolder = outfolder+'/PSF/'  
   spawn, 'mkdir -p '+psffolder
-  
-     print, ' '
+
+; remove 'null' from object list
+  wh_null = where(strtrim(object_list,2) EQ 'null', ctnull)
+  IF ctnull GT 0 THEN BEGIN
+     hlpind = lindgen(n_elements(object_list))
+     wh_notnull = a_not_b(hlpind, wh_null)
+     object_list = object_list[wh_notnull]
+     print, 'for '+strtrim(ctnull,2)+' objects, the fit has not been started due to too few images with data. These have been removed'
+  ENDIF  
+
+  print, ' '
   FOR o = 0,n_elements(object_list)-1 DO BEGIN
-     statusline, 'packaging object '+strtrim(o+1,2)+' of '+strtrim(n_elements(object_list),2)
+     statusline, 'packaging object '+strtrim(o+1,2)+' of '+strtrim(n_elements(object_list),2);+': '+object_list[o]
      obj_new = strmid(object_list[o],strpos(object_list[o],'/',/reverse_search)+1)
      obj_new = strmid(obj_new,0,strpos(obj_new,'_obj',/reverse_search))
      outfolder_new = outfolder+'/'+obj_new
      IF strpos(strtrim(outfolder_new, 2), 'bd') NE -1 THEN outfolder_new = strmid(outfolder_new, 0, strpos(outfolder_new, 'bd')-1)
      package_single_object, object_list[o], outfolder_new, psffolder, /notar
   ENDFOR
-     print, ' '
+     print, ''
   IF NOT keyword_set(notar) THEN BEGIN
 ; now pack that folder into a tar file
      print, 'now packaging into tar file'
@@ -26,20 +35,58 @@ PRO package_objects, object_list, outfolder, notar=notar
      outfolder_new = strmid(outfolder,strpos(outfolder,'/',/reverse_search)+1)
      CD, outfolder_base
      
-     spawn, 'tar -cf '+outfolder_new+'.tar '+outfolder_new
+     IF keyword_set(outname) THEN BEGIN
+           spawn, 'tar -cf '+outname+'.tar '+outfolder_new
+        ENDIF ELSE BEGIN
+           spawn, 'tar -cf '+outfolder_new+'.tar '+outfolder_new
+     ENDELSE
      spawn, 'rm -r '+outfolder_new
   ENDIF
   
 END
 
-PRO package_objects_by_ra_dec, input_cat, ra_dec_cat, radius, outfolder, notar=notar, bd=bd, all=all
+PRO package_objects_by_ra_dec, input_cat, ra_dec_cat, radius, outfolder, outname=outname, notar=notar, bd=bd, all=all
 ; package_objects_by_ra_dec,'/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/CANDELS_EGS_30mas_f160w_detect_lin.fits','/home/bhaeussl/test_package/ra_list',1.0,'/home/bhaeussl/test_package/'
 
 ; read in catalogue
   print, 'reading catalogue'
   cat = mrdfits(input_cat, 1,/silent)
+
 ; read in list of required objects
-  readcol, ra_dec_cat, ra, dec, format='F,F', comment='#', /SILENT
+; check how many columns first
+  openr, 1, strtrim(ra_dec_cat,2)
+  ncol=0
+  line=''
+; look for first valid line and count number of columns
+try_again1:
+  readf, 1, line     
+;get rid of leading and trailing blanks
+  line = strtrim(line, 2)
+;comment or empty line encountered?
+  IF strmid(line, 0, 1) EQ '#' OR strlen(line) EQ 0 THEN goto, try_again1
+;comment at end of line?
+  pos = strpos(line, '#')
+  IF pos EQ -1 THEN pos = strlen(line)
+; get columns and number of columns, separated by ' '      
+  columns = strsplit(line, ' ', COUNT=ncol)      
+  close,1
+        
+  IF NOT (ncol EQ 2 OR ncol EQ 3) THEN BEGIN
+    print, 'something wrong in your input lists. I can not count 2 or 3 columns'
+    print, 'are you sure the spaces i the list are spaces and not e.g. TABS?'
+    stop
+  ENDIF
+        
+; now read in list of required objects
+  IF ncol EQ 2 THEN BEGIN
+    print, 'using 2 column catalogue'
+    readcol, ra_dec_cat, ra, dec, format='F,F', comment='#', /SILENT
+  ENDIF
+  IF ncol EQ 3 THEN  BEGIN
+    print, 'using 3 column catalogue'
+    readcol, ra_dec_cat, id, ra, dec, format='A,F,F', comment='#', /SILENT
+  ENDIF
+
 ; select objects by RA & DEC
   print, 'correlating sources'
   srccor, cat.alpha_j2000/15., cat.delta_j2000, ra/15., dec, $
@@ -54,7 +101,14 @@ PRO package_objects_by_ra_dec, input_cat, ra_dec_cat, radius, outfolder, notar=n
        targets = targets_bd
     ENDIF
     IF keyword_set(all) THEN targets = [targets_ss, targets_bd]
-    package_objects, targets, outfolder, notar=notar
+
+; create output folder
+    spawn, 'mkdir -p '+outfolder
+; copy input_filelist
+    spawn, 'cp '+input_cat+' '+outfolder+'/.'
+    spawn, 'cp '+ra_dec_cat+' '+outfolder+'/.'
+; package objects
+    package_objects, targets, outfolder, outname=outname, notar=notar
   ENDIF
 END
 
@@ -113,10 +167,11 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
           content_elements = strsplit(content,',',/extract)
           bandnames = content_elements
       ENDIF
-      
+  output_file_exists=0      
 ; output image if there
       IF strpos(strtrim(line, 2), 'B) ') EQ 0 THEN BEGIN
           IF file_test(content) THEN BEGIN
+              output_file_exists = 1
               files_to_copy = [files_to_copy,content]
               content_new = strmid(content,strpos(content,'/',/reverse_search)+1)
               files_to_copy_new = [files_to_copy_new,content_new]
@@ -216,10 +271,10 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
 
   close, filer
   free_lun, filer
-  
+
 ; now go and change the paths in the objects file
   change_paths_in_obj_file, obj, outfolder
-  change_paths_in_obj_file, galfit_restart_file,outfolder
+  IF output_file_exists THEN change_paths_in_obj_file, galfit_restart_file,outfolder
   
   IF NOT keyword_set(notar) THEN BEGIN
 ; now pack that folder into a tar file
@@ -233,19 +288,19 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
   
 END
 
-PRO change_paths_in_obj_file, obj, outfolder
+PRO change_paths_in_obj_file, obj_file, outfolder
 ; .run package_objects.pro
 ; change_paths_in_obj_file, '~/GAMA/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/tile41_26/galfit/t41_26.321_obj', '~/test_package'
 
 ; create output folder
   spawn, 'mkdir -p '+outfolder
-  objname = strmid(obj,strpos(obj,'/',/reverse_search)+1)
+  objname = strmid(obj_file,strpos(obj_file,'/',/reverse_search)+1)
   newfile = outfolder+'/'+objname+'_adapt'
 
 
 ; go through setup file one line at a time and, where needed, cut down
 ; to one band value
-  openr, filer, obj, /get_lun
+  openr, filer, obj_file, /get_lun
   line = ''
 
   openw, filew, newfile, /get_lun
