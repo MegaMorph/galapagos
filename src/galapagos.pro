@@ -4618,7 +4618,7 @@ jump_over_this_2:
      add_tag, table, 'do_list_bd', 0, table_new
      table = table_new
      delvarx, table_new
-     
+
 ; get sourcelist of interesting (primary) sources and correlate to catalogue
      IF (setup.bd_srclist EQ '' OR setup.bd_srclistrad LE 0) THEN BEGIN
         table.do_list_bd = 1
@@ -4762,8 +4762,8 @@ loopstart_bd:
 ; todo eq flag_galfit eq 2 and flag_galfit_bd eq 0?????
 ; new source catalogue?
            
-           todo=where(table.flag_galfit_bd eq 0 AND table.do_list_bd EQ 1 and table.do_batch eq 1 and $
-                      table.mag_galfit_band[0] gt 0 and table.mag_galfit_band[0] lt setup.bd_maglim, ctr)
+           todo=where(table.flag_galfit_bd EQ 0 AND table.do_list_bd EQ 1 AND table.do_batch EQ 1 AND $
+                      table.mag_galfit_band[0] GT 0 AND table.mag_galfit_band[0] LT setup.bd_maglim, ctr)
            if ctr eq 0 then begin
               FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
               goto, loopend_bd
