@@ -523,35 +523,7 @@ PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac, setup
   hd = headfits(image)
   nx = sxpar(hd, 'NAXIS1')
   ny = sxpar(hd, 'NAXIS2')
-  
-;; correlate with object list to create a flag that enables cut_stamp
-;; to only cut scientific targets
-;add_tag, cat, 'cut_list', 0, cat_new
-;cat=cat_new
-;delvarx, cat_new
-;
-;IF (setup.srclist EQ '' OR setup.srclistrad LE 0) THEN BEGIN
-;   cat.cut_list = 1
-;ENDIF ELSE BEGIN
-;   if file_test(setup.srclist) eq 0 then print, 'supplied object file does not exist'
-;   if file_test(setup.srclist) eq 0 then stop
-;   readcol, setup.srclist, cut_ra, cut_dec, format='F,F', comment='#', /SILENT
-;   
-;; or is the other way around faster??? NEESSARILY USE FASTER METHOD!
-;; Make this dynamic! Usually, in big surveys, srclist would have
-;; more objects that a tile, but not always true, e.g. when interested
-;; in a very special subsample
-;;if n_elements(cat.alpha_j2000/15.) ne 0 then stop
-;   if n_elements(cat.alpha_j2000) le n_elements(cut_ra) THEN $
-;      srccor, cat.alpha_j2000/15., cat.delta_j2000, cut_ra/15., cut_dec, $
-;              setup.srclistrad, cat_i, cut_i, OPTION=1, /SPHERICAL, /SILENT
-;   if n_elements(cat.alpha_j2000) gt n_elements(cut_ra) THEN $
-;      srccor, cut_ra/15., cut_dec, cat.alpha_j2000/15., cat.delta_j2000, $
-;              setup.srclistrad, cut_i, cat_i, OPTION=1, /SPHERICAL, /SILENT
-;   
-;   if cat_i[0] ne -1 then cat[cat_i].cut_list = 1
-;ENDELSE
-  
+    
   openw, 1, outparam
 ;loop over objects and calculate postage stamp sizes
   FOR i=0ul, n_elements(cat)-1 DO BEGIN
@@ -575,32 +547,20 @@ PRO create_stamp_file, image, sexcat, sexparam, outparam, sizefac, setup
      ENDELSE
      
      xlo = round(cat[i].x_image)-round(xfac)
-     xa = 0
-     IF xlo LT 0 THEN BEGIN
-        xa = abs(xlo) & xlo = 0
-     ENDIF
+     IF xlo LT 0 THEN xlo = 0
      xhi = round(cat[i].x_image)+round(xfac)
      IF xhi GT nx-1 THEN xhi = nx-1
-     
+    
      ylo = round(cat[i].y_image)-round(yfac)
-     ya = 0
-     IF ylo LT 0 THEN BEGIN
-        ya = abs(ylo) & ylo = 0
-     ENDIF
+     IF ylo LT 0 THEN ylo = 0
      yhi = round(cat[i].y_image)+round(yfac)
      IF yhi GT ny-1 THEN yhi = ny-1
      
-; write out parameters for postages stamps, but only if object is in
-; srclist
-; in case of an empty catalogue, 0s have to be written out (if the file
-; doesn not exist, galapapos crases) The check is in the cut_stamps
-;    if (cat[i].cut_list eq 1) then begin
+; write out parameters for postages stamps
      printf, 1, cat[i].number, cat[i].x_image, cat[i].y_image, $
              xlo, xhi, ylo, yhi, format = '(I,2(F),4(I))'
-;    endif
   ENDFOR
   close, 1
-  
 END
 
 PRO cut_stamps, image, param, outpath, pre, post, cut_list
