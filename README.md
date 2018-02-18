@@ -4,7 +4,7 @@ This is the multi-band Galapagos version.
 
 *Galapagos: Galaxy Analysis over Large Areas: Parameter Assessment by GALFITting Objects from SExtractor*
 
-See [here](http://astro-staff.uibk.ac.at/~m.barden/galapagos/) for details of the original version, described in this paper: [Barden, Häußler et al, 2012, MNRAS,422,449](http://adsabs.harvard.edu/abs/2012MNRAS.422..449B)
+See [here](https://borishaeussler.github.io/galapagos_v1/) for details of the original version, described in this paper: [Barden, Häußler et al, 2012, MNRAS,422,449](http://adsabs.harvard.edu/abs/2012MNRAS.422..449B)
 
 The MegaMorph project (specifically Häußler, Bamford and Vika) has added many new features to this code: (selection)
 - Galapagos can now use multi-band data simultaneously  
