@@ -1451,7 +1451,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
               skyim = reform(skyim[randomu(seed, npix^2)*npix^2], npix, npix)
               
               IF n_elements(uniq(skyim)) LT 5 THEN BEGIN
-                 ringsky = mean(skyim)
+                 ringsky = float(mean(skyim,/double))
                  ringsigma = 1e30
               ENDIF ELSE BEGIN
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1507,7 +1507,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
            IF new_sky LT min_sky and new_sky_sig lt 1e20 THEN BEGIN
               min_sky_flag = min_sky_flag0
               min_sky = new_sky
-              IF ct GT 0 THEN min_sky_rad = mean(sl_rad[idx]) $
+              IF ct GT 0 THEN min_sky_rad = float(mean(sl_rad[idx],/double)) $
               ELSE min_sky_rad = radius[r]
               min_sky_sig = new_sky_sig
 ;        oploterror, min_sky_rad, min_sky, min_sky_sig, $
@@ -1549,7 +1549,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;        new_sky_sig = 999
         fit = [0, 0]
      ENDELSE
-     IF ct GT 0 THEN sky_rad = mean(sl_rad[idx]) ELSE sky_rad = radius[(r-1) >0]
+     IF ct GT 0 THEN sky_rad = float(mean(sl_rad[idx],/double)) ELSE sky_rad = radius[(r-1) >0]
      IF new_sky GT min_sky THEN BEGIN
         sky_flag0 = min_sky_flag
         new_sky = min_sky
