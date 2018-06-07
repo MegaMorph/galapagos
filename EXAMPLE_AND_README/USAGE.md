@@ -224,11 +224,11 @@ While some users might prefer other handling, this is overall the most flexible.
 SIGMA images can be created from an RMS and the image itself, similar to the following way.
 The trick here is to normalize images properly and adding the poisson noise of the objects themselves on top of the RMS images. This can be done in approximation using:
 
-    sigma = sqrt{rms^2 + [sqrt(abs(img)]^2    (sqrt of absolute image values and rms are added in quadrature)
+    sigma = sqrt{rms^2 + [(img > 0)]}    (sqrt of image uncertainties (or 0, whatever is higher) and rms are added in quadrature. Not the missing ^2 on the image. Image uncertainties are sqrt(img). sqrt(img)^2 = img)
 
 'img' in this case is normalized to 1 second (which is not preferred by Galapagos/Galfit, but easier to explain here! If you have your image normalized to please adapt accordingly!)
 
-If the wht and rms image are correct (i.e., taking the pixel scale and gain into account, all images in electrons/second) then the correct formula to add Poisson noise is rms_total ^ 2 = rms^2 + (sqrt(sci) / exp)^2.  
+If the wht and rms image are correct (i.e., taking the pixel scale and gain into account, all images in electrons/second) then the correct formula to add Poisson noise is rms_total ^ 2 = rms^2 + (sqrt(sci) / exp).  
 Here, sci is the science mosaic, and exp the exposure time mosaic. 
 
 In this context it is important that exp is normalized to the right pixel scale!  
