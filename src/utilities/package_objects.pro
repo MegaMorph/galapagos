@@ -134,6 +134,7 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
   obj_new = strmid(obj,strpos(obj,'/',/reverse_search)+1)
   files_to_copy_new = [obj_new]
 
+  output_file_exists=0      
   WHILE ~ EOF(filer) DO BEGIN
 ; Read a line of text:
       readf, filer, line
@@ -167,10 +168,9 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
           content_elements = strsplit(content,',',/extract)
           bandnames = content_elements
       ENDIF
-  output_file_exists=0      
 ; output image if there
       IF strpos(strtrim(line, 2), 'B) ') EQ 0 THEN BEGIN
-          IF file_test(content) THEN BEGIN
+         IF file_test(content) THEN BEGIN
               output_file_exists = 1
               files_to_copy = [files_to_copy,content]
               content_new = strmid(content,strpos(content,'/',/reverse_search)+1)

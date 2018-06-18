@@ -1,4 +1,6 @@
 PRO create_output_from_obj, obj, layers, gal_exe
+; this script does REPEAT the fit with new output options, e.g. can
+; NOT be used to simplycreate the residuals
 ; .run create_output_from_obj.pro
 ; create_output_from_obj, '/Users/haeussler/Documents/Dropbox/Arianna_Fits/414.556/414.556_obj_adapt','blank,input,model,residual,psf','~/megamorph/galfit/exec/galfitm-1.2.0-osx'
   spawn, 'pwd', infolder
@@ -18,7 +20,13 @@ PRO create_output_from_obj, obj, layers, gal_exe
   WHILE ~ EOF(filer) DO BEGIN
 ; Read a line of text:
      readf, filer, line
-     
+; split up into parts
+     content_numbers = ' '
+     content_descriptor = ' '
+     start = strtrim(strmid(line,0,strpos(line,')')+2),2)
+     content = strtrim(strmid(line,strpos(line,')')+2, strpos(line,'#')-strpos(line,')')-2),2)
+     comment = strtrim(strmid(line,strpos(line,'#')),2)
+
 ; change format of output file
      IF strpos(strtrim(line, 2), 'W) ') EQ 0 THEN BEGIN
         printf, filew, start+' '+layers+'  '+comment
