@@ -291,6 +291,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
                      ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
                      ' -CHECKIMAGE_TYPE '+setup.chktype+' -CHECKIMAGE_NAME '+ $
                      file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
+     print, sexcommand_cc
      spawn, sexcommand_cc
      IF multi EQ 3 THEN BEGIN
         print, 'starting hot sex check image'
@@ -302,6 +303,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
                         ' -CHECKIMAGE_TYPE '+setup.chktype+' -CHECKIMAGE_NAME '+ $
                         file_dirname(check)+'/'+file_basename(check, '.fits')+ $
                         '.hot.fits'
+        print, sexcommand_hc
         spawn, sexcommand_hc
      ENDIF
   ENDIF
@@ -314,6 +316,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
                   ' -WEIGHT_IMAGE '+weight+','+weight+ $
                   ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
                   ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
+  print, sexcommand_cs
   spawn, sexcommand_cs
 ; create reg file for cold catalogue
   sex2ds9reg, coldcat, outpath_file[tile,0]+setup.outparam, $
@@ -327,6 +330,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
                      ' -WEIGHT_IMAGE '+weight+','+weight+ $
                      ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
                      ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+hotseg
+     print, sexcommand_hs
      spawn, sexcommand_hs
 ; create reg file for hot catalogue
      sex2ds9reg, hotcat, outpath_file[tile,0]+setup.outparam, $
@@ -3033,7 +3037,7 @@ PRO read_image_files, setup, save_folder, silent=silent
      print, ' '
      print, 'there is at least one weight image missing as currently defined (typo?)'
      print, 'missing weights:'
-     forprint, setup.images(wh_non_exist), textout=1
+     forprint, setup.weights(wh_non_exist), textout=1
   ENDIF
   
   IF (cntimne NE 0) OR (cntwhne NE 0) THEN stop
