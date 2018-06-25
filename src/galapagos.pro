@@ -291,6 +291,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
                      ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
                      ' -CHECKIMAGE_TYPE '+setup.chktype+' -CHECKIMAGE_NAME '+ $
                      file_dirname(check)+'/'+file_basename(check, '.fits')+'.cold.fits'
+;     print, sexcommand_cc
      spawn, sexcommand_cc
      IF multi EQ 3 THEN BEGIN
         print, 'starting hot sex check image'
@@ -302,6 +303,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
                         ' -CHECKIMAGE_TYPE '+setup.chktype+' -CHECKIMAGE_NAME '+ $
                         file_dirname(check)+'/'+file_basename(check, '.fits')+ $
                         '.hot.fits'
+;        print, sexcommand_hc
         spawn, sexcommand_hc
      ENDIF
   ENDIF
@@ -314,6 +316,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
                   ' -WEIGHT_IMAGE '+weight+','+weight+ $
                   ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
                   ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+coldseg
+;  print, sexcommand_cs
   spawn, sexcommand_cs
 ; create reg file for cold catalogue
   sex2ds9reg, coldcat, outpath_file[tile,0]+setup.outparam, $
@@ -327,6 +330,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
                      ' -WEIGHT_IMAGE '+weight+','+weight+ $
                      ' -WEIGHT_TYPE '+weight_type+','+weight_type+' -MAG_ZEROPOINT '+zp_eff[0]+ $
                      ' -CHECKIMAGE_TYPE segmentation -CHECKIMAGE_NAME '+hotseg
+;     print, sexcommand_hs
      spawn, sexcommand_hs
 ; create reg file for hot catalogue
      sex2ds9reg, hotcat, outpath_file[tile,0]+setup.outparam, $
@@ -1246,6 +1250,8 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;16 - value from contributing source taken
 ;32 - image is masked entirey, no sky determination was
 ;    possible. Assuming 0 as sky value
+;64 - distribution of sky pixels too narrow, so gaussian fit can not
+;     be run. Instead, resistant_mean and sigma are used
   sky_flag = 0
   
 ; rename image so im0 is not changed
@@ -1496,14 +1502,15 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
               ENDIF ELSE BEGIN
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                  plothist, skyim, x, y, chars = 2, bin = s*3*2/50., /noplot
-                 f = gaussfit(x, y, a, sigma=sig, nterms = 3)
-;oplot, x, f, col = 250
-                 resistant_mean, skyim, 3, ringsky, ringsigma
-;ver, ringsky
-;ver, a[1], col = 250
-;            print, ringsky, a[1]
-                 ringsky = a[1]
-                 ringsigma = sig[1] ;a[2]/(n_elements(x)^2-1)
+                 IF n_elements(x) GT 3 THEN BEGIN
+                    f = gaussfit(x, y, a, sigma=sig, nterms = 3)
+                    ringsky = a[1]
+                    ringsigma = sig[1] ;a[2]/(n_elements(x)^2-1)
+                 ENDIF ELSE BEGIN
+                    resistant_mean, skyim, 3, ringsky, ringsigma, nrej
+                    ringsigma *= sqrt(n_elements(skyim)-1-nr)
+                    sky_flag += 64
+                 ENDELSE
 ;++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
               ENDELSE
            ENDIF ELSE BEGIN
@@ -3033,7 +3040,7 @@ PRO read_image_files, setup, save_folder, silent=silent
      print, ' '
      print, 'there is at least one weight image missing as currently defined (typo?)'
      print, 'missing weights:'
-     forprint, setup.images(wh_non_exist), textout=1
+     forprint, setup.weights(wh_non_exist), textout=1
   ENDIF
   
   IF (cntimne NE 0) OR (cntwhne NE 0) THEN stop
