@@ -7,9 +7,8 @@ pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost, overwrite
 ; fits file itself.
   
 ; THIS CODE
-; use *galfit.01 obj file
+; use *galfit.01 obj file (or *galfit.01_adapt if keyword /adapt is used) 
 ; run galfit with all parameters fixed!
-; galfit -o option?
 
 ; BETTER WOULD BE
 ; read results from fits output file itself instead of fake obj file
@@ -46,7 +45,7 @@ pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost, overwrite
   obj = list[wh]
 
   print, 'using file '+strtrim(obj,2)+' to start from'
-  
+
 ; go through setup file one line at a time
 ; change output file format and set all DOG == 0!!
   openr, filer, obj, /get_lun
