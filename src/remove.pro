@@ -11,7 +11,8 @@ pro remove,index, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, $
 ;       INDEX - scalar or vector giving the index number of elements to
 ;               be removed from vectors.  Duplicate entries in index are
 ;               ignored.    An error will occur if one attempts to remove
-;               all the elements of a vector.
+;               all the elements of a vector.     REMOVE will return quietly
+;               (no error message) if index is !NULL or undefined.
 ;
 ; INPUT-OUTPUT:
 ;       v1 - Vector or array.  Elements specifed by INDEX will be 
@@ -51,32 +52,35 @@ pro remove,index, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, $
 ;       Major rewrite for improved speed   W. Landsman    April 2000
 ;       Accept up to 25 variables, use SCOPE_VARFETCH internally
 ;              W. Landsman   Feb 2010
-;       
+;       Fix occasional integer overflow problem  V. Geers  Feb 2011
+;       Quietly return if index is !null or undefined W.L. Aug 2011
+;             
 ;-
  On_error,2
- compile_opt idl2
+ compile_opt idl2,strictarrsubs
 
  npar = N_params()
  nvar = npar-1
  if npar LT 2 then begin
-      print,'Syntax - remove, index, v1, [v2, v3, v4, v5, v6, v7]'
+      print,'Syntax - remove, index, v1, [v2, v3, v4,..., v25]'
       return
  endif
+
+ if N_elements(index) EQ 0 then return
+
   vv = 'v' + strtrim( indgen(nvar)+1, 2) 
+  npts = N_elements(v1)
+   
+  max_index = max(index, MIN = min_index)
 
-
- npts = N_elements(v1)
-
- max_index = max(index, MIN = min_index)
-
- if ( min_index LT 0 ) or (max_index GT npts-1) then message, $
+ if ( min_index LT 0 ) || (max_index GT npts-1) then message, $
              'ERROR - Index vector is out of range'
 
- if ( max_index Eq min_index ) then begin 
+ if ( max_index Eq min_index ) then begin   ;Remove only 1 element?
      Ngood = 0  
     if npts EQ 1 then message, $ 
          'ERROR - Cannot delete all elements from a vector'
-  endif else begin  ;Remove only 1 element?
+  endif else begin 
          
 
 ;  Begin case where more than 1 element is to be removed.   Use HISTOGRAM
@@ -106,10 +110,10 @@ pro remove,index, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, $
 
  1:  ii = Ngood EQ 0 ? imax + lindgen(npts-imax) : $
                       [keep, imax + lindgen(npts-imax) ]
- 2:  ii = Ngood EQ 0 ? indgen(imin+1)               :  $
-                       [indgen(imin+1), keep ]
- 0:   ii = Ngood EQ 0 ? [indgen(imin+1), imax + lindgen(npts-imax) ]  : $
-                      [indgen(imin+1), keep, imax + lindgen(npts-imax) ]
+ 2:  ii = Ngood EQ 0 ? lindgen(imin+1)               :  $
+                       [lindgen(imin+1), keep ]
+ 0:   ii = Ngood EQ 0 ? [lindgen(imin+1), imax + lindgen(npts-imax) ]  : $
+                      [lindgen(imin+1), keep, imax + lindgen(npts-imax) ]
  endcase 
 
       for i=0,nvar-1 do  $
