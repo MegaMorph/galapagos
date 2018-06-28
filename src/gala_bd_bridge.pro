@@ -293,11 +293,9 @@ PRO gala_bd_bridge, filein
    printf, filew, n_b
 
 ; AR BULGE
-; IS EQ CORRECT HERE? OR LE?? ALSO IN ALL OTHER PARAMETERS!
    if (setup.cheb_b[5]+1)<maxdeg eq 1 then begin
        q_b = string(strarr(nband)+(median([ss_mult.Q_GALFIT_BAND])>0.6), $
                                    format = '('+string(nband)+'(A,","))')
-; NO LIMIT CURRENTLY USED WHEN DOF NE 1!!!
     endif else q_b = string(ss_mult.Q_GALFIT_BAND>0.6, $
                            format = '('+string(nband)+'(A,","))')
    q_b = strtrim(strcompress(q_b, /remove_all), 2)
