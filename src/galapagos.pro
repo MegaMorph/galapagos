@@ -3951,24 +3951,25 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
 ;allow main to see which process is free
      post_bridge_use = bytarr(setup.max_proc <max_proc)
 ;initialise every bridge (specify output property to allow debugging)
-     IF keyword_set(bridgejournal) THEN BEGIN
-         FOR i=0, setup.max_proc-1 <(max_proc-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_postage_stamps_'+strtrim(i,2))
-     ENDIF ELSE BEGIN
-         FOR i=0, setup.max_proc-1 <(max_proc-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
-     ENDELSE
      IF setup.max_proc <(max_proc) GT 1 THEN BEGIN
-         FOR i=0, setup.max_proc-1 <(max_proc-1) DO BEGIN
-             post_bridge_arr[i]->execute, 'astrolib'
-             post_bridge_arr[i]->execute, '.r '+gala_pro
-         ENDFOR
+        IF keyword_set(bridgejournal) THEN BEGIN
+           FOR i=0, setup.max_proc-1 <(max_proc-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_postage_stamps_'+strtrim(i,2))
+        ENDIF ELSE BEGIN
+           FOR i=0, setup.max_proc-1 <(max_proc-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+        ENDELSE
+        FOR i=0, setup.max_proc-1 <(max_proc-1) DO BEGIN
+           post_bridge_arr[i]->execute, 'astrolib'
+           post_bridge_arr[i]->execute, '.r '+gala_pro
+        ENDFOR
      ENDIF 
      done_cnt=0L
      i=0
      
      REPEAT BEGIN
 ;get status of bridge elements
-        FOR l=0, setup.max_proc-1 < (max_proc-1) DO post_bridge_use[l] = post_bridge_arr[l]->status()
-        
+        IF setup.max_proc <(max_proc) GT 1 THEN BEGIN
+           FOR l=0, setup.max_proc-1 < (max_proc-1) DO post_bridge_use[l] = post_bridge_arr[l]->status()
+        ENDIF
 ;check for free bridges
         free = where(post_bridge_use eq 0, ct)
         
@@ -4004,16 +4005,16 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
 ;allow main to see which process is free
      post_bridge_use = bytarr(setup.max_proc < nframes)
 ;initialise every bridge (specify output property to allow debugging)
-     IF keyword_set(bridgejournal) THEN BEGIN
-         FOR i=0, setup.max_proc-1 < (nframes-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_skymaps_'+strtrim(i,2))
-     ENDIF ELSE BEGIN
-         FOR i=0, setup.max_proc-1 < (nframes-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
-     ENDELSE
      IF setup.max_proc <(nframes) GT 1 THEN BEGIN
-         FOR i=0, setup.max_proc-1 < (nframes-1) DO BEGIN
-             post_bridge_arr[i]->execute, 'astrolib'
-             post_bridge_arr[i]->execute, '.r '+gala_pro
-         ENDFOR
+        IF keyword_set(bridgejournal) THEN BEGIN
+           FOR i=0, setup.max_proc-1 < (nframes-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_skymaps_'+strtrim(i,2))
+        ENDIF ELSE BEGIN
+           FOR i=0, setup.max_proc-1 < (nframes-1) DO post_bridge_arr[i] = obj_new('IDL_IDLBridge')
+        ENDELSE
+        FOR i=0, setup.max_proc-1 < (nframes-1) DO BEGIN
+           post_bridge_arr[i]->execute, 'astrolib'
+           post_bridge_arr[i]->execute, '.r '+gala_pro
+        ENDFOR
      ENDIF
      
 ;create skymap files using bridge
@@ -4022,8 +4023,9 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
      print, 'starting skymaps: '+systime(0)
      REPEAT BEGIN
 ;get status of bridge elements
-        FOR l=0, setup.max_proc-1 < (nframes-1) DO post_bridge_use[l] = post_bridge_arr[l]->status()
-        
+        IF setup.max_proc <(nframes) GT 1 THEN BEGIN
+           FOR l=0, setup.max_proc-1 < (nframes-1) DO post_bridge_use[l] = post_bridge_arr[l]->status()
+        ENDIF
 ;check for free bridges
         free = where(post_bridge_use EQ 0, ct)
         
@@ -4235,17 +4237,17 @@ jump_over_this_1:
      bridge_pos = dblarr(2, setup.max_proc)+!values.F_NAN
      
 ;initialise every bridge (specify output property to allow debugging)
-     IF keyword_set(bridgejournal) THEN BEGIN
-         FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_fitting_'+strtrim(i,2))
-     ENDIF ELSE BEGIN
-         FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge')
-     ENDELSE
      IF setup.max_proc GT 1 THEN BEGIN
-         FOR i=0, setup.max_proc-1 DO BEGIN
-             bridge_arr[i]->execute, 'astrolib'
-             bridge_arr[i]->execute, '.r '+gala_pro
-             bridge_arr[i]->execute, '.r gala_bridge'
-         ENDFOR
+        IF keyword_set(bridgejournal) THEN BEGIN
+           FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_fitting_'+strtrim(i,2))
+        ENDIF ELSE BEGIN
+           FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge')
+        ENDELSE
+        FOR i=0, setup.max_proc-1 DO BEGIN
+           bridge_arr[i]->execute, 'astrolib'
+           bridge_arr[i]->execute, '.r '+gala_pro
+           bridge_arr[i]->execute, '.r gala_bridge'
+        ENDFOR
      ENDIF
      
      IF keyword_set(plot) THEN BEGIN
@@ -4300,8 +4302,9 @@ loopstart:
         
 loopstart2:
 ;get status of bridge elements
-        FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
-        
+        IF setup.max_proc GT 1 THEN BEGIN
+           FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
+        ENDIF
 ;check for free bridges
         free = where(bridge_use EQ 0, ct)
         
@@ -4704,17 +4707,17 @@ jump_over_this_2:
         bridge_pos = dblarr(2, setup.max_proc)+!values.F_NAN
         
 ;initialise every bridge (specify output property to allow debugging)
-        IF keyword_set(bridgejournal) THEN BEGIN
-            FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_fitting_bd_'+strtrim(i,2))
-        ENDIF ELSE BEGIN
-            FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge')
-        ENDELSE
         IF setup.max_proc gt 1 THEN BEGIN
-            FOR i=0, setup.max_proc-1 DO BEGIN
-                bridge_arr[i]->execute, 'astrolib'
-                bridge_arr[i]->execute, '.r '+gala_pro
-                bridge_arr[i]->execute, '.r gala_bd_bridge'
-            ENDFOR  
+           IF keyword_set(bridgejournal) THEN BEGIN
+              FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_fitting_bd_'+strtrim(i,2))
+           ENDIF ELSE BEGIN
+              FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge')
+           ENDELSE
+           FOR i=0, setup.max_proc-1 DO BEGIN
+              bridge_arr[i]->execute, 'astrolib'
+              bridge_arr[i]->execute, '.r '+gala_pro
+              bridge_arr[i]->execute, '.r gala_bd_bridge'
+           ENDFOR  
         ENDIF
         IF keyword_set(plot) THEN BEGIN
            loadct,39,/silent
@@ -4772,8 +4775,9 @@ loopstart_bd:
            
 loopstart2_bd:
 ;get status of bridge elements
-           FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
-           
+           IF setup.max_proc gt 1 THEN BEGIN
+              FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
+           ENDIF
 ;check for free bridges
            free = where(bridge_use EQ 0, ct)
            
