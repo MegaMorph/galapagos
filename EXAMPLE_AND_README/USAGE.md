@@ -763,3 +763,13 @@ Please read the README in the utilities folder for details of what the codes do 
     - tighter constraints on objects xmax -> xmax/10. for objects ON the postage stamp xmax -> xmax/5. for objects outside the postage stamp ("contributing sources"). This should keep secondary objects from running into the primary or to a position outside of the postage stamp.
     - update to tiling_helper.pro to return more information to split the survey up into batches.
     - galapagos now checks that input images and weights exist. Helps to find typos in image names before running the code.
+
+**v2.2.8**
+- now calculating all mean values in double precision. Otherwise, this could have lead to significantly wrong values, e.g. in the sky determination in scertain rare cases. Changed throughout the code.
+- added a missing procedure from the astroloib to make the galapagos package stand-alone
+- updated the procedures to determine the sky values to work even with very few pixels or a sky value distribution too narrow to fit a gaussian to it, which caused the code to crash.
+- fixed a small bug in which ar_b>0.6 for starting values was not imposed if DOF>1 for this parameter.
+- properly disabled the usages of IDL_BRIDGE when only 1 core is used (D18 == 1), to avoid the code to crash.
+- updates to USAGES.md, especially regarding how to calculate the sigma images when creating them by hand and feeding them into Galapagos-2
+- cosmetic changes to some output, e.g. for marking wrong detections
+- some changes to utility scripts
