@@ -583,6 +583,7 @@ Running the postage stamp cutting again is easy and possible in case you decide 
 7. use the SExtractor output catalogue to define the values for 
 
     D13) -0.25    # slope in log(fwhm_image) vs. mag_best below which object is star
+    
     D14) 5.8      # zeropoint in log(fwhm_image) vs. mag_best below which object is star
 8. create batch files (if required)
 9. Run different setups (everything identical, other than the batch file in E01) on different machines.  
