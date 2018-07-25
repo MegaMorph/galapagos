@@ -4262,8 +4262,10 @@ jump_over_this_1:
 loopstart:
         todo=where(table.flag_galfit EQ 0 AND table.do_list EQ 1 AND table.do_batch EQ 1, ctr)
         IF ctr EQ 0 THEN BEGIN
-           FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
-           GOTO, loopend
+           IF setup.max_proc gt 1 THEN BEGIN
+              FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
+              GOTO, loopend
+           ENDIF
         ENDIF
         ct = 0
         
@@ -4735,8 +4737,10 @@ loopstart_bd:
            todo=where(table.flag_galfit_bd EQ 0 AND table.do_list_bd EQ 1 AND table.do_batch EQ 1 AND $
                       table.mag_galfit_band[0] GT 0 AND table.mag_galfit_band[0] LT setup.bd_maglim, ctr)
            if ctr eq 0 then begin
-              FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
-              goto, loopend_bd
+              IF setup.max_proc gt 1 THEN BEGIN
+                 FOR i=0, setup.max_proc-1 DO bridge_use[i] = bridge_arr[i]->status()
+                 goto, loopend_bd
+              ENDIF
            ENDIF
            ct = 0l
            
