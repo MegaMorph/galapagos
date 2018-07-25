@@ -23,6 +23,8 @@ PRO derive_colour_offsets, setup_file, image_number, hot=hot, image=image, weigh
 ; 'weight' have to be the arrays for all bands
 
 ;read in the setup file
+colorset,/pseudo
+loadct,39
   read_setup, setup_file, setup
 
 ;read input files into arrays
@@ -97,6 +99,7 @@ PRO derive_colour_offsets, setup_file, image_number, hot=hot, image=image, weigh
   if count gt 0 then sample[wh] = 0
   print, strtrim(total(sample),2)+' objects left after cleaning for magnitudes in reference catalogue'
   FOR b=1,nband DO BEGIN
+;  FOR b=1,nband DO BEGIN
      cat = mrdfits(cat_name[b],1,/silent)
 ; filter nonsense magnitudes
      wh = where(cat.mag_best gt 30, count)
@@ -107,13 +110,11 @@ PRO derive_colour_offsets, setup_file, image_number, hot=hot, image=image, weigh
 
 
   print, 'you should be able to use these offsets: zero_point, image, median, mean, accuracy, sigma, #objects after sigma clipping'
-  print, 'Given the double peak profile, the resistant mean values are probably dangerous, I recommend median instead'
+;  print, 'Given the double peak profile, the (resistant) mean values are probably dangerous, I recommend median instead'
+  print, 'you can chose either median or mean values. Please look at the distributions plotted and decide which is better. median in red, mean in green'
   FOR b=1,nband DO BEGIN
      cat = mrdfits(cat_name[b],1,/silent)
 ;     wh = where(cat.mag_best lt 50)
-     plothist, cat[sample].mag_best-refcat[sample].mag_best,xrange=[-1,4],bin=0.05
-;stop
-     wait, 2
      resistant_mean, cat[sample].mag_best-refcat[sample].mag_best, 5., m, s, r
      med[b] = median(cat[sample].mag_best-refcat[sample].mag_best)
      offset[b] = m
@@ -122,7 +123,14 @@ PRO derive_colour_offsets, setup_file, image_number, hot=hot, image=image, weigh
      rej[b] = r
      sigma[b] *= sqrt(n_elements(sample)-1-rej[b])
      print, strtrim(setup.zp[b],2), ' ', images[image_number,b], '  ', med[b], '  ', offset[b], '  ', offset_acc[b], '  ', sigma[b], '  ', strtrim(n_elements(sample)-rej[b],2)
-  ENDFOR
+     IF NOT (offset[b] EQ 0 AND sigma[b] EQ 0) THEN BEGIN
+       plothist, cat[sample].mag_best-refcat[sample].mag_best,bin=0.05;,xrange=[-5,5]
+       oplot,[med[b],med[b]],[0,10000],col=235
+       oplot,[offset[b],offset[b]],[0,10000],col=135
+       wait,2
+     ENDIF
+;     stop
 
+  ENDFOR
 
 END
