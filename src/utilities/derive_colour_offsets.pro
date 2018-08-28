@@ -129,7 +129,6 @@ loadct,39
        oplot,[offset[b],offset[b]],[0,10000],col=135
        wait,2
      ENDIF
-;     stop
 
   ENDFOR
 

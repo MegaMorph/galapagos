@@ -374,6 +374,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
         segim_hot = readfits(hotseg, seghd_hot, /silent)
         
         FOR i=0ul, ncold-1 DO BEGIN
+           statusline, 'creating segmentation map for cold objects '+strtrim(i,2)
            idx = where(cold_cxx[i]*(hot_table.x_image- $
                                     cold_table[i].x_image)^2.+ $
                        cold_cyy[i]*(hot_table.y_image- $
@@ -396,9 +397,11 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
 ;defined in cold segmentation map. Then write result!
      IF multi EQ 3 THEN BEGIN
         
+        print, ''
         nhot = n_elements(hot_table)
         off = max(cold_table.number)+1
         FOR i=0ul, nhot-1 DO BEGIN
+           statusline, 'adding hot objects to those cold objects '+strtrim(i,2)
            idx = where(segim_hot EQ hot_table[i].number, ct)
            IF ct GT 0 THEN BEGIN
 ;prefer cold pixels in output segmentation map
@@ -419,6 +422,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
         x = reform(exclude[0, *])
         y = reform(exclude[1, *])
 
+        print, ''
         print, 'removing a total of '+strtrim(n_elements(x),2)+' flagged false detections from this tile'
         srccor, x, y, table_all.x_image, table_all.y_image, setup.exclude_rad, l, e, $
                 option = 1, /silent
