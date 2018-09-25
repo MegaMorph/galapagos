@@ -401,7 +401,7 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
         nhot = n_elements(hot_table)
         off = max(cold_table.number)+1
         FOR i=0ul, nhot-1 DO BEGIN
-           statusline, 'adding hot objects to those cold objects '+strtrim(i,2)
+           statusline, 'adding hot objects '+strtrim(i,2)
            idx = where(segim_hot EQ hot_table[i].number, ct)
            IF ct GT 0 THEN BEGIN
 ;prefer cold pixels in output segmentation map
