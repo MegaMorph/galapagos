@@ -365,6 +365,7 @@ If your IDL session is niced, the galfit is already niced automatically. (rename
 
     E17) 4.0      #GALFIT version string. E.g. 2.0.3c
 This defines the input file format for the galfit start files. (renamed, previously E15)
+In order to use galfitm (with multi-wavelength capability), use a version 4.0 or higher (this is how Galapagos will know what you're trying to use)
 
     E18) galfitm-0.1.3.1  # string used to identify running galfit processes in order to kill them after E19 minutes (string seen in 'top')
     E19) 240              # time (in minutes) after which galfit processes are killed
