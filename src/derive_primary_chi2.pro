@@ -94,9 +94,9 @@ PRO derive_primary_chi2, obj_file, gal_exe
   spawn, gal_exe+' -o2 '+newfile +' >null'
 
 ; delete all mask files and new start file to save disk space, only keep output file for readout of Chi^2
-;  spawn, 'rm fit.log null '+newfile
-;  FOR b=0,nband-1 DO spawn, 'rm '+new_mask_files[b]
-  
+  spawn, 'rm fit.log null *primary_only.galfit.*'
+  FOR b=0,nband-1 DO spawn, 'rm '+new_mask_files[b]
+;  spawn, 'rm '+newfile
   
 ; back to the start
   CD, infolder

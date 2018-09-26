@@ -3730,7 +3730,7 @@ PRO start_log, logfile, message
   free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2, mac=mac
+PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2
   galapagos_version = 'GALAPAGOS-v2.2.8'
   galapagos_date = '(June 28th, 2018)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
