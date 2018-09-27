@@ -24,9 +24,9 @@ PRO define_addcol, addcol, nband, bd_fit = bd_fit, read_bd = read_bd
             ['GALFIT_VERSION', '" "'], $
             ['FIRSTCON_GALFIT','0'], ['LASTCON_GALFIT','0'], $
             ['NDOF_GALFIT','0l'], ['NFREE_GALFIT','0l'], $
-            ['NFIX_GALFIT','0l'], ['CHI2NU_GALFIT','0.'], $
-            ['INITFILE', '" "'], ['CONSTRNT', '" "'], $
-            ['LOGFILE', '" "'], $
+            ['NFIX_GALFIT','0l'], $
+            ['CHI2NU_GALFIT','0.'], ['INITFILE', '" "'], $
+            ['CONSTRNT', '" "'], ['LOGFILE', '" "'], $
             ['FITSECT', '" "'], ['CONVBOX', '" "'], $
             ['CPUTIME_SETUP_GALFIT', '0.'], ['CPUTIME_FIT_GALFIT', '0.'], $
             ['CPUTIME_TOTAL_GALFIT', '0.'], $
@@ -62,18 +62,21 @@ PRO define_addcol, addcol, nband, bd_fit = bd_fit, read_bd = read_bd
             ['X_GALFIT_DEG','0'], ['Y_GALFIT_DEG','0'], $
             ['MAG_GALFIT_DEG','0'],['RE_GALFIT_DEG','0'], $
             ['N_GALFIT_DEG','0'],['Q_GALFIT_DEG','0'], $
-            ['PA_GALFIT_DEG','0']]
+            ['PA_GALFIT_DEG','0'], $
+            ['NDOF_GALFIT_PRIME','0l'], ['CHISQ_GALFIT_PRIME','0.'], $
+            ['CHI2NU_GALFIT_PRIME','0.']]
+;            ['NGOOD_GALFIT_BAND_PRIME', bandfloat], ['NMASK_GALFIT_BAND_PRIME', bandfloat]
   if keyword_set(bd_fit) or keyword_set(read_bd) then addcol=[[addcol], $
                                                               ['FLAG_GALFIT_BD', '0'], ['NITER_GALFIT_BD', '0'], $
                                                               ['NEIGH_GALFIT_BD', '0'], ['CHISQ_GALFIT_BD','0.'], $
                                                               ['GALFIT_VERSION_BD', '" "'], $
                                                               ['FIRSTCON_GALFIT_BD','0'], ['LASTCON_GALFIT_BD','0'], $
                                                               ['NDOF_GALFIT_BD','0l'], ['NFREE_GALFIT_BD','0l'], $
-                                                              ['NFIX_GALFIT_BD','0l'], ['CHI2NU_GALFIT_BD','0.'], $
-                                                              ['INITFILE_BD', '" "'], ['CONSTRNT_BD', '" "'], $
-                                                              ['LOGFILE_BD', '" "'], ['FILE_GALFIT_BD', '" "'],$
-                                                              ['CPUTIME_SETUP_GALFIT_BD', '0.'], ['CPUTIME_FIT_GALFIT_BD', '0.'], $
-                                                              ['CPUTIME_TOTAL_GALFIT_BD', '0.'], $
+                                                              ['NFIX_GALFIT_BD','0l'], $
+                                                              ['CHI2NU_GALFIT_BD','0.'], ['INITFILE_BD', '" "'], $
+                                                              ['CONSTRNT_BD', '" "'], ['LOGFILE_BD', '" "'], $
+                                                              ['FILE_GALFIT_BD', '" "'], ['CPUTIME_SETUP_GALFIT_BD', '0.'], $
+                                                              ['CPUTIME_FIT_GALFIT_BD', '0.'], ['CPUTIME_TOTAL_GALFIT_BD', '0.'], $
                                                               ['X_GALFIT_D', '0.'], ['XERR_GALFIT_D', '0.'], $
                                                               ['X_GALFIT_B', '0.'], ['XERR_GALFIT_B', '0.'], $
                                                               ['X_GALFIT_CHEB_D', hlpcheb0], ['XERR_GALFIT_CHEB_D', hlpcheb0], $
@@ -126,5 +129,8 @@ PRO define_addcol, addcol, nband, bd_fit = bd_fit, read_bd = read_bd
                                                               ['X_GALFIT_DEG_D','0'], ['Y_GALFIT_DEG_D','0'], $
                                                               ['MAG_GALFIT_DEG_D','0'],['RE_GALFIT_DEG_D','0'], $
                                                               ['N_GALFIT_DEG_D','0'],['Q_GALFIT_DEG_D','0'], $
-                                                              ['PA_GALFIT_DEG_D','0']]  
+                                                              ['PA_GALFIT_DEG_D','0'], $
+                                                              ['NDOF_GALFIT_BD_PRIME','0l'], ['CHISQ_GALFIT_BD_PRIME','0.'], $
+                                                              ['CHI2NU_GALFIT_BD_PRIME','0.']]  
+
 END

@@ -1288,8 +1288,8 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;read in the GALFIT image fitting results from current_file
               forward_function read_sersic_results ; not quite sure why this is needed
               forward_function read_sersic_results_old_galfit ; not quite sure why this is needed
-              IF setup.version ge 4. then par = read_sersic_results(current_contrib_file,nband)
-              IF setup.version lt 4. then par = read_sersic_results_old_galfit(current_contrib_file)      
+              IF setup.version ge 4. then par = read_sersic_results(current_contrib_file,nband,setup)
+              IF setup.version lt 4. then par = read_sersic_results_old_galfit(current_contrib_file,setup)      
               contrib_sky = [contrib_sky, par.sky_galfit_band[b-1]]
               
 ;subtract the source from the image               
@@ -2014,8 +2014,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      forward_function read_sersic_results_old_galfit
      IF file_test(secout_file) THEN BEGIN
 ;sources with existing fit will be included as static source
-        IF setup.version ge 4. then par = read_sersic_results(secout_file,nband)
-        IF setup.version lt 4. then par = read_sersic_results_old_galfit(secout_file)      
+        IF setup.version ge 4. then par = read_sersic_results(secout_file,nband,setup)
+        IF setup.version lt 4. then par = read_sersic_results_old_galfit(secout_file,setup)      
         
 ;problem: position from GALFIT is relative to original postage
 ;stamp. Need to compute offset using SExtractor input for that fit
@@ -2051,8 +2051,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ; not matter
         forward_function read_sersic_results
         forward_function read_sersic_results_old_galfit
-        IF setup.version GE 4. then par = read_sersic_results(secout_file,nband)
-        IF setup.version LT 4. then par = read_sersic_results_old_galfit(secout_file)      
+        IF setup.version GE 4. then par = read_sersic_results(secout_file,nband,setup)
+        IF setup.version LT 4. then par = read_sersic_results_old_galfit(secout_file,setup)      
         par.x_galfit = table[objects[i]].x_image
         par.x_galfit_band = fltarr(nband)+table[objects[i]].x_image
         par.y_galfit = table[objects[i]].y_image
@@ -2223,8 +2223,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ;sources with existing fit will be included as static source
         forward_function read_sersic_results
         forward_function read_sersic_results_old_galfit
-        IF setup.version GE 4. THEN par = read_sersic_results(current_contrib_file,nband)
-        IF setup.version LT 4. THEN par = read_sersic_results_old_galfit(current_contrib_file)      
+        IF setup.version GE 4. THEN par = read_sersic_results(current_contrib_file,nband,setup)
+        IF setup.version LT 4. THEN par = read_sersic_results_old_galfit(current_contrib_file,setup)      
 ;problem: position from GALFIT is relative to original postage
 ;stamp. Need to compute offset using SExtractor input for that fit
         tb = read_sex_table(outpath_file[idx,0]+out_cat, $
@@ -2259,8 +2259,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ; not matter
               forward_function read_sersic_results
               forward_function read_sersic_results_old_galfit
-              IF setup.version GE 4. THEN par = read_sersic_results(secout_file,nband)
-              IF setup.version LT 4. THEN par = read_sersic_results_old_galfit(secout_file)      
+              IF setup.version GE 4. THEN par = read_sersic_results(secout_file,nband,setup)
+              IF setup.version LT 4. THEN par = read_sersic_results_old_galfit(secout_file,setup)      
 ; replace correctly!
               par.x_galfit = table[i_con].x_image
               par.x_galfit_band = fltarr(nband)+table[i_con].x_image
@@ -2284,8 +2284,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ;source is in fit_table but no fit exists -> bombed -> free fit
               forward_function read_sersic_results
               forward_function read_sersic_results_old_galfit
-              IF setup.version GE 4. THEN par = read_sersic_results(secout_file,nband)
-              IF setup.version LT 4. THEN par = read_sersic_results_old_galfit(secout_file)      
+              IF setup.version GE 4. THEN par = read_sersic_results(secout_file,nband,setup)
+              IF setup.version LT 4. THEN par = read_sersic_results_old_galfit(secout_file,setup)      
               
               par.x_galfit = table[i_con].x_image
               par.x_galfit_band = fltarr(nband)+table[i_con].x_image
@@ -2310,8 +2310,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ;source is not in fit_table -> free fit
            forward_function read_sersic_results
            forward_function read_sersic_results_old_galfit
-           IF setup.version GE 4. THEN par = read_sersic_results(secout_file,nband)
-           IF setup.version LT 4. THEN par = read_sersic_results_old_galfit(secout_file)      
+           IF setup.version GE 4. THEN par = read_sersic_results(secout_file,nband,setup)
+           IF setup.version LT 4. THEN par = read_sersic_results_old_galfit(secout_file,setup)      
            
            par.x_galfit = table[i_con].x_image
            par.x_galfit_band = fltarr(nband)+table[i_con].x_image
@@ -3012,7 +3012,7 @@ PRO read_image_files, setup, save_folder, silent=silent
 
 END
 
-FUNCTION read_sersic_results, obj, nband, bd=bd
+FUNCTION read_sersic_results, obj, nband, setup, bd=bd
   IF file_test(obj[0]) THEN BEGIN
      result = mrdfits(obj[0], 'FINAL_BAND',/silent)
      res_cheb = mrdfits(obj[0], 'FINAL_CHEB',/silent)
@@ -3023,8 +3023,16 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
      REPEAT comp = comp +1 UNTIL tag_exist(result, 'COMP'+strtrim(comp,2)+'_MAG') eq 0
      IF tag_exist(band_info, 'NGOOD') THEN ngood_g = band_info.ngood ELSE ngood_g = -99
      IF tag_exist(band_info, 'NMASK') THEN nmask_g = band_info.nmask ELSE nmask_g = -99
-; delete feedback, just in case the format of one is different,
-; avoiding crash
+
+; run galfit to derive primary target on these latest parameters
+; (only run if new galfit.band.?? file exists and this has not already been done)
+     fit_info_primary_file = strtrim(fit_info.logfile,2)+'_primary_fit_info'
+
+     IF NOT FILE_TEST(fit_info_primary_file) THEN derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
+; read out these values from ascii file
+     readcol, fit_info_primary_file, ndof_prime, chi2_prime, chi2nu_prime, format='I,F,F',/silent
+
+; delete feedback, just in case the format of one is different, avoiding crash
      delvarx, feedback
      IF NOT keyword_set(bd) THEN BEGIN
         feedback = create_struct('mag_galfit', result[0].COMP2_MAG, 'magerr_galfit',result[0].COMP2_MAG_ERR, $
@@ -3078,7 +3086,10 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'RE_GALFIT_DEG', total(res_cheb.comp2_re_fit), $
                                  'N_GALFIT_DEG', total(res_cheb.comp2_n_fit), $
                                  'Q_GALFIT_DEG', total(res_cheb.comp2_ar_fit), $
-                                 'PA_GALFIT_DEG', total(res_cheb.comp2_pa_fit))
+                                 'PA_GALFIT_DEG', total(res_cheb.comp2_pa_fit), $
+                                 'NDOF_GALFIT_PRIME', ndof_prime, $
+                                 'CHISQ_GALFIT_PRIME', chi2_prime, $
+                                 'CHI2NU_GALFIT_PRIME', chi2nu_prime)
      ENDIF
      IF keyword_set(bd) THEN BEGIN
         feedback = create_struct('mag_galfit_d', result[0].COMP2_MAG, 'magerr_galfit_d',result[0].COMP2_MAG_ERR, $
@@ -3156,7 +3167,10 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'RE_GALFIT_DEG_D', total(res_cheb.comp2_re_fit), $
                                  'N_GALFIT_DEG_D', total(res_cheb.comp2_n_fit), $
                                  'Q_GALFIT_DEG_D', total(res_cheb.comp2_ar_fit), $
-                                 'PA_GALFIT_DEG_D', total(res_cheb.comp2_pa_fit))
+                                 'PA_GALFIT_DEG_D', total(res_cheb.comp2_pa_fit), $
+                                 'NDOF_GALFIT_BD_PRIME', ndof_prime, $
+                                 'CHISQ_GALFIT_BD_PRIME', chi2_prime, $
+                                 'CHI2NU_GALFIT_BD_PRIME', chi2nu_prime)
      ENDIF
 ; to include:
 ; there is more band_info which is not used yet (band, wl, datain,
@@ -3214,7 +3228,10 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'RE_GALFIT_DEG', -99, $
                                  'N_GALFIT_DEG', -99, $
                                  'Q_GALFIT_DEG', -99, $
-                                 'PA_GALFIT_DEG', -99)
+                                 'PA_GALFIT_DEG', -99, $
+                                 'NDOF_GALFIT_PRIME', -99l, $
+                                 'CHISQ_GALFIT_PRIME', -99., $
+                                 'CHI2NU_GALFIT_PRIME', -99.)
      ENDIF
      IF keyword_set(bd) THEN BEGIN
         feedback = create_struct('mag_galfit_d', -999., 'magerr_galfit_d',99999., $
@@ -3293,7 +3310,10 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
                                  'RE_GALFIT_DEG_D', -99, $
                                  'N_GALFIT_DEG_D', -99, $
                                  'Q_GALFIT_DEG_D', -99, $
-                                 'PA_GALFIT_DEG_D', -99)
+                                 'PA_GALFIT_DEG_D', -99, $
+                                 'NDOF_GALFIT_BD_PRIME', -99l, $
+                                 'CHISQ_GALFIT_BD_PRIME', -99., $
+                                 'CHI2NU_GALFIT_BD_PRIME', -99.)
      ENDIF
      
   ENDELSE
@@ -3303,7 +3323,7 @@ FUNCTION read_sersic_results, obj, nband, bd=bd
 ;            nfree_galfit, nfix_galfit, chi2nu_galfit]
 END
 
-FUNCTION read_sersic_results_old_galfit, obj, bd=bd
+FUNCTION read_sersic_results_old_galfit, obj, setup, bd=bd
   IF file_test(obj) THEN BEGIN
      hd = headfits(obj, exten = 2)
      mag0 = sxpar(hd, '2_MAG')
@@ -3610,18 +3630,18 @@ PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = 
                                 ; HAS TO BE CHANGED FOR POSSIBILITY FOR B/D DECOMPOSITION
   forward_function read_sersic_results
   forward_function read_sersic_results_old_galfit
-; this routine takes care of objects with non-existent output files
-; (e.g. crashed)
-  IF setup.version GE 4. THEN res = read_sersic_results(out_file+'.fits', nband, bd=bd)
-  IF setup.version LT 4. THEN res = read_sersic_results_old_galfit(out_file+'.fits', bd=bd)      
+; this routine takes care of objects with non-existent output files (e.g. crashed)
+; this routine takes care of deriving primary Chi^2 values
+  IF setup.version GE 4. THEN res = read_sersic_results(out_file+'.fits', nband, setup, bd=bd)
+  IF setup.version LT 4. THEN res = read_sersic_results_old_galfit(out_file+'.fits', setup, bd=bd)      
   name_table = tag_names(table)
   name_res = tag_names(res)
-  
+
   FOR j=0,n_elements(name_res)-1 DO BEGIN
      tagidx=where(name_table EQ name_res[j], ct)
      IF ct GT 0 THEN BEGIN
         type=size(res.(j))
-; if keyword is INT
+; if keyword is INT 
         ntype = n_elements(type)
         IF type[ntype-2] EQ 2 OR type[ntype-2] EQ 3 THEN BEGIN
            wh=where(finite(res.(j)) NE 1, ct)
@@ -3734,9 +3754,9 @@ PRO start_log, logfile, message
   free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2, mac=mac
-  galapagos_version = 'GALAPAGOS-v2.2.8'
-  galapagos_date = '(June 28th, 2018)'
+PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2
+  galapagos_version = 'GALAPAGOS-v2.3.0'
+  galapagos_date = '(September 27th, 2018)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)
@@ -4085,7 +4105,7 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
   
 ; this line only created an empty structure, no values in yet!
 ; fittab read in because for now this seems to be easier. Will be renamed to 'table' below.
-; could and should be cleaned up at some point !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+; could and should be cleaned up at some point
   print, 'setting up second table, needed only for a short time, deleted afterwards'
   fittab = read_sex_param(outpath_file[0,0]+setup.outparam, n_elements(sexcat.mag_best), $
                           add_column = addcol)
@@ -4534,10 +4554,8 @@ loopend:
 ; ?? d) Neighbours will only be deblended as single sersics!
   
   IF setup.dobd THEN BEGIN
-; FOR NOW !!! DISABLE QUEUEING SYSTEM
      setup.min_dist = 0
      setup.min_dist_block = 0
-; TO BE TAKEN OUT EVENTUALLY WHEN B/D FITS DEPEND ON EACH OTHER
      
      outpath_galfit_bd = strtrim(outpath[*,0]+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)
      outpath_galfit_bd = set_trailing_slash(outpath_galfit_bd)
@@ -5129,6 +5147,7 @@ loopend_bd:
      
      print,' '
      read = 0L
+
      FOR i=0ul, ntab-1 DO BEGIN
         objnum = round_digit(tab[i].number, 0, /str)
         idx = where(tab[i].tile EQ orgim[*,0])
@@ -5140,7 +5159,7 @@ loopend_bd:
         out[i].gala_id = orgpre[idx]+objnum
         
         print, 'reading results for object No.'+strtrim(i+1,2)+' of '+strtrim(ntab,2)+' ('+strtrim(read,2)+' already read)' 
-;      statusline, 'reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)
+;        statusline, 'reading result '+strtrim(i+1,2)+' of '+strtrim(ntab,2)+'      '
         
         obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
         sky_file = strarr(nband+1)
@@ -5221,12 +5240,15 @@ loopend_bd:
               params, $
               'TILE','ORG_IMAGE_BAND',$
               'SKY_GALA_BAND','SKY_SIG_BAND','SKY_RAD_BAND','SKY_FLAG_BAND',$
+; galfit values
               'GALFIT_VERSION','FILE_GALFIT','INITFILE','CONSTRNT','LOGFILE','PSF_GALFIT_BAND',$
               'FLAG_GALFIT','FITSECT','CONVBOX','NGOOD_GALFIT_BAND','NMASK_GALFIT_BAND',$
-              'NITER_GALFIT','NEIGH_GALFIT','CHISQ_GALFIT','NFREE_GALFIT','NFIX_GALFIT',$
-              'NDOF_GALFIT','CHI2NU_GALFIT','FIRSTCON_GALFIT','LASTCON_GALFIT','CPUTIME_SETUP_GALFIT',$
-              'CPUTIME_FIT_GALFIT','CPUTIME_TOTAL_GALFIT',$
+              'NITER_GALFIT','NEIGH_GALFIT','CHISQ_GALFIT','CHISQ_GALFIT_PRIME','NFREE_GALFIT',$
+              'NFIX_GALFIT','NDOF_GALFIT','NDOF_GALFIT_PRIME','CHI2NU_GALFIT','CHI2NU_GALFIT_PRIME',$
+              'FIRSTCON_GALFIT','LASTCON_GALFIT',$
+              'CPUTIME_SETUP_GALFIT','CPUTIME_FIT_GALFIT','CPUTIME_TOTAL_GALFIT',$
               'SKY_GALFIT_BAND','SKY_GALFIT_CHEB',$
+; fit values
               'X_GALFIT_DEG','X_GALFIT_BAND','XERR_GALFIT_BAND','X_GALFIT_CHEB','XERR_GALFIT_CHEB',$
               'Y_GALFIT_DEG','Y_GALFIT_BAND','YERR_GALFIT_BAND','Y_GALFIT_CHEB','YERR_GALFIT_CHEB',$
               'MAG_GALFIT_DEG','MAG_GALFIT_BAND','MAGERR_GALFIT_BAND','MAG_GALFIT_CHEB','MAGERR_GALFIT_CHEB',$
@@ -5234,11 +5256,15 @@ loopend_bd:
               'N_GALFIT_DEG','N_GALFIT_BAND' ,'NERR_GALFIT_BAND' ,'N_GALFIT_CHEB','NERR_GALFIT_CHEB',$
               'Q_GALFIT_DEG','Q_GALFIT_BAND','QERR_GALFIT_BAND' ,'Q_GALFIT_CHEB','QERR_GALFIT_CHEB',$
               'PA_GALFIT_DEG','PA_GALFIT_BAND','PAERR_GALFIT_BAND','PA_GALFIT_CHEB','PAERR_GALFIT_CHEB',$
+; BD galfit values
               'GALFIT_VERSION_BD','FILE_GALFIT_BD','INITFILE_BD','CONSTRNT_BD','LOGFILE_BD','PSF_GALFIT_BAND_BD',$
-              'FLAG_GALFIT_BD','NITER_GALFIT_BD','NEIGH_GALFIT_BD','CHISQ_GALFIT_BD','NFREE_GALFIT_BD',$
-              'NFIX_GALFIT_BD','NDOF_GALFIT_BD','CHI2NU_GALFIT_BD','FIRSTCON_GALFIT_BD','LASTCON_GALFIT_BD',$
+              'FLAG_GALFIT_BD',$
+              'NITER_GALFIT_BD','NEIGH_GALFIT_BD','CHISQ_GALFIT_BD','CHISQ_GALFIT_BD_PRIME','NFREE_GALFIT_BD',$
+              'NFIX_GALFIT_BD','NDOF_GALFIT_BD','NDOF_GALFIT_BD_PRIME','CHI2NU_GALFIT_BD','CHI2NU_GALFIT_BD_PRIME',$
+              'FIRSTCON_GALFIT_BD','LASTCON_GALFIT_BD',$
               'CPUTIME_SETUP_GALFIT_BD','CPUTIME_FIT_GALFIT_BD','CPUTIME_TOTAL_GALFIT_BD' ,$
               'SKY_GALFIT_BAND_BD','SKY_GALFIT_CHEB_BD',$
+; fit values bulge
               'X_GALFIT_DEG_B','X_GALFIT_BAND_B','XERR_GALFIT_BAND_B' ,'X_GALFIT_CHEB_B','XERR_GALFIT_CHEB_B',$
               'Y_GALFIT_DEG_B','Y_GALFIT_BAND_B','YERR_GALFIT_BAND_B' ,'Y_GALFIT_CHEB_B','YERR_GALFIT_CHEB_B',$
               'MAG_GALFIT_DEG_B','MAG_GALFIT_BAND_B','MAGERR_GALFIT_BAND_B'  ,'MAG_GALFIT_CHEB_B','MAGERR_GALFIT_CHEB_B',$
@@ -5246,6 +5272,7 @@ loopend_bd:
               'N_GALFIT_DEG_B','N_GALFIT_BAND_B','NERR_GALFIT_BAND_B','N_GALFIT_CHEB_B','NERR_GALFIT_CHEB_B',$
               'Q_GALFIT_DEG_B','Q_GALFIT_BAND_B' ,'QERR_GALFIT_BAND_B','Q_GALFIT_CHEB_B','QERR_GALFIT_CHEB_B',$
               'PA_GALFIT_DEG_B','PA_GALFIT_BAND_B','PAERR_GALFIT_BAND_B','PA_GALFIT_CHEB_B','PAERR_GALFIT_CHEB_B',$
+; fit values disk
               'X_GALFIT_DEG_D','X_GALFIT_BAND_D','XERR_GALFIT_BAND_D','X_GALFIT_CHEB_D','XERR_GALFIT_CHEB_D',$
               'Y_GALFIT_DEG_D','Y_GALFIT_BAND_D','YERR_GALFIT_BAND_D','Y_GALFIT_CHEB_D','YERR_GALFIT_CHEB_D',$
               'MAG_GALFIT_DEG_D','MAG_GALFIT_BAND_D','MAGERR_GALFIT_BAND_D','MAG_GALFIT_CHEB_D','MAGERR_GALFIT_CHEB_D',$
