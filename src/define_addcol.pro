@@ -64,8 +64,8 @@ PRO define_addcol, addcol, nband, bd_fit = bd_fit, read_bd = read_bd
             ['N_GALFIT_DEG','0'],['Q_GALFIT_DEG','0'], $
             ['PA_GALFIT_DEG','0'], $
             ['NDOF_GALFIT_PRIME','0l'], ['CHISQ_GALFIT_PRIME','0.'], $
-            ['CHI2NU_GALFIT_PRIME','0.'], $
-            ['NGOOD_GALFIT_BAND_PRIME', bandfloat], ['NMASK_GALFIT_BAND_PRIME', bandfloat]]
+            ['CHI2NU_GALFIT_PRIME','0.']]
+;            ['NGOOD_GALFIT_BAND_PRIME', bandfloat], ['NMASK_GALFIT_BAND_PRIME', bandfloat]
   if keyword_set(bd_fit) or keyword_set(read_bd) then addcol=[[addcol], $
                                                               ['FLAG_GALFIT_BD', '0'], ['NITER_GALFIT_BD', '0'], $
                                                               ['NEIGH_GALFIT_BD', '0'], ['CHISQ_GALFIT_BD','0.'], $
