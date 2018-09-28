@@ -23,6 +23,7 @@ PRO derive_primary_chi2, obj_file, gal_exe
   bandnames = strsplit(content,',',/extract)
   nband = n_elements(bandnames)
   close, filer
+  free_lun, filer
 
 ;start reading input file line by line
   openr, filer, obj, /get_lun
@@ -30,7 +31,7 @@ PRO derive_primary_chi2, obj_file, gal_exe
   
   newfile = obj+'_with_primary_mask'
   openw, filew, newfile, /get_lun
-  
+
   WHILE ~ EOF(filer) DO BEGIN
 ; Read a line of text:
      readf, filer, line
@@ -101,8 +102,8 @@ PRO derive_primary_chi2, obj_file, gal_exe
   ENDWHILE
   close, filer
   close, filew
-  FREE_LUN, filer
-  FREE_LUN, filew
+  free_lun, filer
+  free_lun, filew
 
 ; run fits in option galfit -o3
   spawn, gal_exe+' -o2 '+newfile +' >null'
