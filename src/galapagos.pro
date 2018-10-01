@@ -3012,7 +3012,7 @@ PRO read_image_files, setup, save_folder, silent=silent
 
 END
 
-FUNCTION read_sersic_results, obj, nband, setup, bd=bd
+FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
   IF file_test(obj[0]) THEN BEGIN
      result = mrdfits(obj[0], 'FINAL_BAND',/silent)
      res_cheb = mrdfits(obj[0], 'FINAL_CHEB',/silent)
@@ -3023,14 +3023,19 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd
      REPEAT comp = comp +1 UNTIL tag_exist(result, 'COMP'+strtrim(comp,2)+'_MAG') eq 0
      IF tag_exist(band_info, 'NGOOD') THEN ngood_g = band_info.ngood ELSE ngood_g = -99
      IF tag_exist(band_info, 'NMASK') THEN nmask_g = band_info.nmask ELSE nmask_g = -99
-
-; run galfit to derive primary target on these latest parameters
+     
+     IF keyword_set(final) THEN BEGIN ; run galfit to derive primary target on these latest parameters
 ; (only run if new galfit.band.?? file exists and this has not already been done)
-     fit_info_primary_file = strtrim(fit_info.logfile,2)+'_primary_fit_info'
-
-     IF NOT FILE_TEST(fit_info_primary_file) THEN derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
+        fit_info_primary_file = strtrim(fit_info.logfile,2)+'_primary_fit_info'
+        
+        IF NOT FILE_TEST(fit_info_primary_file) THEN derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
 ; read out these values from ascii file
-     readcol, fit_info_primary_file, ndof_prime, chi2_prime, chi2nu_prime, format='I,F,F',/silent
+        readcol, fit_info_primary_file, ndof_prime, chi2_prime, chi2nu_prime, format='I,F,F',/silent
+     ENDIF ELSE BEGIN
+        ndof_prime = -99
+        chi2_prime = -99.
+        chi2nu_prime) = -99.
+     ENDELSE
 
 ; delete feedback, just in case the format of one is different, avoiding crash
      delvarx, feedback
@@ -3632,7 +3637,7 @@ PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = 
   forward_function read_sersic_results_old_galfit
 ; this routine takes care of objects with non-existent output files (e.g. crashed)
 ; this routine takes care of deriving primary Chi^2 values
-  IF setup.version GE 4. THEN res = read_sersic_results(out_file+'.fits', nband, setup, bd=bd)
+  IF setup.version GE 4. THEN res = read_sersic_results(out_file+'.fits', nband, setup, bd=bd, final=final)
   IF setup.version LT 4. THEN res = read_sersic_results_old_galfit(out_file+'.fits', setup, bd=bd)      
   name_table = tag_names(table)
   name_res = tag_names(res)
@@ -3755,8 +3760,8 @@ PRO start_log, logfile, message
 END
 
 PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2
-  galapagos_version = 'GALAPAGOS-v2.3.0'
-  galapagos_date = '(September 27th, 2018)'
+  galapagos_version = 'GALAPAGOS-v2.3.1'
+  galapagos_date = '(September 28th, 2018)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)

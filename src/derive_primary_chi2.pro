@@ -121,7 +121,8 @@ PRO derive_primary_chi2, obj_file, gal_exe
 
 ; delete all mask files and new start file to save disk space, only keep output file for readout of Chi^2
   spawn, 'rm null ';*_with_primary_mask'
-  spawn, 'rm '+file_folder+'primary_*mask*'
+  new_mask_names = strsplit(new_masks_all,',',/extract)
+  FOR d=0,n_elements(new_mask_names)-1 DO spawn, 'rm '+strtrim(new_mask_names[d],2)
   spawn, 'rm '+new_output_name
 
 ; back to the start
