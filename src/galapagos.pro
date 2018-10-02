@@ -2987,29 +2987,30 @@ PRO read_image_files, setup, save_folder, silent=silent
   ENDIF
   IF ncolf NE 6 AND ncolf NE 5 AND ncolf NE 4 THEN message, 'Invalid Entry in '+setup.files
   
-; now check whether all images exist
-  image_exist = file_test(setup.images)
-  weight_exist = file_test(setup.weights)
-  im_non_exist = where(image_exist EQ 0, cntimne)
-  wh_non_exist = where(weight_exist EQ 0, cntwhne)
-  IF cntimne NE 0 THEN BEGIN
-     stopnow=1
-     print, ' '
-     print, 'there is at least one image missing as currently defined (typo?)'
-     print, 'missing images:'
-     forprint, setup.images(im_non_exist), textout=1
+; now check whether all images exis
+  IF setup.dosex+setup.dostamps+setup.dosky+setup.dobd GE 1 THEN BEGIN
+     image_exist = file_test(setup.images)
+     weight_exist = file_test(setup.weights)
+     im_non_exist = where(image_exist EQ 0, cntimne)
+     wh_non_exist = where(weight_exist EQ 0, cntwhne)
+     IF cntimne NE 0 THEN BEGIN
+        stopnow=1
+        print, ' '
+        print, 'there is at least one image missing as currently defined (typo?)'
+        print, 'missing images:'
+        forprint, setup.images(im_non_exist), textout=1
+     ENDIF
+     IF cntwhne NE 0 THEN BEGIN
+        stopnow=1
+        print, ' '
+        print, 'there is at least one weight image missing as currently defined (typo?)'
+        print, 'missing weights:'
+        forprint, setup.weights(wh_non_exist), textout=1
+     ENDIF
+     
+     IF (cntimne NE 0) OR (cntwhne NE 0) THEN stop
+     IF (cntimne EQ 0) AND (cntwhne EQ 0) THEN print, 'all images and weights have been checked to exist'
   ENDIF
-  IF cntwhne NE 0 THEN BEGIN
-     stopnow=1
-     print, ' '
-     print, 'there is at least one weight image missing as currently defined (typo?)'
-     print, 'missing weights:'
-     forprint, setup.weights(wh_non_exist), textout=1
-  ENDIF
-  
-  IF (cntimne NE 0) OR (cntwhne NE 0) THEN stop
-  IF (cntimne EQ 0) AND (cntwhne EQ 0) THEN print, 'all images and weights have been checked to exist'
-
 END
 
 FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
@@ -3034,7 +3035,7 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
      ENDIF ELSE BEGIN
         ndof_prime = -99
         chi2_prime = -99.
-        chi2nu_prime) = -99.
+        chi2nu_prime = -99.
      ENDELSE
 
 ; delete feedback, just in case the format of one is different, avoiding crash
@@ -3867,26 +3868,28 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
 ;total number of frames
   
   nframes = n_elements(images[*,0])
-;calculate image centres
-  dec_cnt = (ra_cnt = dblarr(nframes))
-  FOR i=0ul, nframes-1 DO BEGIN
-     head = headfits(images[i,0])
-     xcnt = sxpar(head, 'NAXIS1')*0.5
-     ycnt = sxpar(head, 'NAXIS2')*0.5
-     xyad, head, xcnt, ycnt, a, d
-     ra_cnt[i] = a
-     dec_cnt[i] = d
-  ENDFOR
-  
+;calculate image centres, but only if needed in further program
+  IF setup.dosex+setup.dostamps+setup.dosky+setup.dobd GE 1 THEN BEGIN
+     dec_cnt = (ra_cnt = dblarr(nframes))
+     FOR i=0ul, nframes-1 DO BEGIN
+        head = headfits(images[i,0])
+        xcnt = sxpar(head, 'NAXIS1')*0.5
+        ycnt = sxpar(head, 'NAXIS2')*0.5
+        xyad, head, xcnt, ycnt, a, d
+        ra_cnt[i] = a
+        dec_cnt[i] = d
+     ENDFOR
+     
 ;create an array, that contains the filenames of neighbouring frames
 ;for each tile
-  neighbours = strarr(setup.nneighb >1, nframes)
-  FOR i=0ul, nframes-1 DO BEGIN
-     gcirc, 1, ra_cnt[i]/15., dec_cnt[i], ra_cnt/15., dec_cnt, dist
-     ord = sort(dist)
-     n = setup.nneighb < (n_elements(ord)-1)
-     IF n GT 0 THEN neighbours[0:n-1, i] = images[ord[1:n]]
-  ENDFOR
+     neighbours = strarr(setup.nneighb >1, nframes)
+     FOR i=0ul, nframes-1 DO BEGIN
+        gcirc, 1, ra_cnt[i]/15., dec_cnt[i], ra_cnt/15., dec_cnt, dist
+        ord = sort(dist)
+        n = setup.nneighb < (n_elements(ord)-1)
+        IF n GT 0 THEN neighbours[0:n-1, i] = images[ord[1:n]]
+     ENDFOR
+  ENDIF
 ;==============================================================================
 ;check if output path exists, if not create them
   IF NOT file_test(setup.outdir) THEN $
