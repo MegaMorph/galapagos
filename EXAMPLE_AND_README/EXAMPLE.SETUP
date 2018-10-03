@@ -1,10 +1,7 @@
 #===========FILE LOCATIONS===========
 A00) /path/to/images.gala                  #file containing ALL input files, including SExtractor (1st line) and all bands, weight,...)
 A01) /path/to/where/galapagos/should/go/   #output directory for catalogues
-#
-## to be put in:
-#  parameters for database
-#
+
 #===========SEXTRACTOR SETUP===========
 B00) execute                # execute the SExtractor block ('execute' = true)
 B01) /path/to/sex           # SExtractor executable including path
@@ -36,7 +33,7 @@ C00) execute    # execute the Stamps creation block ('execute' = true)
 C01) stamps     # descriptor file for postage stamps (file_name)
 C02) r          # postposition for postage stamps (only used for single image run, for multi-band overwritten in file A00)
 C03) 2.5        # scale factor by which the sextractor isophotes are enlarged
-#
+
 #===========SKY PREPARATION =====
 D00) execute                   # execute the sky preparation and GALFIT block ('execute' = true)
 D01) skymap                    # output object/sky-mapfile (file_name)
@@ -63,9 +60,7 @@ D20) 80                        # minimum distance (in arcseconds) to already blo
 D21) /path/to/target_objects   # optional list containing primary targets (format: RA DEC)
                                # feature switched off when 'none' or an empty string are provided. In this case everything will be fit
 D22) 1.0                       # search/correlation radius for the above list [arcsec]
-#
-# Test for backwards compatibility: D21!
-#
+
 #===========GALFIT SETUP=========== switched on at D00)
 E00) /path/to/galfit      # Galfit executable including path 
                           # This galapagos version has been written and mostly been tested with galfitm, please make sure you download this.
@@ -117,6 +112,7 @@ E23) 30                   # fraction of data pixels ==0 within the primaries SEx
                           # e.g. 99 still allows full polynomial freedom if 1% of the data has values (but is a foolish value)
 E24) 3                    # minimum number of good images that are needed for the fit (is set to be >1 by the code), e.g. objects without any good data are NEVER fit) 
                           # (if restricted above to less than that, galfit startfile is written out, but fit is NOT started)
+
 #===========B/D DECOMPOSITION SETUP===========
 F00) execute                             # execute the B/D fitting block ('execute' = true). Mostly assumes that single sersic fitting (block E) is also or had previsouly been run
 F01) 0,0,9,0,0,0,0                       # similar to E18 for BULGE (see README for details) 
@@ -131,7 +127,8 @@ F08) nHPC                                # switches to HPC mode ("HPC" = true), 
 F09) /path/to/HPC/output/folder          # alternative path for Supercomputer use.
 F10) /path/to/data/, /path/to/data/HPC   # PSF filename correction (!). [1] is replaced by [2]
 # additionally uses the same values as E07 - E19 and E22 - E24
-##===========OUTPUT CATALOGUE SETUP===========
+
+#===========OUTPUT CATALOGUE SETUP===========
 G00) execute      # execute catalogue combination block (read single_sersic)
 G01) execute      # execute catalogue combination block (read single-sersic & B/D), switches on G00 automatically
 G02) output_catalogue.fits # filename for output catalogue in A01)
