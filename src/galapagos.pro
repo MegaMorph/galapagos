@@ -3025,18 +3025,18 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
      IF tag_exist(band_info, 'NGOOD') THEN ngood_g = band_info.ngood ELSE ngood_g = -99
      IF tag_exist(band_info, 'NMASK') THEN nmask_g = band_info.nmask ELSE nmask_g = -99
      
-     IF keyword_set(final) THEN BEGIN ; run galfit to derive primary target on these latest parameters
+;     IF keyword_set(final) THEN BEGIN ; run galfit to derive primary target on these latest parameters
 ; (only run if new galfit.band.?? file exists and this has not already been done)
         fit_info_primary_file = strtrim(fit_info.logfile,2)+'_primary_fit_info'
         
         IF NOT FILE_TEST(fit_info_primary_file) THEN derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
 ; read out these values from ascii file
         readcol, fit_info_primary_file, ndof_prime, chi2_prime, chi2nu_prime, format='I,F,F',/silent
-     ENDIF ELSE BEGIN
-        ndof_prime = -99
-        chi2_prime = -99.
-        chi2nu_prime = -99.
-     ENDELSE
+;     ENDIF ELSE BEGIN
+;        ndof_prime = -99
+;        chi2_prime = -99.
+;        chi2nu_prime = -99.
+;     ENDELSE
 
 ; delete feedback, just in case the format of one is different, avoiding crash
      delvarx, feedback
