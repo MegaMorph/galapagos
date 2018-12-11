@@ -3027,31 +3027,31 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
      
 ; only run in final readout stage?
 ;     IF keyword_set(final) THEN BEGIN ; run galfit to derive primary target on these latest parameters
-        fit_info_primary_file = strtrim(fit_info.logfile,2)+'_primary_fit_info'
-        
-        spawn, 'ls '+fit_info_primary_file, lsout_primary_file,errxxx
-        IF lsout_primary_file[0] EQ '' THEN BEGIN
+     fit_info_primary_file = strtrim(fit_info.logfile,2)+'_primary_fit_info'
+     
+     spawn, 'ls '+fit_info_primary_file, lsout_primary_file,errxxx
+     IF lsout_primary_file[0] EQ '' THEN BEGIN
 ;        IF NOT FILE_TEST(fit_info_primary_file) THEN BEGIN
-           spawn, 'ls '+fit_info.logfile, lsout_logfile,errxxx
-           IF lsout_logfile[0] EQ '' THEN BEGIN
-              print, 'galfit restart file missing although galfit output file exists'
-              print, strtrim(fit_info.logfile,2)
-              stop
-           ENDIF ELSE BEGIN
-              derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
-           ENDELSE
-        ENDIF
+        spawn, 'ls '+fit_info.logfile, lsout_logfile,errxxx
+        IF lsout_logfile[0] EQ '' THEN BEGIN
+           print, 'galfit restart file missing although galfit output file exists'
+           print, strtrim(fit_info.logfile,2)
+           stop
+        ENDIF ELSE BEGIN
+           derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
+        ENDELSE
+     ENDIF
 
 ; old version 
 ;        IF NOT FILE_TEST(fit_info_primary_file) THEN derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
 ; read out these values from ascii file
-        readcol, fit_info_primary_file, ndof_prime, chi2_prime, chi2nu_prime, format='I,F,F',/silent
+     readcol, fit_info_primary_file, ndof_prime, chi2_prime, chi2nu_prime, format='I,F,F',/silent
 ;     ENDIF ELSE BEGIN
 ;        ndof_prime = -99
 ;        chi2_prime = -99.
 ;        chi2nu_prime = -99.
 ;     ENDELSE
-
+     
 ; delete feedback, just in case the format of one is different, avoiding crash
      delvarx, feedback
      IF NOT keyword_set(bd) THEN BEGIN
