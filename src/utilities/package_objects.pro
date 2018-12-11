@@ -151,14 +151,13 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
          comment = ' '
       ENDELSE
 
-; images
+;;;;;;; IMAGES
      IF strpos(strtrim(line, 2), 'A) ') EQ 0 THEN BEGIN
           content_elements = strsplit(content,',',/extract)
           content_elements_new = content_elements
-          FOR el=0,n_elements(content_elements)-1 DO BEGIN
 ; cut off initial path
-              content_elements_new[el] = strmid(content_elements_new[el],strpos(content_elements_new[el],'/',/reverse_search)+1)
-          ENDFOR
+          FOR el=0,n_elements(content_elements)-1 DO $
+             content_elements_new[el] = strmid(content_elements_new[el],strpos(content_elements_new[el],'/',/reverse_search)+1)
           files_to_copy = [files_to_copy,content_elements]
           files_to_copy_new = [files_to_copy_new,content_elements_new]
       ENDIF
@@ -168,14 +167,17 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
           content_elements = strsplit(content,',',/extract)
           bandnames = content_elements
       ENDIF
-; output image if there
+
+;;;;;;;; OUTPUT IMAGE if there
       IF strpos(strtrim(line, 2), 'B) ') EQ 0 THEN BEGIN
          IF file_test(content) THEN BEGIN
               output_file_exists = 1
+              output_image = content
               files_to_copy = [files_to_copy,content]
               content_new = strmid(content,strpos(content,'/',/reverse_search)+1)
               files_to_copy_new = [files_to_copy_new,content_new]
  
+;;; RESTART FILE
 ; if this file exists, there also has to be a galfit.xx file for
 ; restart purposes. This file is needed, too!
 
@@ -183,7 +185,7 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
               workfolder = strmid(content,0,strpos(content,'/',/REVERSE_SEARCH))
 
 ; find all matching galfit.??.band files and select newest
-              spawn, 'ls '+workfolder+'/'+strmid(content_new,0,strpos(content_new,'.fits'))+'.galfit.*', list
+              spawn, 'ls '+workfolder+'/'+strmid(content_new,0,strpos(content_new,'.fits'))+'.galfit.??', list
 
 ; throw away all the files ending in 'band' or 'output'
               list = list[where(strmid(list,4,/reverse_offset) NE '.band')]
@@ -191,7 +193,7 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
   
               list2 = list
 ; isolate counting number
-              FOR i=0,n_elements(list)-1 DO list2[i] = strmid(list,strpos(list,'.',/reverse_search)+1)
+              FOR i=0,n_elements(list)-1 DO list2[i] = strmid(list[i],strpos(list[i],'.',/reverse_search)+1)
               list2 = fix(list2)
 ; select latest file (file with highest number)
               wh = where(list2 EQ max(list2))
@@ -202,14 +204,13 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
          ENDIF
       ENDIF
 
-; sigma image
+;;;;;; SIGMA IMAGES
       IF strpos(strtrim(line, 2), 'C) ') EQ 0 THEN BEGIN
           content_elements = strsplit(content,',',/extract)
           content_elements_new = content_elements
-          FOR el=0,n_elements(content_elements)-1 DO BEGIN
 ; cut off initial path
-              content_elements_new[el] = strmid(content_elements_new[el],strpos(content_elements_new[el],'/',/reverse_search)+1)
-          ENDFOR
+          FOR el=0,n_elements(content_elements)-1 DO $
+             content_elements_new[el] = strmid(content_elements_new[el],strpos(content_elements_new[el],'/',/reverse_search)+1)
           files_to_copy = [files_to_copy,content_elements]
           files_to_copy_new = [files_to_copy_new,content_elements_new]
       ENDIF
@@ -228,53 +229,99 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
 ; correct naming for PSFs
           content_elements_new = 'PSF_'+bandnames+'_'+content_elements_new
           
-          FOR p=0,n_elements(content_elements)-1 DO BEGIN
+          FOR p=0,n_elements(content_elements)-1 DO $
              spawn, 'cp '+content_elements[p]+' '+psffolder+'/'+content_elements_new[p]
-          ENDFOR
-;          files_to_copy = [files_to_copy,content_elements]
-;          files_to_copy_new = [files_to_copy_new,content_elements_new]
-          
-      ENDIF
-; mask images
+       ENDIF
+
+;;;;;; MASK IMAGES
       IF strpos(strtrim(line, 2), 'F) ') EQ 0 THEN BEGIN
           IF content EQ '' THEN content = strtrim(strmid(line,3),2)
           content_elements = strsplit(content,',',/extract)
           content_elements_new = content_elements
-          FOR el=0,n_elements(content_elements)-1 DO BEGIN
 ; cut off initial path
-              content_elements_new[el] = strmid(content_elements_new[el],strpos(content_elements_new[el],'/',/reverse_search)+1)
-          ENDFOR
+          FOR el=0,n_elements(content_elements)-1 DO $
+             content_elements_new[el] = strmid(content_elements_new[el],strpos(content_elements_new[el],'/',/reverse_search)+1)
+          mask_images = content_elements
           files_to_copy = [files_to_copy,content_elements]
           files_to_copy_new = [files_to_copy_new,content_elements_new]
       ENDIF
 
-; constraint file
+;;;;;;; CONSTRAINTS FILES
       IF strpos(strtrim(line, 2), 'G) ') EQ 0 THEN BEGIN
           IF content EQ '' THEN content = strtrim(strmid(line,3),2)
           content_elements = strsplit(content,',',/extract)
           content_elements_new = content_elements
-          FOR el=0,n_elements(content_elements)-1 DO BEGIN
 ; cut off initial path
-              content_elements_new[el] = strmid(content_elements_new[el],strpos(content_elements_new[el],'/',/reverse_search)+1)
-          ENDFOR
+          FOR el=0,n_elements(content_elements)-1 DO $
+             content_elements_new[el] = strmid(content_elements_new[el],strpos(content_elements_new[el],'/',/reverse_search)+1)
           files_to_copy = [files_to_copy,content_elements]
           files_to_copy_new = [files_to_copy_new,content_elements_new]
       ENDIF
       
   ENDWHILE
 
+;;;;;; PRIMARY CHI^2 files
+;;; MASKS
+  IF mask_images[0] NE '' THEN BEGIN
+     mask_path = strmid(mask_images[0],0,strpos(mask_images[0],'/',/reverse_search)+1)
+; cut off initial path
+     FOR el=0,n_elements(mask_images)-1 DO $
+        mask_images[el]=strmid(mask_images[el],strpos(mask_images[el],'/',/reverse_search)+1)
+     primary_mask_images = 'primary_'+mask_images
+     spawn, 'ls '+mask_path+primary_mask_images[0], lsout_primary_mask,errxxx
+     IF lsout_primary_mask NE '' THEN BEGIN
+        files_to_copy = [files_to_copy, mask_path+primary_mask_images]
+        files_to_copy_new = [files_to_copy_new, primary_mask_images]
+     ENDIF
+  ENDIF
+
+;;; primary startfile 
+  spawn, 'ls '+strtrim(galfit_restart_file,2)+'_with_primary_mask', lsout_startf,errxxx
+  IF lsout_startf[0] NE '' THEN BEGIN
+     primary_file_exists = 1
+     primary_file = lsout_startf[0]
+     files_to_copy = [files_to_copy, lsout_startf]
+; cut off initial path
+     FOR el = 0, n_elements(lsout_startf)-1 DO $
+        lsout_startf[el] = strmid(lsout_startf[el],strpos(lsout_startf[el],'/',/reverse_search)+1)
+     files_to_copy_new = [files_to_copy_new, lsout_startf]
+  ENDIF
+     
+;;; fit_info
+  spawn, 'ls '+strtrim(galfit_restart_file,2)+'_primary_fit_info', lsout_fitinfo,errxxx
+  IF lsout_fitinfo[0] NE '' THEN BEGIN
+     files_to_copy = [files_to_copy, lsout_fitinfo]
+; cut off initial path
+     FOR el = 0, n_elements(lsout_fitinfo)-1 DO $
+        lsout_fitinfo[el] = strmid(lsout_fitinfo[el],strpos(lsout_fitinfo[el],'/',/reverse_search)+1)
+     files_to_copy_new = [files_to_copy_new, lsout_fitinfo]
+  ENDIF
+
+;;; output file
+stop
+  output_image_path = strmid(output_image,0,strpos(output_image,'/',/reverse_search)+1)
+  output_image = strmid(output_image,strpos(output_image,'/',/reverse_search)+1)
+  output_image_stump = strmid(output_image,0,strpos(output_image,'.fits'))
+  primary_output = output_image_stump+'_primary_only.fits'
+  spawn, 'ls '+output_image_path+primary_output, lsprimeout,errxxx
+  IF lsprimeout NE '' THEN BEGIN
+     files_to_copy = [files_to_copy, lsprimeout]
+     files_to_copy_new = [files_to_copy_new, primary_output]
+  ENDIF
+
 ; copy all files into output folder
   FOR i=0,n_elements(files_to_copy)-1 DO BEGIN
-      IF files_to_copy[i] EQ 'none' THEN CONTINUE
-      spawn, 'cp '+files_to_copy[i]+' '+outfolder+'/'+files_to_copy_new[i]
+     IF files_to_copy[i] EQ 'none' THEN CONTINUE
+     spawn, 'cp '+files_to_copy[i]+' '+outfolder+'/'+files_to_copy_new[i]
   ENDFOR
 
   close, filer
   free_lun, filer
 
-; now go and change the paths in the objects file
+; now go and change the paths in the objects file(s)
   change_paths_in_obj_file, obj, outfolder
-  IF output_file_exists THEN change_paths_in_obj_file, galfit_restart_file,outfolder
+  IF output_file_exists THEN change_paths_in_obj_file, galfit_restart_file, outfolder
+  IF primary_file_exists THEN change_paths_in_obj_file, primary_file, outfolder
   
   IF NOT keyword_set(notar) THEN BEGIN
 ; now pack that folder into a tar file
