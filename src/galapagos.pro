@@ -4256,6 +4256,7 @@ jump_over_this_1:
      
 ; set up batch mode! (has to be done for single-sersic and B/D
 ; independently, otherwise '/jump2' will not work
+     print, 'Bridge started, now adding some columns to the table to define objects to be done'
      add_tag, table, 'do_batch', 0, table_new
      table = table_new
      delvarx, table_new
