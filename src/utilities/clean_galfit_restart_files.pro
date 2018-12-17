@@ -8,7 +8,7 @@ PRO clean_galfit_restart_files, setup_file
   out_path = setup.outdir
   folder_path_all = [strtrim(strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1),2),strtrim(strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)]
 
-  FOR fp=1,1 DO BEGIN ;0,1 DO BEGIN
+  FOR fp=0,1 DO BEGIN
      folder_path = folder_path_all[fp]
      
      spawn, 'pwd', start_folder
