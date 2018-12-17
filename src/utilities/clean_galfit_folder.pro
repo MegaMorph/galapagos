@@ -98,7 +98,7 @@ pro clean_galfit_folder, setup_file, max_file_age=max_file_age, bd=bd, clean_all
            ENDIF ; obj file does exist (by definition of loop should always exist?)
         ENDFOR ; loop over all *obj files in a folder
      ENDFOR ; loop over all folders
-     print, 'deleted '+strtrim(del,2)+' crahsed objects, ready for restart'
+     print, 'deleted '+strtrim(del,2)+' crashed objects, ready for restart'
   ENDIF ; clean_crashed keyword 
 
 

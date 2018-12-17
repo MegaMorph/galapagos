@@ -3026,7 +3026,8 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
      IF tag_exist(band_info, 'NMASK') THEN nmask_g = band_info.nmask ELSE nmask_g = -99
      
 ; only run in final readout stage?
-;     IF keyword_set(final) THEN BEGIN ; run galfit to derive primary target on these latest parameters
+;     IF keyword_set(final) THEN BEGIN 
+; run galfit to derive primary target on these latest parameters
      fit_info_primary_file = strtrim(fit_info.logfile,2)+'_primary_fit_info'
      
      spawn, 'ls '+fit_info_primary_file, lsout_primary_file,errxxx
