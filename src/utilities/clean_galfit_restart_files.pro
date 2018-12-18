@@ -59,7 +59,5 @@ PRO clean_galfit_restart_files, setup_file
      print, missing_files
   ENDELSE
 
-stop
-  
   CD, start_folder
 END
