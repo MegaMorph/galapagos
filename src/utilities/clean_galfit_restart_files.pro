@@ -22,6 +22,8 @@ PRO clean_galfit_restart_files, setup_file
 ;folder by folder
      FOR f=0, n_elements(folder_list)-1 DO BEGIN
         CD, out_path+'/'+folder_list[f]
+        print, ''
+        print, 'checking folder '+strtrim(folder_list[f])
         delvarx, gf_outfile_list
 ;get list of gf.fits files
         spawn, 'ls *'+setup.galfit_out+'.fits', gf_outfile_list, count=gf_count

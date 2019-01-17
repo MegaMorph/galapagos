@@ -3775,9 +3775,9 @@ PRO start_log, logfile, message
   free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2
-  galapagos_version = 'GALAPAGOS-v2.3.1'
-  galapagos_date = '(September 28th, 2018)'
+PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2, sex_overwrite=sex_overwrite
+  galapagos_version = 'GALAPAGOS-v2.3.2'
+  galapagos_date = '(January 17th, 2019)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)
@@ -3793,6 +3793,21 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
   IF n_params() LT 1 THEN BEGIN
      print, 'start galapagos by typing: '
      print, 'galapagos, "\path\to\setup_file"'
+     print, 'allowed keyword:'
+     print, '   logfile = "filename"    ; creates a log file for the galapagos run'
+     print, '   /plot                   ; creates a plot that shows which objects are being worked on '
+     print, '                           ; and which objects are being blocked'
+     print, '                           ; (might not work on all systems and setups)'
+     print, '   /bridgejournal          ; switches on creation of journal files for all bridges, e.g. to examine the Galfit/GalfitM outputs directly'
+     print, '                           ; can be found in a subfolder "journal" in the output folder'
+     print, '   /sex_overwrite          ; re-runs all SExtractor runs even if the output files already exist, e.g. SExtractor has already been run'
+     print, '   /jump1                  ; jumps some parts at the beginning of the code that do not need to be repeated (for speedup)'
+     print, '                           ; more precisely the creation of some catalogue files'
+     print, '                           ; typically can be set when Galapagos has crashed or has been stopped somewhere during the fits'
+     print, '                           ; AND NO NEW TILES HAVE BEEN ADDED (e.g. object catalogue did not change!)'
+     print, '   /jump2                  ; before B/D fits jumps the read-in of single-profile fits (for speedup)'
+     print, '                           ; typically can be set when Galapagos has crashed or has been stopped somewhere during the B/D fits'
+     print, '                           ; AND NO NEW SINGLE-SERSIC FITS SHOULD EXIST!'
      print, ''
      setup_file = ''
      read, prompt = 'Location of setup file: ', setup_file
@@ -3936,8 +3951,7 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
         IF ct GT 0 THEN BEGIN
            exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] 
         ENDIF ELSE exclude = [[-1, -1]]
-        run_sextractor, setup, images, weights, outpath_file, i, exclude
-        
+        IF NOT FILE_TEST(outpath_file[i,0]+'combined.reg') OR keyword_set(sex_overwrite) THEN run_sextractor, setup, images, weights, outpath_file, i, exclude
      ENDFOR
      
 ;combine all SExtractor catalogues
