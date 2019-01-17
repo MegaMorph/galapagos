@@ -3,6 +3,7 @@ PRO clean_galfit_restart_files, setup_file
 ; .run clean_galfit_restart_files
 ; clean_galfit_restart_files, '/lustre/home/bhaeussl/megamorph/scripts_boris/gala_setups/G15/GAMA15_galapagos_setup_sextractor'
 ; read setup file first
+  starttime=systime(0)
   read_setup, setup_file, setup
 
   out_path = setup.outdir
@@ -62,4 +63,6 @@ PRO clean_galfit_restart_files, setup_file
   ENDELSE
 
   CD, start_folder
+  print, 'started at: '+starttime  
+  print, 'finished at: '+systime(0)
 END
