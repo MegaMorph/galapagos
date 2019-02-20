@@ -9,6 +9,7 @@ PRO clean_galfit_restart_files, setup_file
   out_path = setup.outdir
   folder_path_all = [strtrim(strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1),2),strtrim(strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)]
 
+  missing_files = ' '
   FOR fp=0,1 DO BEGIN
      folder_path = folder_path_all[fp]
      
@@ -19,7 +20,6 @@ PRO clean_galfit_restart_files, setup_file
 ; get list of all folders
      spawn, 'ls -d */'+folder_path, folder_list
      
-     missing_files = ' '
 ;folder by folder
      FOR f=0, n_elements(folder_list)-1 DO BEGIN
         CD, out_path+'/'+folder_list[f]
@@ -58,7 +58,7 @@ PRO clean_galfit_restart_files, setup_file
   IF n_elements(missing_files) EQ 1 THEN BEGIN
      print, 'congratulations, no missing files found'
   ENDIF ELSE BEGIN
-     print, 'missing files: '
+     print, 'missing files (THAT AND MATCHING FILES NEED TO BE DELETED BY HAND!): '
      print, missing_files
   ENDELSE
 

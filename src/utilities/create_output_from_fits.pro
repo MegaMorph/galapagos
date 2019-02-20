@@ -1,6 +1,7 @@
 pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost, overwrite=overwrite,adapt=adapt
 ; .run create_output_from_fits.pro
 ; create_output_from_fits, '/Users/haeussler/Documents/Dropbox/Arianna_Fits/414.556/414.556_gf.fits','blank,input,model,residual,psf','~/megamorph/galfit/exec/galfitm-1.2.0-osx'
+; create_output_from_fits, '/lustre/home/bhaeussl/GAMA/gala/G09/tile16_7/galfit/t16_7.7006_gf.fits','blank,input,model,residual,psf','/lustre/home/bhaeussl/megamorph/galfit/exec/galfitm-1.2.1-linux-x86_64'
 
 ; WARNING! Always uses LAST *galfit.??.band file, so make sure that
 ; this is what you meant. This is of course also the file matching the
@@ -26,7 +27,7 @@ pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost, overwrite
   ENDIF
 
 ; find all matching galfit.??.band files and select newest
-  spawn, 'ls '+strmid(fits,0,strpos(fits,'.fits'))+'.galfit.*', list
+  spawn, 'ls '+strmid(fits,0,strpos(fits,'.fits'))+'.galfit.??', list
 
 ; throw away all the files ending in 'band' or 'output'
   list = list[where(strmid(list,4,/reverse_offset) NE '.band')]
@@ -105,3 +106,37 @@ pro create_output_from_fits, fits, layers, gal_exe, namepost=namepost, overwrite
   CD, infolder
  
 end
+
+PRO display_all_fits_from_folder,folder
+; .run create_output_from_fits.pro
+; display_all_fits_from_folder, '/lustre/home/bhaeussl/GAMA/gala/G09/tile10_5/galfit'
+
+  ds9_exe = '/lustre/opsw/software/ds9-7.7.5/ds9'
+  galfit_exe='/lustre/home/bhaeussl/megamorph/galfit/exec/galfitm-1.2.1-linux-x86_64'
+  spawn, 'pwd', startfolder  
+  
+; get all objects. Get them in order of file age to diplay newest fits first!
+  CD, folder
+  spawn, 'ls -t *gf.fits', galfit_out_files
+  
+  openw, sf, 'display_files', /get_lun
+; get new output names
+  galfit_new_out_files = galfit_out_files
+  FOR j=0,n_elements(galfit_new_out_files)-1 DO $
+     galfit_new_out_files[j] = strmid(galfit_new_out_files[j],0,strpos(galfit_new_out_files[j],'.fits'))+'_changed_content.fits'
+
+; loop over all objects to ...
+  FOR i=0,n_elements(galfit_out_files)-1 DO BEGIN
+     
+; ... create new output file
+     create_output_from_fits, galfit_out_files[i],'input,model,residual',galfit_exe
+
+; ... display the new output
+     printf, sf, ds9_exe +' -multiframe -log '+galfit_new_out_files[i]
+  ENDFOR
+  close, sf
+  free_lun, sf
+  
+  
+CD, startfolder  
+END
