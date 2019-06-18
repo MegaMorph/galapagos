@@ -298,7 +298,7 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
   ENDIF
 
 ;;; output file
-stop
+;stop
   output_image_path = strmid(output_image,0,strpos(output_image,'/',/reverse_search)+1)
   output_image = strmid(output_image,strpos(output_image,'/',/reverse_search)+1)
   output_image_stump = strmid(output_image,0,strpos(output_image,'.fits'))

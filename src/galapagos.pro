@@ -4641,8 +4641,12 @@ loopend:
 jump_over_this_2:
      
 ;    restore, setup.outdir+'table_before_'+setup.bd_label+'.sav'
-     IF keyword_set(jump2) THEN restore, setup.outdir+'table_before_bd.sav'
-     
+     IF keyword_set(jump2) THEN BEGIN
+        print, 'reading already exisiting table instead of all results'
+        restore, setup.outdir+'table_before_bd.sav'
+     ENDIF
+
+     print, 'Got all primary fit results now and setting up table for B/D fits'
 ;=========================================================================
 ; finished reading in all single sersic results
 ;=========================================================================
@@ -4677,12 +4681,13 @@ jump_over_this_2:
 ; because the order of objects is different, so indices would be wrong
            save, tab_i, filename=setup.outdir+'primary_list_'+bd_srclist_name+'.sav'
         ENDIF ELSE BEGIN
+; if sav file exists and is newer than sextractor table, simply read
+; in the indices from there!
            print, 'source correlation has already been done, simply reading result!'
            restore, setup.outdir+'primary_list_'+bd_srclist_name+'.sav'
         ENDELSE
         
-; if sav file exists and is newer than sextractor table, simply read
-; in the indices from there!
+; set all wantd objects to 1
         table[tab_i].do_list_bd = 1
         delvarx, tab_i
      ENDELSE
@@ -4691,6 +4696,7 @@ jump_over_this_2:
         update_log, logfile, systime()+': Beginning Bulge_Disk_decomposition ...'
 ; set standard values for B/D parameters
 ; fill with standard values
+     print, 'setting up table with default values'
      table.mag_galfit_d = 999.
      table.mag_galfit_band_d = fltarr(nband)+999
      table.re_galfit_d = -1.
@@ -4707,8 +4713,7 @@ jump_over_this_2:
      table.n_galfit_band_b = fltarr(nband)-1.
      table.q_galfit_b = -1.
      table.q_galfit_band_b = fltarr(nband)-1.
-     
-     
+          
 ;******************************************************************************
 ;****************************************************************************** 
 ;calculate sky for the brightest objects
@@ -4737,6 +4742,7 @@ jump_over_this_2:
         
 ;initialise every bridge (specify output property to allow debugging)
         IF setup.max_proc gt 1 THEN BEGIN
+           print, 'setting up bridge processes'
            IF keyword_set(bridgejournal) THEN BEGIN
               FOR i=0, setup.max_proc-1 DO bridge_arr[i] = obj_new('IDL_IDLBridge', output=journal_folder+'/bridge_journal_fitting_bd_'+strtrim(i,2))
            ENDIF ELSE BEGIN
@@ -4747,6 +4753,7 @@ jump_over_this_2:
               bridge_arr[i]->execute, '.r '+gala_pro
               bridge_arr[i]->execute, '.r gala_bd_bridge'
            ENDFOR  
+           print, ' all bridges set up'
         ENDIF
         IF keyword_set(plot) THEN BEGIN
            loadct,39,/silent
@@ -4755,6 +4762,7 @@ jump_over_this_2:
         
 ; set up batch mode! (has to be done for single-sersic and B/D
 ; independently, otherwise '/jump2' will not work
+        print, 'adding one column to the table'
         table = remove_tags(table,'do_batch')
         add_tag, table, 'do_batch', 0, table_new
         table = table_new
@@ -5145,9 +5153,7 @@ loopend_bd:
   ENDIF
   
 ;==============================================================================
-;read in sextractor table, combine with galfit results, write out
-;combined fits table
-; has to be adapted to also read B/D!
+;read in sextractor table, combine with galfit results, write out combined fits table
   IF setup.docombine or setup.docombinebd THEN BEGIN
      print, 'reading sexcat for output table'
      tab = read_sex_table(setup.outdir+setup.sexcomb, $
