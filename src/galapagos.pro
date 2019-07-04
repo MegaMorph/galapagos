@@ -1831,7 +1831,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      hi = strtrim(setup.conmaxn, 2)
      printf, 1, j, ' n '+lo+' to '+hi
      printf, 1, j, ' re 0.3 to '+strtrim(conmaxre, 2)
-     printf, 1, j, ' q 0.0001  to 1.'
+     printf, 1, j, ' q 0.01  to 1.'
      printf, 1, j, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
      printf, 1, j, ' mag 0 to 40'
 ;     printf, 1, j, ' pa -360 to 360'
@@ -2099,8 +2099,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ; hard contraints work only on principle band if this is used
      par.n_galfit = par.n_galfit < setup.conmaxn > setup.conminn
      par.n_galfit_band = par.n_galfit_band < setup.conmaxn > setup.conminn
-     par.q_galfit = par.q_galfit > 0.0001 < 1
-     par.q_galfit_band = par.q_galfit_band > 0.0001 < 1
+     par.q_galfit = par.q_galfit > 0.01 < 1
+     par.q_galfit_band = par.q_galfit_band > 0.01 < 1
      par.pa_galfit = par.pa_galfit > (-360) < 360
      par.pa_galfit_band = par.pa_galfit_band > (-360) < 360
      
@@ -2350,8 +2350,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ; hard contraints work only on principle band if this is used
      par.n_galfit = par.n_galfit < setup.conmaxn > setup.conminn
      par.n_galfit_band = par.n_galfit_band < setup.conmaxn > setup.conminn
-     par.q_galfit = par.q_galfit > 0.0001 < 1
-     par.q_galfit_band = par.q_galfit_band > 0.0001 < 1
+     par.q_galfit = par.q_galfit > 0.01 < 1
+     par.q_galfit_band = par.q_galfit_band > 0.01 < 1
      par.pa_galfit = par.pa_galfit > (-360) < 360
      par.pa_galfit_band = par.pa_galfit_band > (-360) < 360
      
@@ -2442,7 +2442,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         openu, 1, constr_file, /append
         printf, 1, ctr, ' n '+lo+' to '+hi
         printf, 1, ctr, ' re 0.3 to '+strtrim(conmaxre, 2)
-        printf, 1, ctr, ' q 0.0001  to 1.'
+        printf, 1, ctr, ' q 0.01  to 1.'
         printf, 1, ctr, ' mag '+strtrim(conminm, 2)+' '+strtrim(conmaxm, 2)
         printf, 1, ctr, ' mag 0 to 40'
 ;        printf, 1, ctr, ' pa -360 to 360'
