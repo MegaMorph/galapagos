@@ -3030,11 +3030,12 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
 ; run galfit to derive primary target on these latest parameters
      fit_info_primary_file = strtrim(fit_info.logfile,2)+'_primary_fit_info'
      
-     spawn, 'ls '+fit_info_primary_file, lsout_primary_file,errxxx
-     IF lsout_primary_file[0] EQ '' THEN BEGIN
-;        IF NOT FILE_TEST(fit_info_primary_file) THEN BEGIN
-        spawn, 'ls '+fit_info.logfile, lsout_logfile,errxxx
-        IF lsout_logfile[0] EQ '' THEN BEGIN
+;     spawn, 'ls '+fit_info_primary_file, lsout_primary_file,errxxx
+;     IF lsout_primary_file[0] EQ '' THEN BEGIN
+     IF NOT FILE_TEST(strtrim(fit_info_primary_file,2)) THEN BEGIN
+;        spawn, 'ls '+strtrim(fit_info.logfile,2), lsout_logfile,errxxx
+;        IF lsout_logfile[0] EQ '' THEN BEGIN
+        IF NOT FILE_TEST(strtrim(fit_info.logfile,2)) THEN BEGIN
            print, 'galfit restart file missing although galfit output file exists'
            print, strtrim(fit_info.logfile,2)
            stop
