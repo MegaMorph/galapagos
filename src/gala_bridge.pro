@@ -184,7 +184,6 @@ PRO gala_bridge, filein, bd_fit = bd_fit
         IF setup.gal_kill_time NE 0 THEN spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "'+setup.galexe+' '+obj_file+'"'+outputpost
      ENDIF
      
-;     spawn, 'rm '+outpath_galfit[idx]+'galfit.[0123456789]*'
      spawn, 'rm ~/galfit.[0123456789]*'
   ENDIF
 

@@ -21,7 +21,7 @@ END
 FUNCTION tmp_file, path
 ;create a temporary filename with PATH prepended
   file = path+'tmp.'+strcompress(systime(), /remove_all)
-  WHILE file_test(file) DO file += strtrim(round(randomu(systime(1))*10), 2)
+  WHILE file_test(strtrim(file,2)) DO file += strtrim(round(randomu(systime(1))*10), 2)
   return, file
 END
 
@@ -231,8 +231,8 @@ PRO run_sextractor, setup, images, weights, outpath_file, tile, exclude
   
 ;create a temporary parameter file with the minimum set of sextractor
 ;parameters
-  IF file_test(hot) THEN multi = 1 ELSE multi = 0
-  IF file_test(cold) THEN multi += 2
+  IF file_test(strtrim(hot,2)) THEN multi = 1 ELSE multi = 0
+  IF file_test(strtrim(cold,2)) THEN multi += 2
   IF multi EQ 0 THEN $
      message, 'Neither cold nor hot SExtractor setup-file found'
   IF multi EQ 1 THEN BEGIN
@@ -1282,7 +1282,7 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
            objnum = round_digit(table[i_con].number, 0, /str)
            current_contrib_file = outpath[idx]+outpre[idx,1]+objnum+'_'+setup.galfit_out+'.fits'
            
-           IF file_test(current_contrib_file) THEN BEGIN
+           IF file_test(strtrim(current_contrib_file,2)) THEN BEGIN
 ;a GALFIT result exists for the current contributing source--------------------
               
 ;read in the GALFIT image fitting results from current_file
@@ -1940,7 +1940,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   SKY_po=''
   SKY_po2=''
   FOR b=1, nband DO BEGIN
-     IF file_test(sky_file[b]) EQ 0 THEN $
+     IF file_test(strtrim(sky_file[b],2)) EQ 0 THEN $
         message, 'sky file corresponding to current object was not found in band '+strtrim(setup.stamp_pre[b],2)
      openr, 2, sky_file[b]
      readf, 2, sky, dsky, skyrad, sky_magobj, flag
@@ -2012,7 +2012,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ; command line.
      forward_function read_sersic_results
      forward_function read_sersic_results_old_galfit
-     IF file_test(secout_file) THEN BEGIN
+     IF file_test(strtrim(secout_file,2)) THEN BEGIN
 ;sources with existing fit will be included as static source
         IF setup.version ge 4. then par = read_sersic_results(secout_file,nband,setup)
         IF setup.version lt 4. then par = read_sersic_results_old_galfit(secout_file,setup)      
@@ -2219,7 +2219,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      objnum = round_digit(table[i_con].number, 0, /str)
      current_contrib_file = outpath_galfit[idx]+outpre[idx,1]+objnum+'_'+strtrim(setup.galfit_out,2)+'.fits'
      
-     IF file_test(current_contrib_file) THEN BEGIN
+     IF file_test(strtrim(current_contrib_file,2)) THEN BEGIN
 ;sources with existing fit will be included as static source
         forward_function read_sersic_results
         forward_function read_sersic_results_old_galfit
@@ -2459,7 +2459,7 @@ END
 PRO read_setup, setup_file, setup
 ;read in the main setup file
 ;example:
-  if file_test(setup_file) eq 0 then begin
+  if file_test(strtrim(setup_file,2)) eq 0 then begin
      print, 'input file does not exist'
      stop
   ENDIF
@@ -2793,8 +2793,8 @@ PRO read_setup, setup_file, setup
   
 ; check whether executables exist
   
-  IF file_test(setup.sexexe) NE 1 AND setup.dosex EQ 1 THEN message, 'SExtractor executable does not exist'
-  IF file_test(setup.galexe) NE 1 AND (setup.dosky EQ 1 OR setup.dobd EQ 1) THEN message, 'Galfit executable does not exist'
+  IF file_test(strtrim(setup.sexexe,2)) NE 1 AND setup.dosex EQ 1 THEN message, 'SExtractor executable does not exist'
+  IF file_test(strtrim(setup.galexe,2)) NE 1 AND (setup.dosky EQ 1 OR setup.dobd EQ 1) THEN message, 'Galfit executable does not exist'
   
   return
   
@@ -2989,8 +2989,8 @@ PRO read_image_files, setup, save_folder, silent=silent
   
 ; now check whether all images exis
   IF setup.dosex+setup.dostamps+setup.dosky+setup.dobd GE 1 THEN BEGIN
-     image_exist = file_test(setup.images)
-     weight_exist = file_test(setup.weights)
+     image_exist = file_test(strtrim(setup.images,2))
+     weight_exist = file_test(strtrim(setup.weights,2))
      im_non_exist = where(image_exist EQ 0, cntimne)
      wh_non_exist = where(weight_exist EQ 0, cntwhne)
      IF cntimne NE 0 THEN BEGIN
@@ -3014,7 +3014,7 @@ PRO read_image_files, setup, save_folder, silent=silent
 END
 
 FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
-  IF file_test(obj[0]) THEN BEGIN
+  IF file_test(strtrim(obj[0],2)) THEN BEGIN
      result = mrdfits(obj[0], 'FINAL_BAND',/silent)
      res_cheb = mrdfits(obj[0], 'FINAL_CHEB',/silent)
      fit_info = mrdfits(obj[0], 'FIT_INFO',/silent)
@@ -3346,7 +3346,7 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
 END
 
 FUNCTION read_sersic_results_old_galfit, obj, setup, bd=bd
-  IF file_test(obj) THEN BEGIN
+  IF file_test(strtrim(obj,2)) THEN BEGIN
      hd = headfits(obj, exten = 2)
      mag0 = sxpar(hd, '2_MAG')
 ; cut number and error
@@ -3536,7 +3536,7 @@ FUNCTION read_sersic_results_old_galfit, obj, setup, bd=bd
   ENDIF
   
   IF keyword_set(bd) THEN BEGIN
-     IF file_test(obj) THEN BEGIN
+     IF file_test(strtrim(obj,2)) THEN BEGIN
         hd = headfits(obj, exten = 2)
         mag0_b = sxpar(hd, '3_MAG')
         mag_b = float(strmid(mag0_b, 0, strpos(mag0_b, '+/-')))
@@ -3695,15 +3695,15 @@ PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = 
   IF keyword_set(bd) THEN table[i].flag_galfit_bd = res.flag_galfit_bd    
   
 ; deal with 'crashed' objects
-  IF NOT file_test(out_file+'.fits') THEN BEGIN
+  IF NOT file_test(strtrim(out_file+'.fits',2)) THEN BEGIN
 ; object has deliberately not been started as the maximum degree of freedom is too small
-     IF file_test(obj_file+'_not_started') THEN BEGIN
+     IF file_test(strtrim(obj_file+'_not_started',2)) THEN BEGIN
         IF NOT keyword_set(bd) THEN table[i].flag_galfit = -1
         IF keyword_set(bd) THEN table[i].flag_galfit_bd = -1
      ENDIF
      
-     IF NOT file_test(obj_file+'_not_started') THEN BEGIN
-        IF NOT file_test(obj_file) AND NOT file_test(out_file+'.sav') THEN BEGIN
+     IF NOT file_test(strtrim(obj_file+'_not_started',2)) THEN BEGIN
+        IF NOT file_test(strtrim(obj_file,2)) AND NOT file_test(strtrim(out_file+'.sav',2)) THEN BEGIN
 ; object has not YET been started.
            IF NOT keyword_set(bd) THEN table[i].flag_galfit = 0
            IF keyword_set(bd) THEN table[i].flag_galfit_bd = 0
@@ -3744,7 +3744,7 @@ PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = 
      FOR b=1,nband DO BEGIN
 ; check whether sky file exists first
 ; overwrite -999. from above with true value
-        IF file_test(sky_file[b]) EQ 1 THEN BEGIN
+        IF file_test(strtrim(sky_file[b],2)) EQ 1 THEN BEGIN
            openr, 99, sky_file[b]
            readf, 99, sky, dsky, skyrad, sky_magobj, skyflag
            close, 99
@@ -3824,16 +3824,16 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
   date=systime(0)
   date=strsplit(date,' ',/extract)  
   save_folder = setup.outdir+'setups/setup_'+date[4]+'_'+date[1]+'_'+date[2]
-  IF NOT file_test(save_folder) THEN spawn, 'mkdir -p '+save_folder
+  IF NOT file_test(strtrim(save_folder,2)) THEN spawn, 'mkdir -p '+save_folder
   spawn, 'cp '+setup_file+' '+save_folder
   spawn, 'cp '+setup.files+' '+save_folder
   spawn, 'cp '+setup.sexout+' '+save_folder
-  IF file_test(setup.cold) THEN spawn, 'cp '+setup.cold+' '+save_folder
-  IF file_test(setup.hot) THEN spawn, 'cp '+setup.hot+' '+save_folder
-  IF file_test(setup.exclude) THEN spawn, 'cp '+setup.exclude+' '+save_folder
-  IF file_test(setup.bad) THEN spawn, 'cp '+setup.bad+' '+save_folder
-  IF file_test(setup.srclist) THEN spawn, 'cp '+setup.srclist+' '+save_folder
-  IF file_test(setup.bd_srclist) THEN spawn, 'cp '+setup.bd_srclist+' '+save_folder
+  IF file_test(strtrim(setup.cold,2)) THEN spawn, 'cp '+setup.cold+' '+save_folder
+  IF file_test(strtrim(setup.hot,2)) THEN spawn, 'cp '+setup.hot+' '+save_folder
+  IF file_test(strtrim(setup.exclude,2)) THEN spawn, 'cp '+setup.exclude+' '+save_folder
+  IF file_test(strtrim(setup.bad,2)) THEN spawn, 'cp '+setup.bad+' '+save_folder
+  IF file_test(strtrim(setup.srclist,2)) THEN spawn, 'cp '+setup.srclist+' '+save_folder
+  IF file_test(strtrim(setup.bd_srclist,2)) THEN spawn, 'cp '+setup.bd_srclist+' '+save_folder
   journal_folder = setup.outdir+'journals/bridgejournal_'+date[4]+'_'+date[1]+'_'+date[2]
   IF keyword_set(bridgejournal) THEN spawn, 'mkdir -p '+journal_folder
   
@@ -3923,11 +3923,11 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
   ENDIF
 ;==============================================================================
 ;check if output path exists, if not create them
-  IF NOT file_test(setup.outdir) THEN $
+  IF NOT file_test(strtrim(setup.outdir,2)) THEN $
      spawn, 'mkdir -p '+setup.outdir
-  FOR i=0ul, n_elements(outpath_band)-1 DO IF NOT file_test(outpath_band[i]) THEN $
+  FOR i=0ul, n_elements(outpath_band)-1 DO IF NOT file_test(strtrim(outpath_band[i],2)) THEN $
      spawn, 'mkdir -p '+strtrim(outpath_band[i],2)
-  FOR i=0ul, n_elements(outpath_galfit)-1 DO IF NOT file_test(outpath_galfit[i]) THEN $
+  FOR i=0ul, n_elements(outpath_galfit)-1 DO IF NOT file_test(strtrim(outpath_galfit[i],2)) THEN $
      spawn, 'mkdir -p  '+outpath_galfit[i]
   IF keyword_set(logfile) THEN $
      update_log, logfile, systime()+': Initialisation... done!'
@@ -3942,7 +3942,7 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
 ;run SExtractor
   IF setup.dosex THEN BEGIN
      print, 'starting SExtractor: '+systime(0)
-     IF file_test(setup.exclude) THEN $
+     IF file_test(strtrim(setup.exclude,2)) THEN $
         readcol, setup.exclude, exclude_files, exclude_x, exclude_y, $
                  format = 'A,F,F', /silent $
      ELSE exclude_files = ''
@@ -3952,7 +3952,7 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
         IF ct GT 0 THEN BEGIN
            exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] 
         ENDIF ELSE exclude = [[-1, -1]]
-        IF NOT FILE_TEST(outpath_file[i,0]+'combined.reg') OR keyword_set(sex_overwrite) THEN run_sextractor, setup, images, weights, outpath_file, i, exclude
+        IF NOT FILE_TEST(strtrim(outpath_file[i,0]+'combined.reg',2)) OR keyword_set(sex_overwrite) THEN run_sextractor, setup, images, weights, outpath_file, i, exclude
      ENDFOR
      
 ;combine all SExtractor catalogues
@@ -4094,7 +4094,7 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
   skymap_exist = intarr(nframes,nband)
   for t=0ul,nframes-1 do begin
      for b=1,nband do begin
-        skymap_exist[t,b-1] = file_test(outpath_file_no_band[t,b]+setup.stamp_pre[b]+'.'+setup.skymap+'.fits')
+        skymap_exist[t,b-1] = file_test(strtrim(outpath_file_no_band[t,b]+setup.stamp_pre[b]+'.'+setup.skymap+'.fits',2))
      endfor
   endfor
   if (total(skymap_exist) ne nframes*nband) and (setup.dosky eq 1 or setup.dobd eq 1) then begin
@@ -4199,13 +4199,13 @@ jump_over_this_1:
      ENDIF ELSE BEGIN
 ; only do this when the sav file does not exist or is older than the
 ; sextractor table!
-        IF NOT file_test(setup.srclist) THEN BEGIN
+        IF NOT file_test(strtrim(setup.srclist,2)) THEN BEGIN
            print, "your target list in D21 does not exist. Please provide a valid file name of use 'none' or an empty string to indicate that this feature should not be used"
            stop
         ENDIF
         srclist_name = strtrim(strmid(setup.srclist, strpos(setup.srclist,'/',/reverse_search)+1),2)
-        sav_file_test = file_info(setup.outdir+'primary_list_'+srclist_name+'.sav')
-        sex_file_test = file_info(setup.outdir+setup.sexcomb)
+        sav_file_test = file_info(strtrim(setup.outdir+'primary_list_'+srclist_name+'.sav',2))
+        sex_file_test = file_info(strtrim(setup.outdir+setup.sexcomb,2))
         
         IF sav_file_test.exists EQ 0 OR (sav_file_test.exists EQ 1 AND sav_file_test.mtime LT sex_file_test.mtime) THEN BEGIN
            print, 'correlating SExtractor catalogue to source list. Might take some time'
@@ -4293,7 +4293,7 @@ jump_over_this_1:
      table[*].do_batch = 0
      
 ;loop over all batch frames and set do_batch =1
-     IF file_test(setup.batch) AND strlen(setup.batch) GT 0 THEN BEGIN
+     IF file_test(strtrim(setup.batch,2)) AND strlen(setup.batch) GT 0 THEN BEGIN
         readcol, setup.batch, batch, format = 'A', comment = '#', /silent
         print, 'batch file detected, only doing the following image:'
         IF n_elements(batch) GT 0 THEN BEGIN
@@ -4414,7 +4414,7 @@ loopstart2:
               sky_file = strarr(nband+1)
               for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
 ;check if file was done successfully or bombed and update table                  
-              IF file_test(obj_file) THEN BEGIN
+              IF file_test(strtrim(obj_file,2)) THEN BEGIN
 ;                      print, obj_file+' found.'
                  print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
                  update_table, table, cur, out_file, obj_file, sky_file, nband, setup
@@ -4599,7 +4599,7 @@ loopend:
      outpath_galfit_bd = strtrim(outpath[*,0]+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)
      outpath_galfit_bd = set_trailing_slash(outpath_galfit_bd)
      FOR i=0ul, n_elements(outpath_galfit_bd)-1 DO $
-        IF NOT file_test(outpath_galfit_bd[i]) THEN $
+        IF NOT file_test(strtrim(outpath_galfit_bd[i],2)) THEN $
            spawn, 'mkdir -p '+outpath_galfit_bd[i]
      
      IF setup.bd_hpc THEN print, 'only preparing the galfit feedme files, NO fits done!'
@@ -4628,7 +4628,7 @@ loopend:
         sky_file = strarr(nband+1)
         FOR q=1,nband DO sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
 ; read in single sersic again
-        IF file_test(out_file+'.fits') THEN sscnt += 1
+        IF file_test(strtrim(out_file+'.fits',2)) THEN sscnt += 1
         update_table, table, i, out_file, obj_file, sky_file, nband, setup
         table[i].org_image_band = orgim[idx[0],1:nband]
         
@@ -4662,13 +4662,13 @@ jump_over_this_2:
      ENDIF ELSE BEGIN
 ; only do this when the sav file does not exist or is older than the
 ; sextractor table!
-        IF NOT file_test(setup.bd_srclist) THEN BEGIN
+        IF NOT file_test(strtrim(setup.bd_srclist,2)) THEN BEGIN
            print, "your target list in F04 does not exist. Please provide a valid file name of use 'none' or an empty string to indicate that this feature should not be used"
            stop
         ENDIF
         bd_srclist_name = strtrim(strmid(setup.bd_srclist, strpos(setup.bd_srclist,'/',/reverse_search)+1),2)
-        sav_file_test = file_info(setup.outdir+'primary_list_'+bd_srclist_name+'.sav')
-        sex_file_test = file_info(setup.outdir+setup.sexcomb)
+        sav_file_test = file_info(strtrim(setup.outdir+'primary_list_'+bd_srclist_name+'.sav',2))
+        sex_file_test = file_info(strtrim(setup.outdir+setup.sexcomb,2))
         
         IF sav_file_test.exists EQ 0 OR (sav_file_test.exists EQ 1 AND sav_file_test.mtime LT sex_file_test.mtime) THEN BEGIN
            print, 'correlating SExtractor catalogue to source list for B/D. Might take some time'
@@ -4771,7 +4771,7 @@ jump_over_this_2:
         table[*].do_batch = 0
         
 ;loop over all batch frames and set do_batch =1
-        IF file_test(setup.batch) AND strlen(setup.batch) GT 0 THEN BEGIN
+        IF file_test(strtrim(setup.batch,2)) AND strlen(setup.batch) GT 0 THEN BEGIN
            print, 'setting up batch mode for B/D fits'
            readcol, setup.batch, batch, format = 'A', comment = '#', /silent
            
@@ -4908,7 +4908,7 @@ loopstart2_bd:
 ;                    IF file_test(out_file+'.fits') THEN BEGIN ; to be
 ;                    used for reruns after HPC. Delete obj files, run
 ;                    again. Also disable galfit in gala_bd_bridge
-                 IF file_test(obj_file) THEN BEGIN
+                 IF file_test(strtrim(obj_file,2)) THEN BEGIN
 ;                    print, obj_file+' found.'
                     print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
                     
@@ -5020,7 +5020,7 @@ loopstart2_bd:
 ;                bridge_arr[free[0]]->execute, $
 ;                  'gala_bridge, "'+out_file+'.sav", /bd_fit', /nowait
 ;++++++++++++++++++++++++++ MARCOS SCRIPT
-                 if file_test(out_file+'.fits') THEN $
+                 if file_test(strtrim(out_file+'.fits',2)) THEN $
                     bridge_arr[free[0]]->execute, $
                     'gala_bd_bridge, "'+out_file_bd+'.sav"',/nowait
                  
@@ -5040,7 +5040,7 @@ loopstart2_bd:
                  
 ;++++++++++++++++++++++++++ MARCOS SCRIPT
 ;                bd_fit, out_file+'.fits',setup.bd_label, setup.galexe
-                 IF file_test(out_file+'.fits') THEN $
+                 IF file_test(strtrim(out_file+'.fits',2)) THEN $
                     gala_bd_bridge, out_file_bd+'.sav'
 ;--------------------------- MARCOS SCRIPT
                  
@@ -5129,8 +5129,8 @@ loopend_bd:
            out_file_bd = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.galfit_out)[0]                
            
 ; check whether this object has already been done, if so, skip
-           IF file_test(obj_file_bd) THEN print, obj_file_bd+' skipped, exists already'
-           IF file_test(obj_file_bd) THEN CONTINUE
+           IF file_test(strtrim(obj_file_bd,2)) THEN print, obj_file_bd+' skipped, exists already'
+           IF file_test(strtrim(obj_file_bd,2)) THEN CONTINUE
            
            IF loopk MOD 100 EQ 0 THEN $
               print, systime()+': starting object No. '+strtrim(loopk,2)+' of ' $
@@ -5141,7 +5141,7 @@ loopend_bd:
            save, out_file, out_file_bd, obj_file, obj_file_bd, constr_file, constr_file_bd, setup, galfit_path, $
                  filename=out_file_bd+'.sav'
            
-           IF file_test(out_file+'.fits') THEN $
+           IF file_test(strtrim(out_file+'.fits',2)) THEN $
               gala_bd_bridge, out_file_bd+'.sav'
            
         ENDFOR
@@ -5198,7 +5198,7 @@ loopend_bd:
         idx = where(tab[i].tile EQ orgim[*,0])
         out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0] 
         
-        if file_test(out_file+'.fits') then read += 1
+        if file_test(strtrim(out_file+'.fits',2)) then read += 1
         
 ; write galapagos ID
         out[i].gala_id = orgpre[idx]+objnum
@@ -5226,7 +5226,7 @@ loopend_bd:
      
 ; cleaning bad detections from catalog
      print, 'catalogue has '+strtrim(n_elements(out.tile),2)+' objects'
-     IF file_test(setup.bad) THEN BEGIN
+     IF file_test(strtrim(setup.bad,2)) THEN BEGIN
         readcol, setup.bad, tile, x, y, format = 'A,F,F', comment = '#', /silent
         tiles = uniq(tile, sort(tile))
         flag = intarr(n_elements(out))
