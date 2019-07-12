@@ -1270,14 +1270,14 @@ PRO getsky_loop, setup, current_obj, table, rad, im0, hd, map, exptime, zero_pt,
 ;loop over all contributing sources============================================
         FOR current_contrib=0ul, n_contrib-1 DO BEGIN
            i_con = where(table.number EQ nums[current_contrib] AND $
-                         table.frame[0] EQ frames[current_contrib])
+                         strtrim(table.frame[0],2) EQ strtrim(frames[current_contrib],2))
            dist[current_contrib] = $
               sqrt((table[i_con].x_image-table[current_obj].x_image)^2+ $
                    (table[i_con].y_image-table[current_obj].y_image)^2)+ $
               table[i_con].a_image*table[i_con].kron_radius*scale
            
 ;find the GALFIT output file for the current contributing source
-           idx = where(orgim[*,1] EQ table[i_con].frame[1])
+           idx = where(strtrim(orgim[*,1],2) EQ strtrim(table[i_con].frame[1],2))
            
            objnum = round_digit(table[i_con].number, 0, /str)
            current_contrib_file = outpath[idx]+outpre[idx,1]+objnum+'_'+setup.galfit_out+'.fits'
@@ -1735,7 +1735,7 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, mask_file_primary, im_f
      ENDIF ELSE BEGIN
 ;loop source has NO overlap with current --> tertiary
 ;if loop source is contributing source on current frame, make secondary
-        coni = where(table[i].number EQ nums AND table[i].frame[0] EQ frames, $
+        coni = where(table[i].number EQ nums AND strtrim(table[i].frame[0],2) EQ strtrim(frames,2), $
                      con)
         IF con GT 0 THEN BEGIN
            plus = 1
@@ -1791,7 +1791,7 @@ PRO create_mask, table0, wht, seg, paramfile, mask_file, mask_file_primary, im_f
   mask1 = segm < 1
   FOR i=0ul, n_elements(objects)-1 DO BEGIN
      idx = where(segm EQ table[objects[i]].number AND $
-                 table[objects[i]].frame[b] EQ image AND segm GT 0, ct)
+                 strtrim(table[objects[i]].frame[b],2) EQ strtrim(image,2) AND segm GT 0, ct)
      IF ct GT 0 THEN mask1[idx] = 0
   ENDFOR
   FOR i=0ul, n_elements(con_num)-1 DO BEGIN
@@ -2003,7 +2003,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   ENDIF
 ;loop over all (primary & secondary) sources
   FOR i=0ul, n_elements(objects)-1 DO BEGIN
-     idx = where(orgim[*,0] EQ table[objects[i]].frame[0], ct)
+     idx = where(strtrim(orgim[*,0],2) EQ strtrim(table[objects[i]].frame[0],2), ct)
      secout_file = outpath_galfit[idx]+outpre[idx,1]+ $
                    round_digit(table[objects[i]].number, 0, /str)+'_'+strtrim(setup.galfit_out,2)+'.fits'
      
@@ -2137,6 +2137,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         IF b LT nband THEN mag_po=mag_po+','
      ENDFOR
      IF fix[2] EQ 1 THEN mag_po_fit = strtrim((setup.cheb[2]+1)<maxdeg,2) ELSE mag_po_fit = '0'
+if strtrim(mag_po_fit,2) eq '0' then stop
      printf, 1, ' 3) '+mag_po+'    '+mag_po_fit+'   '+band_po+'    # total magnitude'
      
      re_po=''
@@ -2208,13 +2209,13 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   FOR i=0ul, n_nums-1 DO BEGIN
      
      i_con = where(table.number EQ num_contrib[i] AND $
-                   table.frame[0] EQ frame_contrib[i])
+                   strtrim(table.frame[0],2) EQ strtrim(frame_contrib[i],2))
      
      dum = where(table[objects].number EQ num_contrib[i] AND $
-                 table[objects].frame[0] EQ frame_contrib[i], ct)
+                 strtrim(table[objects].frame[0],2) EQ strtrim(frame_contrib[i],2), ct)
      IF ct GT 0 THEN CONTINUE
      
-     idx = where(orgim[*,0] EQ table[i_con].frame[0])
+     idx = where(strtrim(orgim[*,0],2) EQ strtrim(table[i_con].frame[0],2))
 ;    objnum = integer2string(table[i_con].number, table.number, /array)
      objnum = round_digit(table[i_con].number, 0, /str)
      current_contrib_file = outpath_galfit[idx]+outpre[idx,1]+objnum+'_'+strtrim(setup.galfit_out,2)+'.fits'
@@ -3727,7 +3728,7 @@ PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = 
         table[i].org_image = table[i].tile
         table[i].org_image_band = table[i].tile
      ENDIF
-     IF NOT keyword_set(final) THEN table[i].org_image = table[i].frame[0]
+     IF NOT keyword_set(final) THEN table[i].org_image = strtrim(table[i].frame[0],2)
      
      IF NOT keyword_set(bd) THEN BEGIN
         table[i].flag_galfit = 2
@@ -4129,7 +4130,7 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
   tableim = strarr(nband+1,n_elements(table.frame))
   
   for i = 0l, n_elements(images[*,0])-1 do begin
-     whtableim = where(table.frame eq images[i,0], ct)
+     whtableim = where(strtrim(table.frame,2) eq strtrim(images[i,0],2), ct)
      if ct gt 0 then for b=0,nband do tableim[b,whtableim] = images[i,b]
   ENDFOR 
   table=remove_tags(table,'frame')
@@ -4300,7 +4301,7 @@ jump_over_this_1:
 
            FOR f=0ul, n_elements(batch)-1 DO BEGIN
               print, batch[f]
-              dum = where(table.frame[0] EQ batch[f], ct)
+              dum = where(strtrim(table.frame[0],2) EQ strtrim(batch[f],2), ct)
               IF ct EQ 0 THEN CONTINUE
               table[dum].do_batch = 1
            ENDFOR
@@ -4348,7 +4349,7 @@ loopstart2:
 ;treat finished objects first
            IF bridge_obj[free[0]] GE 0 THEN BEGIN
 ;read in feedback data
-              idx = where(table[bridge_obj[free[0]]].frame[0] EQ orgim[*,0])
+              idx = where(strtrim(table[bridge_obj[free[0]]].frame[0],2) EQ strtrim(orgim[*,0],2))
               objnum = round_digit(table[bridge_obj[free[0]]].number, 0, /str)
               obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
               out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
@@ -4397,16 +4398,16 @@ loopstart2:
                     goto, loopstart2
                  ENDIF
                  
-              ENDREP UNTIL (min(dist) gt setup.min_dist and min(dist_block) gt setup.min_dist_block) or ob ge n_elements(todo)-1
+              ENDREP UNTIL (min(dist) GE setup.min_dist AND min(dist_block) GE setup.min_dist_block) OR ob GE n_elements(todo)-1
               IF min(dist) LT setup.min_dist or min(dist_block) lt setup.min_dist_block THEN CONTINUE
            ENDIF
-           ob=ob-1>0
+           ob=ob-1>0; because I already added  1 to ob above in the repeat loop. I want the CURRENT object, not the next
            cur=todo[ob]
            
 ; check whether this object has already been done, if so, read in
 ; result
            ct = 0l 
-           idx = where(table[cur].frame[0] EQ orgim[*,0], ct)
+           idx = where(strtrim(table[cur].frame[0],2) EQ strtrim(orgim[*,0],2), ct)
            IF ct GT 0 THEN BEGIN
               objnum = round_digit(table[cur].number, 0, /str)
               obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
@@ -4415,7 +4416,6 @@ loopstart2:
               for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
 ;check if file was done successfully or bombed and update table                  
               IF file_test(strtrim(obj_file,2)) THEN BEGIN
-;                      print, obj_file+' found.'
                  print, 'Updating table now! ('+strtrim(cur, 2)+'/'+strtrim(nbr, 1)+')'                      
                  update_table, table, cur, out_file, obj_file, sky_file, nband, setup
                  IF n_elements(todo) NE 1 THEN GOTO, loopstart
@@ -4454,7 +4454,7 @@ loopstart2:
            ENDIF
            
 ;find the matching filenames
-           idx = where(table[cur].frame[0] EQ orgim[*,0])
+           idx = where(strtrim(table[cur].frame[0],2) EQ strtrim(orgim[*,0],2))
 ;define the file names for the:
 ;postage stamp parameters
            stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
@@ -4497,17 +4497,17 @@ loopstart2:
            
 ; USE 'NEIGHBOURS' TO CUT DOWN TABLE SIZE OF FITTAB!!
 ;select part of table with frames neighbouring the current frame;
-           int_obj = where(table.frame[0] EQ table[cur].frame[0])
+           int_obj = where(strtrim(table.frame[0],2) EQ strtrim(table[cur].frame[0],2))
            
            FOR i=0ul, n_elements(neighbours[*, idx])-1 DO BEGIN
-              tabi = where(table.frame[0] EQ neighbours[i, idx[0]], ct)
+              tabi = where(strtrim(table.frame[0],2) EQ strtrim(neighbours[i, idx[0]],2), ct)
               IF ct GT 0 THEN int_obj = [int_obj, tabi]
            ENDFOR
            save_table = table[int_obj]
            
 ; find new values of [cur] and 
 ; [idx] will stay the same because it's not the object, but the tile it is on!
-           save_cur = where(save_table.frame[0] eq table[cur].frame[0] and save_table.number eq table[cur].number)
+           save_cur = where(strtrim(save_table.frame[0],2) eq strtrim(table[cur].frame[0],2) and save_table.number eq table[cur].number)
            save_cur = save_cur[0]
            
 ;print, systime()+'  writing '+out_file+'.sav'
@@ -4554,7 +4554,7 @@ loopend:
      remain = where(bridge_obj ge 0, ct)
      IF ct GT 0 THEN BEGIN
         FOR i=0, ct-1 DO BEGIN
-           idx = where(table[bridge_obj[remain[i]]].frame[0] EQ orgim[*,0])
+           idx = where(strtrim(table[bridge_obj[remain[i]]].frame[0],2) EQ strtrim(orgim[*,0],2))
            objnum = round_digit(table[bridge_obj[remain[i]]].number, 0, /str)
            obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
            out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
@@ -4593,6 +4593,9 @@ loopend:
 ; ?? d) Neighbours will only be deblended as single sersics!
   
   IF setup.dobd THEN BEGIN
+; this sets minimum distance ==0, so disables the queue
+; system. Objects are done in whatever order, as it does not matter,
+; no results from other objects are used for the successive B/D fits
      setup.min_dist = 0
      setup.min_dist_block = 0
      
@@ -4621,7 +4624,7 @@ loopend:
         print, ' reading single sersic result from object '+strtrim(i+1,2)+' of '+strtrim(ntab,2)+', '+strtrim(sscnt,2)+' objects succesfully read in'
         objnum = round_digit(table[i].number, 0, /str)
         
-        idx = where(table[i].frame[0] EQ orgim[*,0])
+        idx = where(strtrim(table[i].frame[0],2) EQ strtrim(orgim[*,0],2))
         out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0]
         
         obj_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.obj)[0]
@@ -4777,7 +4780,7 @@ jump_over_this_2:
            
            IF n_elements(batch) GT 0 THEN BEGIN
               FOR f=0ul, n_elements(batch)-1 DO BEGIN
-                 dum = where(table.frame[0] EQ batch[f], ct)
+                 dum = where(strtrim(table.frame[0],2) EQ strtrim(batch[f],2), ct)
                  IF ct EQ 0 THEN CONTINUE
                  table[dum].do_batch = 1
               ENDFOR
@@ -4830,16 +4833,16 @@ loopstart2_bd:
 ;treat finished objects first
               IF bridge_obj[free[0]] GE 0 THEN BEGIN
 ;read in feedback data
-                 idx = where(table[bridge_obj[free[0]]].frame[0] EQ orgim[*,0])
+                 idx = where(strtrim(table[bridge_obj[free[0]]].frame[0],2) EQ strtrim(orgim[*,0],2))
                  objnum = round_digit(table[bridge_obj[free[0]]].number, 0, /str)
                  obj_file = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
                  out_file = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.galfit_out)[0]
                  sky_file = strarr(nband+1)
 ;!!!                for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_bd_'+setup.outsky)[0]
                  for q=1,nband do sky_file[q] = (outpath_galfit[idx]+orgpre[idx,q]+objnum+'_'+setup.stamp_pre[q]+'_'+setup.outsky)[0]
+
 ;check if file was done successfully or bombed (done in update_table)
 ;else table is automatically filled with standard values     
-                 
                  update_table, table, bridge_obj[free[0]], out_file, obj_file, sky_file, nband, setup, /bd
                  
 ;clear object
@@ -4869,22 +4872,22 @@ loopstart2_bd:
                     IF min(dist) LT setup.min_dist OR min(dist_block) lt setup.min_dist_block THEN BEGIN
                        blocked = [[blocked],todo[ob]]
                     ENDIF
-                    
+
                     ob++
-                    IF ob EQ n_elements(todo) AND $
+                    IF ob EQ n_elements(todo) AND $ ; no "-1" because I already added 1 to ob
                        (min(dist) LT setup.min_dist OR min(dist_block) LT setup.min_dist_block) THEN BEGIN
                        wait, 1
                        ob=0l
-;                        print, 'starting over'
+;                       print, 'starting loop over'
                        GOTO, loopstart2_bd
                     ENDIF
                     
-                 ENDREP UNTIL (min(dist) GT setup.min_dist AND min(dist_block) GT setup.min_dist_block) OR ob GE n_elements(todo)-1
+                 ENDREP UNTIL (min(dist) GE setup.min_dist AND min(dist_block) GE setup.min_dist_block) OR ob GE n_elements(todo)-1
                  IF min(dist) LT setup.min_dist OR min(dist_block) LT setup.min_dist_block THEN CONTINUE
               ENDIF
-              ob=ob-1>0
+              ob=ob-1>0 ; because I already added  1 to ob above in the repeat loop. I want the CURRENT object, not the next
               cur=todo[ob]
-              
+
 ; perform some kind of STAR classification so B/D is only done for galaxies
 ; currently, SExtractor is used, but maybe others are more useful
 ;              if table[cur].class_star gt 0.8 then begin
@@ -4896,7 +4899,7 @@ loopstart2_bd:
 ; check whether this object has already been done, if so, read in
 ; result and restart
               ct = 0l
-              idx = where(table[cur].frame[0] EQ orgim[*,0], ct)
+              idx = where(strtrim(table[cur].frame[0],2) EQ strtrim(orgim[*,0],2), ct)
               IF ct GT 0 THEN BEGIN
                  objnum = round_digit(table[cur].number, 0, /str)
                  obj_file = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
@@ -4943,7 +4946,7 @@ loopstart2_bd:
               
 ; SOME OF THESE FILE NAMES NOT CURRENTLY USED
 ;find the matching filenames
-              idx = where(table[cur].frame[0] EQ orgim[*,0])
+              idx = where(strtrim(table[cur].frame[0],2) EQ strtrim(orgim[*,0],2))
 ;define the file names for the:
 ;postage stamp parameters
               stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
@@ -5065,7 +5068,7 @@ loopend_bd:
         remain = where(bridge_obj ge 0, ct)
         IF ct GT 0 THEN BEGIN
            FOR i=0, ct-1 DO BEGIN
-              idx = where(table[bridge_obj[remain[i]]].frame[0] EQ orgim[*,0])
+              idx = where(strtrim(table[bridge_obj[remain[i]]].frame[0],2) EQ strtrim(orgim[*,0],2))
               objnum = round_digit(table[bridge_obj[remain[i]]].number, 0, /str)
               obj_file = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.obj)[0]
               out_file = (outpath_galfit_bd[idx]+orgpre[idx]+objnum+'_'+setup.bd_label+'_'+setup.galfit_out)[0]
@@ -5111,7 +5114,7 @@ loopend_bd:
            cur = todo[loopk]
            
 ;find the matching filenames
-           idx = where(table[cur].frame[0] EQ orgim[*,0])
+           idx = where(strtrim(table[cur].frame[0],2) EQ strtrim(orgim[*,0],2))
 ;define the file names for the:
 ;postage stamp parameters
            stamp_param_file = (orgpath_file_no_band[idx,0]+setup.stampfile)[0]
@@ -5195,7 +5198,7 @@ loopend_bd:
 
      FOR i=0ul, ntab-1 DO BEGIN
         objnum = round_digit(tab[i].number, 0, /str)
-        idx = where(tab[i].tile EQ orgim[*,0])
+        idx = where(strtrim(tab[i].tile,2) EQ strtrim(orgim[*,0],2))
         out_file = (outpath_galfit[idx]+orgpre[idx]+objnum+'_'+setup.galfit_out)[0] 
         
         if file_test(strtrim(out_file+'.fits',2)) then read += 1
@@ -5237,7 +5240,7 @@ loopend_bd:
            print, '  '+strtrim(ct,2)+' positions to be removed in this tile (not all have to have objects)'
 ; If something in the bad detection list
            IF ct GT 0 THEN BEGIN
-              catidx = where(out.tile EQ tile[tiles[i]], ct1)
+              catidx = where(strtrim(out.tile,2) EQ strtrim(tile[tiles[i]],2), ct1)
 ; if some objects on that same tile
               IF ct1 GT 0 THEN BEGIN
                  srccor, x[tileidx], y[tileidx], out[catidx].x_image, $

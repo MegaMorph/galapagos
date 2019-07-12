@@ -1,7 +1,7 @@
 PRO gala_bridge, filein, bd_fit = bd_fit
 ;variables provided in filein:
 ;cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
-;stamp_param_file, mask_file, im_file, obj_file, 
+;stamp_param_file, mask_file, im_file,obj_file, 
 ;constr_file, out_file, table, nband, outpath_file
 ;orgpath_band, orgpath_pre, orgpath_galfit, orgpath_file,
 ;orgpath_file_no_band, seed
@@ -184,11 +184,10 @@ PRO gala_bridge, filein, bd_fit = bd_fit
         IF setup.gal_kill_time NE 0 THEN spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "'+setup.galexe+' '+obj_file+'"'+outputpost
      ENDIF
      
-     spawn, 'rm ~/galfit.[0123456789]*'
   ENDIF
 
   print, 'all done for this object at '+systime(0)  
   print, 'deleting *sav file and returning to main queue' 
-  file_delete, filein
+ ; file_delete, filein
   wait, 1
 END
