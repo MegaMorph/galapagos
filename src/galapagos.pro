@@ -2137,7 +2137,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         IF b LT nband THEN mag_po=mag_po+','
      ENDFOR
      IF fix[2] EQ 1 THEN mag_po_fit = strtrim((setup.cheb[2]+1)<maxdeg,2) ELSE mag_po_fit = '0'
-if strtrim(mag_po_fit,2) eq '0' then stop
+;if objects[i] eq 1 and strtrim(mag_po_fit,2) eq '0' then stop
      printf, 1, ' 3) '+mag_po+'    '+mag_po_fit+'   '+band_po+'    # total magnitude'
      
      re_po=''
