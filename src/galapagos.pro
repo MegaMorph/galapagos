@@ -4268,6 +4268,7 @@ jump_over_this_1:
            bridge_arr[i]->execute, 'astrolib'
            bridge_arr[i]->execute, '.r '+gala_pro
            bridge_arr[i]->execute, '.r gala_bridge'
+           bridge_arr[i]->execute, '.r derive_primary_chi2'
         ENDFOR
      ENDIF
      
@@ -4747,7 +4748,8 @@ jump_over_this_2:
               bridge_arr[i]->execute, 'astrolib'
               bridge_arr[i]->execute, '.r '+gala_pro
               bridge_arr[i]->execute, '.r gala_bd_bridge'
-           ENDFOR  
+              bridge_arr[i]->execute, '.r derive_primary_chi2'
+        ENDFOR  
            print, ' all bridges set up'
         ENDIF
         IF keyword_set(plot) THEN BEGIN
