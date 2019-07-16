@@ -2012,6 +2012,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ; command line.
      forward_function read_sersic_results
      forward_function read_sersic_results_old_galfit
+; delete actual output file for primary object, if it (wrongly) exists
+;     IF file_test(strtrim(secout_file,2)) AND i eq 0 then THEN BEGIN file_delete, strtrim(secout_file,2)
      IF file_test(strtrim(secout_file,2)) THEN BEGIN
 ;sources with existing fit will be included as static source
         IF setup.version ge 4. then par = read_sersic_results(secout_file,nband,setup)
@@ -2137,7 +2139,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         IF b LT nband THEN mag_po=mag_po+','
      ENDFOR
      IF fix[2] EQ 1 THEN mag_po_fit = strtrim((setup.cheb[2]+1)<maxdeg,2) ELSE mag_po_fit = '0'
-;if objects[i] eq 1 and strtrim(mag_po_fit,2) eq '0' then stop
+;if i eq o and strtrim(mag_po_fit,2) eq '0' then stop
      printf, 1, ' 3) '+mag_po+'    '+mag_po_fit+'   '+band_po+'    # total magnitude'
      
      re_po=''
@@ -3027,15 +3029,10 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
      IF tag_exist(band_info, 'NMASK') THEN nmask_g = band_info.nmask ELSE nmask_g = -99
      
 ; only run in final readout stage?
-;     IF keyword_set(final) THEN BEGIN 
 ; run galfit to derive primary target on these latest parameters
      fit_info_primary_file = strtrim(fit_info.logfile,2)+'_primary_fit_info'
      
-;     spawn, 'ls '+fit_info_primary_file, lsout_primary_file,errxxx
-;     IF lsout_primary_file[0] EQ '' THEN BEGIN
      IF NOT FILE_TEST(strtrim(fit_info_primary_file,2)) THEN BEGIN
-;        spawn, 'ls '+strtrim(fit_info.logfile,2), lsout_logfile,errxxx
-;        IF lsout_logfile[0] EQ '' THEN BEGIN
         IF NOT FILE_TEST(strtrim(fit_info.logfile,2)) THEN BEGIN
            print, 'galfit restart file missing although galfit output file exists'
            print, strtrim(fit_info.logfile,2)
@@ -3044,16 +3041,8 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
            derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
         ENDELSE
      ENDIF
-
-; old version 
-;        IF NOT FILE_TEST(fit_info_primary_file) THEN derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
 ; read out these values from ascii file
      readcol, fit_info_primary_file, ndof_prime, chi2_prime, chi2nu_prime, format='I,F,F',/silent
-;     ENDIF ELSE BEGIN
-;        ndof_prime = -99
-;        chi2_prime = -99.
-;        chi2nu_prime = -99.
-;     ENDELSE
      
 ; delete feedback, just in case the format of one is different, avoiding crash
      delvarx, feedback
@@ -3065,7 +3054,7 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
                                  'pa_galfit', result[0].COMP2_PA, 'paerr_galfit', result[0].COMP2_PA_ERR, $
                                  'x_galfit', result[0].COMP2_XC, 'xerr_galfit', result[0].COMP2_XC_ERR, $
                                  'y_galfit', result[0].COMP2_YC, 'yerr_galfit', result[0].COMP2_YC_ERR, $
-                                 'psf_galfit', strtrim(band_info[0].psf), 'sky_galfit', result[0].COMP1_SKY, $
+                                 'psf_galfit', strtrim(band_info[0].psf,2), 'sky_galfit', result[0].COMP1_SKY, $
                                  'mag_galfit_band', result.COMP2_MAG, 'magerr_galfit_band',result.COMP2_MAG_ERR, $
                                  're_galfit_band', result.COMP2_RE, 'reerr_galfit_band', result.COMP2_RE_ERR, $
                                  'n_galfit_band', result.COMP2_N, 'nerr_galfit_band' ,result.COMP2_N_ERR, $
@@ -3686,7 +3675,7 @@ PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = 
            IF ct GT 0 THEN res[wh].(j)='null'
         ENDIF
 ;          if ct gt 0 then print, 'changed'
-        table[i].(tagidx) = res.(j)
+        table[i].(tagidx) = strtrim(res.(j),2)
      ENDIF
   ENDFOR
   
@@ -3712,11 +3701,11 @@ PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = 
 ; object has been started and has actually crashed (or is currently doing sky determination)
            IF NOT keyword_set(bd) THEN BEGIN
               table[i].flag_galfit = 1
-              table[i].initfile = obj_file
+              table[i].initfile = strtrim(obj_file,2)
            ENDIF
            IF keyword_set(bd) THEN BEGIN
               table[i].flag_galfit_bd = 1
-              table[i].initfile_bd = obj_file
+              table[i].initfile_bd = strtrim(obj_file,2)
            ENDIF
         ENDELSE
      ENDIF
@@ -3725,18 +3714,18 @@ PRO update_table, table, i, out_file, obj_file, sky_file, nband, setup, final = 
 ; set flag if outfile actually exists (e.g. successful fit)
 ; IN B/D THIS BIT WILL BE DONE IN EACH READIN, BUT RESULT IS EQUIVALENT to SS
      IF keyword_set(final) THEN BEGIN
-        table[i].org_image = table[i].tile
-        table[i].org_image_band = table[i].tile
+        table[i].org_image = strtrim(table[i].tile,2)
+        table[i].org_image_band = strtrim(table[i].tile,2)
      ENDIF
      IF NOT keyword_set(final) THEN table[i].org_image = strtrim(table[i].frame[0],2)
      
      IF NOT keyword_set(bd) THEN BEGIN
         table[i].flag_galfit = 2
-        table[i].file_galfit = out_file+'.fits'
+        table[i].file_galfit = strtrim(out_file,2)+'.fits'
      ENDIF
      IF keyword_set(bd) THEN BEGIN
         table[i].flag_galfit_bd = 2
-        table[i].file_galfit_bd = out_file+'.fits'
+        table[i].file_galfit_bd = strtrim(out_file,2)+'.fits'
      ENDIF
   ENDELSE
   

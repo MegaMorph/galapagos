@@ -1,4 +1,4 @@
-PRO gala_bridge, filein, bd_fit = bd_fit
+PRO gala_bridge, filein
 ;variables provided in filein:
 ;cur, orgwht, idx, orgpath, orgpre, setup, psf, chosen_psf_file, sky_file, 
 ;stamp_param_file, mask_file, im_file,obj_file, 
@@ -128,7 +128,6 @@ PRO gala_bridge, filein, bd_fit = bd_fit
      
   ENDFOR
   
-;if not keyword_set(bd_fit) THEN $
   print, 'preparing GALFIT start file'
   prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
                   im_file, sigma_file, constr_file, mask_file, mask_file_primary, chosen_psf_file, $
@@ -146,28 +145,9 @@ PRO gala_bridge, filein, bd_fit = bd_fit
      close, 1
   ENDIF
   
-;if keyword_set(bd_fit) THEN $
-;  prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
-;  im_file, constr_file, mask_file, chosen_psf_file, $
-;  out_file, sky_file, setup.convbox, setup.zp, $
-;  setup.platescl, nums, frames, cur, $
-;  setup.outcat, setup.outparam, setup.stampfile, $
-;  setup.conmaxre, setup.conminm, setup.conmaxm, $
-;  setup.version, nband, orgpre, bd_fit = bd_fit
-;spawn, 'touch '+filein+'.preparegalfit';§§§§§§§§§§§§§§§§§§§§§§
-  
 ;spawn the script
   cd, outpath_galfit[idx]
   
-;; timeout version (preferred, but doesn't work on all systems, as timeout might be missing (despite being gnu routine))
-;   IF setup.nice THEN BEGIN
-;       IF setup.gal_kill_time eq 0 THEN spawn, 'nice '+setup.galexe+' '+obj_file
-;       IF setup.gal_kill_time ne 0 THEN spawn, 'timeout '+strtrim(60*setup.gal_kill_time,2)+' nice '+setup.galexe+' '+obj_file
-;   ENDIF
-;   IF NOT setup.nice THEN  
-;       IF setup.gal_kill_time eq 0 THEN spawn, setup.galexe+' '+obj_file
-;       IF setup.gal_kill_time ne 0 THEN spawn, 'timeout '+strtrim(60*setup.gal_kill_time,2)+' '+setup.galexe+' '+obj_file
-
   outputpost = ''
   IF setup.galfitoutput THEN outputpost = ' &> '+obj_file+'.out'
 
@@ -186,8 +166,16 @@ PRO gala_bridge, filein, bd_fit = bd_fit
      
   ENDIF
 
+; calculate Chi^ for primary object only right here, for speed up of main code
+  print, 'now deriving Chi^2 value for primary object if possible and applicable'
+  IF file_test(strtrim(out_file+'.fits',2)) THEN BEGIN
+     fit_info = mrdfits(strtrim(out_file+'.fits',2), 'FIT_INFO',/silent)
+     fit_info_primary_file = strtrim(fit_info.logfile,2)+'_primary_fit_info'
+     derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
+  ENDIF
+
   print, 'all done for this object at '+systime(0)  
   print, 'deleting *sav file and returning to main queue' 
- ; file_delete, filein
+  file_delete, filein
   wait, 1
 END
