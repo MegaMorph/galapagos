@@ -2012,8 +2012,10 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ; command line.
      forward_function read_sersic_results
      forward_function read_sersic_results_old_galfit
+
 ; delete actual output file for primary object, if it (wrongly) exists
 ;     IF file_test(strtrim(secout_file,2)) AND i eq 0 then THEN BEGIN file_delete, strtrim(secout_file,2)
+
      IF file_test(strtrim(secout_file,2)) THEN BEGIN
 ;sources with existing fit will be included as static source
         IF setup.version ge 4. then par = read_sersic_results(secout_file,nband,setup)
@@ -3767,8 +3769,8 @@ PRO start_log, logfile, message
 END
 
 PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2, sex_overwrite=sex_overwrite
-  galapagos_version = 'GALAPAGOS-v2.3.3'
-  galapagos_date = '(July 4th, 2019)'
+  galapagos_version = 'GALAPAGOS-v2.3.4'
+  galapagos_date = '(July 16th, 2019)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)

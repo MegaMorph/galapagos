@@ -1,63 +1,3 @@
-; The procedures in this file are standalone scripts for running
-; GALFIT bulge-disk fits on the University of Nottingham supercomputer
-; following a single-sersic run of GALAPAGOS-2.
-;
-; These procedures use routines from galapagos, so that must be
-; compiled, e.g.
-; .r galapgaos
-; .r gala_bd_multi
-;
-; First of all the GALFIT feedme files must be generated, using
-; 'run_bd_fit'. This also outputs two additional files:
-; 'bd*_batch_file', which lists all the feedme files created, and
-; 'bd*_rsync_includes', which is an rsync includes file (used later).
-; 
-; run_bd_fit is given the filename of the GALAPAGOS catalogue to be used.
-;
-; run_bd_fit is also given a label, in order to allow multiple versions of
-; B/D fitting scripts to coexist.
-; 
-; A selection may be applied in run_bd_fit, e.g., to select only
-; objects in a particular magnitude range, but this is currently
-; hardcoded.
-;
-; The details of the initial conditions (i.e., how they are computed
-; from the results of the single-sersic fits) and the fitting
-; parameters (i.e., which parameters are allowed to vary, wavelengths,
-; band labels, etc.) are all hardcoded in run_bd_fit.
-;
-; This is an example of running run_bd_fit:
-; run_bd_fit, 'gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/GAMA_9_ffvqqff_gama_only.fits', '1'
-;
-; Once the files have been created, they, and the corresponding data,
-; need to be transferred to the supercomputer.  For this we use rsync,
-; supplied with the corresponding rsync includes file.
-; run_bd_fit prints an appropriate command upon completion.
-; For example:
-; rsync -av --prune-empty-dirs --include-from=bd_rsync_includes
-;       gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/
-;       jupiter:/work/work1/ppzsb1/megamorph/gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/
-; The --prune-empty-dirs is not strictly necessary, and may slow down
-; the transfer.
-;
-; Next the qsub submission scripts must be created.  This is done
-; using the 'create_batches' procedure, which is given the maximum
-; number of cores to utlise, the filename of the batch file output by
-; run_bd_fit, the name of the galfit executable to use (on jupiterthe
-; supercomputer), the path to put the submission scripts at, and the
-; stub for naming them.
-; For example:
-; create_batches, 64, '/home/ppzsb1/bd_batch_file', 'galfitm-0.1.2.1', 'gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/batches', 'gala_gama_bd1_'
-;
-; These batch files need to be transferred to the supercomputer:
-; rsync -av gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/batches
-;        jupiter /work/work1/ppzsb1/megamorph/gama/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/
-;
-; Finally, one can ssh into a supercomputer head node, navigate to the
-; batches path, and submit the jobs:
-; ls gala_gama_bd1* | xargs -L1 qsub
-
-
 PRO gala_bd_bridge, filein
    restore, filein
    
@@ -398,7 +338,7 @@ PRO gala_bd_bridge, filein
    FOR j=2, maxcomp+1 DO BEGIN
        printf, ut, '           '+strtrim(j, 2)+' n '+strtrim(setup.conminn, 2)+' to '+strtrim(setup.conmaxn, 2)
        printf, ut, '           '+strtrim(j, 2)+' re 0.3 to '+strtrim(setup.conmaxre, 2)
-       printf, ut, '           '+strtrim(j, 2)+' q 0.0001 to 1'
+       printf, ut, '           '+strtrim(j, 2)+' q 0.01 to 1'
        printf, ut, '           '+strtrim(j, 2)+' mag '+strtrim(setup.conminm, 2)+' '+strtrim(setup.conmaxm, 2)
        printf, ut, '           '+strtrim(j, 2)+' mag 0 to 40'
 ;       printf, ut, '           '+strtrim(j, 2)+' pa -360 to 360'
@@ -423,7 +363,7 @@ PRO gala_bd_bridge, filein
    IF setup.galfitoutput THEN outputpost = ' &> '+obj_file_bd+'.out'
    
    IF NOT setup.bd_hpc THEN BEGIN
-      IF file_test(out_file_bd+'.fits') eq 0 then begin
+      IF file_test(strtrim(out_file_bd+'.fits',2)) eq 0 then begin
          IF setup.nice THEN BEGIN
             IF setup.gal_kill_time EQ 0 THEN spawn, 'nice '+setup.galexe+' '+obj_file_bd+outputpost
             IF setup.gal_kill_time NE 0 THEN spawn, 'perl -e "alarm '+strtrim(60*setup.gal_kill_time,2)+'; exec @ARGV" "nice '+setup.galexe+' '+obj_file_bd+'"'+outputpost
@@ -438,7 +378,16 @@ PRO gala_bd_bridge, filein
 ;       spawn, 'rm '+galfit_path+'/galfit.[0123456789]*'
       spawn, 'rm ~/galfit.[0123456789]*'
    ENDIF
+   
+; calculate Chi^ for primary object only right here, for speed up of main code
+; only creates the file, does NOT read them in!
+   print, 'now deriving Chi^2 value for primary object if possible and applicable'
+   IF file_test(strtrim(out_file_bd+'.fits',2)) THEN BEGIN
+      fit_info = mrdfits(strtrim(out_file_bd+'.fits',2), 'FIT_INFO',/silent)
+      derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
+   ENDIF
+   
    file_delete, filein
-  
+   
 END
 

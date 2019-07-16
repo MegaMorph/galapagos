@@ -167,10 +167,10 @@ PRO gala_bridge, filein
   ENDIF
 
 ; calculate Chi^ for primary object only right here, for speed up of main code
+; only creates the file, does NOT read them in!
   print, 'now deriving Chi^2 value for primary object if possible and applicable'
   IF file_test(strtrim(out_file+'.fits',2)) THEN BEGIN
      fit_info = mrdfits(strtrim(out_file+'.fits',2), 'FIT_INFO',/silent)
-     fit_info_primary_file = strtrim(fit_info.logfile,2)+'_primary_fit_info'
      derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
   ENDIF
 
