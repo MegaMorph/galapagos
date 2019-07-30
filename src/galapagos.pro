@@ -1991,7 +1991,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   
 ;find the GALFIT output file for the current contributing source
   num_current = round_digit(table[current].number, 0, /str)
-  
+
 ;find the faintest source with proper magnitude measurement (non 99) and
 ;correct 99 sources
   nn = where(table[objects].mag_best GT 80, n_nn)
@@ -2003,9 +2003,11 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   ENDIF
 ;loop over all (primary & secondary) sources
   FOR i=0ul, n_elements(objects)-1 DO BEGIN
+     object_description = ' '
      idx = where(strtrim(orgim[*,0],2) EQ strtrim(table[objects[i]].frame[0],2), ct)
      secout_file = outpath_galfit[idx]+outpre[idx,1]+ $
                    round_digit(table[objects[i]].number, 0, /str)+'_'+strtrim(setup.galfit_out,2)+'.fits'
+     object_id = strtrim(outpre[idx,1]+round_digit(table[objects[i]].number, 0, /str),2)
      
 ; for some reason this is needed to find read_sersic_results as a
 ; function, not a variable. Worked before and still works fine in the
@@ -2014,7 +2016,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      forward_function read_sersic_results_old_galfit
 
 ; delete actual output file for primary object, if it (wrongly) exists
-;     IF file_test(strtrim(secout_file,2)) AND i eq 0 then THEN BEGIN file_delete, strtrim(secout_file,2)
+;     IF file_test(strtrim(secout_file,2)) AND i eq 0 then THEN file_delete, strtrim(secout_file,2)
 
      IF file_test(strtrim(secout_file,2)) THEN BEGIN
 ;sources with existing fit will be included as static source
@@ -2036,15 +2038,24 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         fill_struct, cat, stamp_file
         icat = where(cat.id EQ table[objects[i]].number)
         
-        par.x_galfit = par.x_galfit+cat[icat].xlo-1-tb[itb].x_image+ $
-                       table[objects[i]].x_image
-        par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-1-tb[itb].x_image+ $
+; original
+;        par.x_galfit = par.x_galfit+cat[icat].xlo-1-tb[itb].x_image+ $
+;                       table[objects[i]].x_image
+;        par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-1-tb[itb].x_image+ $
+;                            table[objects[i]].x_image
+;        par.y_galfit = par.y_galfit+cat[icat].ylo-1-tb[itb].y_image+ $
+;                       table[objects[i]].y_image
+;        par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-1-tb[itb].y_image+ $
+;                            table[objects[i]].y_image
+; fixed version
+        par.x_galfit = par.x_galfit+cat[icat].xlo-tb[itb].x_image+table[objects[i]].x_image
+        par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-tb[itb].x_image+ $
                             table[objects[i]].x_image
-        par.y_galfit = par.y_galfit+cat[icat].ylo-1-tb[itb].y_image+ $
-                       table[objects[i]].y_image
-        par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-1-tb[itb].y_image+ $
+        par.y_galfit = par.y_galfit+cat[icat].ylo-tb[itb].y_image+table[objects[i]].y_image
+        par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-tb[itb].y_image+ $
                             table[objects[i]].y_image
         
+        object_description = '(primary/secondary) object has already been fit, galfit output file exists. Reading result from file'
         fix = ['0', '0', '0', '0', '0', '0', '0']
         
      ENDIF ELSE BEGIN
@@ -2075,6 +2086,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         par.pa_galfit = table[objects[i]].theta_image-90.
         par.pa_galfit_band = fltarr(nband)+table[objects[i]].theta_image-90.
         
+        object_description = '(primary/secondary) object has not yet been fit, output file does not exist'
         fix = ['1', '1', '1', '1', '1', '1', '1']
      ENDELSE
      
@@ -2083,6 +2095,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         table[objects[i]].x_image-corner[0] GT xmax OR $
         table[objects[i]].y_image-corner[1] LT 1 OR $
         table[objects[i]].y_image-corner[1] GT ymax THEN BEGIN
+        object_description = '(primary/secondary) object has not yet been fit, output file does not exist, outside of frame'
         fix[0] = '0' & fix[1] = '0' & fix[5] = '0' & fix[6] = '0'
      ENDIF
      
@@ -2109,8 +2122,10 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      par.pa_galfit_band = par.pa_galfit_band > (-360) < 360
      
      openu, 1, obj_file, /append
-     printf, 1, '# Sersic function'
      printf, 1, ''
+     printf, 1, '# Sersic function'
+     printf, 1, '# '+object_description
+     printf, 1, '# '+object_id
      printf, 1, ' 0) sersic             # Object type'
      
 ; for different GALFIT versions, fit will work, READOUT of parameters
@@ -2209,9 +2224,10 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   line = strmid(line, 0, strpos(line, ' '))
   ctr = fix(line)+1
   
-;loop over all contributing sources
+;loop over all contributing sources, by definitioin far away and not
+;in the fitting table of neighbouring files.
   FOR i=0ul, n_nums-1 DO BEGIN
-     
+     object_description = ' '
      i_con = where(table.number EQ num_contrib[i] AND $
                    strtrim(table.frame[0],2) EQ strtrim(frame_contrib[i],2))
      
@@ -2223,7 +2239,8 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ;    objnum = integer2string(table[i_con].number, table.number, /array)
      objnum = round_digit(table[i_con].number, 0, /str)
      current_contrib_file = outpath_galfit[idx]+outpre[idx,1]+objnum+'_'+strtrim(setup.galfit_out,2)+'.fits'
-     
+     object_id = strtrim(outpre[idx,1]+objnum,2)
+
      IF file_test(strtrim(current_contrib_file,2)) THEN BEGIN
 ;sources with existing fit will be included as static source
         forward_function read_sersic_results
@@ -2244,13 +2261,22 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         fill_struct, cat, stamp_file
         icat = where(cat.id EQ table[i_con].number)
         
-        par.x_galfit = par.x_galfit+cat[icat].xlo-1-tb[itb].x_image+table[i_con].x_image
-        par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-1-tb[itb].x_image+ $
+; original
+;        par.x_galfit = par.x_galfit+cat[icat].xlo-1-tb[itb].x_image+table[i_con].x_image
+;        par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-1-tb[itb].x_image+ $
+;                            table[i_con].x_image
+;        par.y_galfit = par.y_galfit+cat[icat].ylo-1-tb[itb].y_image+table[i_con].y_image
+;        par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-1-tb[itb].y_image+ $
+;                            table[i_con].y_image
+; fixed version
+        par.x_galfit = par.x_galfit+cat[icat].xlo-tb[itb].x_image+table[i_con].x_image
+        par.x_galfit_band = par.x_galfit_band+cat[icat].xlo-tb[itb].x_image+ $
                             table[i_con].x_image
-        par.y_galfit = par.y_galfit+cat[icat].ylo-1-tb[itb].y_image+table[i_con].y_image
-        par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-1-tb[itb].y_image+ $
+        par.y_galfit = par.y_galfit+cat[icat].ylo-tb[itb].y_image+table[i_con].y_image
+        par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-tb[itb].y_image+ $
                             table[i_con].y_image
         
+        object_description = 'contributing source has been fit, output file exists. Reading result from file'
         fix = ['0', '0', '0', '0', '0', '0', '0']
      ENDIF ELSE BEGIN
 ;the source might be in the fit_table
@@ -2284,6 +2310,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
               par.pa_galfit_band = table[i_fit].pa_galfit_band
               
 ;if so fixate the fit
+              object_description = 'contributing source is on neighbouring frames, and has a fit'
               fix = ['0', '0', '0', '0', '0', '0', '0']
            ENDIF ELSE BEGIN
 ;source is in fit_table but no fit exists -> bombed -> free fit
@@ -2309,6 +2336,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
               par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
               
 ;the source is off the frame so just fit profile and magnitude, position fixed
+              object_description = 'contributing source is on neighbouring frames, but has no fit parameters. Fitting only basic parameters, SExtractor values as start parameters'
               fix = ['0', '0', '1', '1', '1', '0', '0']
            ENDELSE
         ENDIF ELSE BEGIN
@@ -2335,6 +2363,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
            par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
            
 ;the source is off the frame so just fit profile and magnitude
+           object_description = 'contributing source is NOT on neighbouring frames, but further away. Fixing position, only fitting basic parameters, startvalues from SExtractor'
            fix = ['0', '0', '1', '1', '1', '0', '0']
         ENDELSE
 ;else make it a fully free fit (unless the source is in the fit_table:
@@ -2361,8 +2390,10 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      par.pa_galfit_band = par.pa_galfit_band > (-360) < 360
      
      openu, 1, obj_file, /append
-     printf, 1, '# Sersic function'
      printf, 1, ''
+     printf, 1, '# Sersic function'
+     printf, 1, '# '+object_description
+     printf, 1, '# '+object_id
      printf, 1, ' 0) sersic             # Object type'
 ; for different GALFIT versions, fit will work, READOUT of parameters
 ; will NOT work!
