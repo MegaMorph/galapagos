@@ -81,7 +81,8 @@ PRO derive_primary_chi2, obj_file, gal_exe
 ; do NOT mask primary!
            new_mask[where(pmask EQ 1)] = 0
 ; mask everything that is masked in original mask!
-           new_mask[where(mask NE 0)] = 1
+           omasked=where(mask NE 0, cntom)
+           IF cntom GE 1 then new_mask[omasked] = 1
            writefits, new_mask_file, new_mask, maskhd,/silent           
            new_masks_all = new_masks_all+new_mask_file+','
         ENDFOR
