@@ -111,12 +111,14 @@ PRO derive_primary_chi2, obj_file, gal_exe
 ; read out fit_info of new fit, and write wanted value into a little ascii file 
   fit_info_prime = mrdfits(new_output_name,'FIT_INFO',/silent)
 
+  wait,0.2
   openw, filew_prime, obj_file+'_primary_fit_info', /get_lun
   printf, filew_prime, $
           strtrim(fit_info_prime.NDOF,2), ' ',$
           strtrim(fit_info_prime.CHISQ,2), ' ',$
           strtrim(fit_info_prime.CHI2NU,2)
   close, filew_prime
+  wait,0.1
   free_lun, filew_prime
 
 ; delete all mask files and new start file to save disk space, only keep output file for readout of Chi^2

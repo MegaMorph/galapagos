@@ -177,5 +177,6 @@ PRO gala_bridge, filein
   print, 'all done for this object at '+systime(0)  
   print, 'deleting *sav file and returning to main queue' 
   file_delete, filein
+  if file_test(strmid(filein,0,strpos(filein,'/',/reverse_search)+1)+'fit.log') then file_delete, strmid(filein,0,strpos(filein,'/',/reverse_search)+1)+'fit.log'
   wait, 1
 END
