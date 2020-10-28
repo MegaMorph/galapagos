@@ -10,6 +10,7 @@ PRO clean_galfit_restart_files, setup_file
   folder_path_all = [strtrim(strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1),2),strtrim(strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'_'+setup.bd_label,2)]
 
   missing_files = ' '
+  corrupt_files = ' '
   FOR fp=0,1 DO BEGIN
      folder_path = folder_path_all[fp]
      
@@ -33,6 +34,14 @@ PRO clean_galfit_restart_files, setup_file
 ; file by file, read out name of restart_file
            FOR gf=0,n_elements(gf_outfile_list)-1 DO BEGIN
               delvarx, gf_restart_file
+              fits_info, gf_outfile_list[gf], extname=list_name,/silent
+              IF total(list_name eq 'FIT_INFO') NE 1 THEN BEGIN
+                 corrupt_files = [corrupt_files,strtrim(out_path,2)+'/'+folder_list[f]+'/'+gf_outfile_list[gf]]
+                 print, ' '
+                 print, 'WARNING !!!'
+                 print, '    corrupt file '+gf_outfile_list[gf]
+                 CONTINUE
+              ENDIF
               fit_info = mrdfits(gf_outfile_list[gf], 'FIT_INFO',/silent)
               gf_restart_file = strtrim(fit_info.logfile,2)
               
@@ -58,8 +67,15 @@ PRO clean_galfit_restart_files, setup_file
   IF n_elements(missing_files) EQ 1 THEN BEGIN
      print, 'congratulations, no missing files found'
   ENDIF ELSE BEGIN
-     print, 'missing files (THAT AND MATCHING FILES NEED TO BE DELETED BY HAND!): '
-     print, missing_files
+     print, 'missing restart files (THAT AND MATCHING FILES NEED TO BE DELETED BY HAND!): '
+     FOR i = 1,n_elements(missing_files)-1 DO print, 'rm '+strmid(missing_files[i],0,strpos(missing_files[i],'_',/reverse_search))+'_*'
+  ENDELSE
+  print, ' '
+  IF n_elements(corrupt_files) EQ 1 THEN BEGIN
+     print, 'congratulations, no corrupt files found'
+  ENDIF ELSE BEGIN
+     print, 'corrupt galfit output files (THAT AND MATCHING FILES NEED TO BE DELETED BY HAND!): '
+         FOR i = 1,n_elements(corrupt_files)-1 DO print, 'rm '+strmid(corrupt_files[i],0,strpos(corrupt_files[i],'_',/reverse_search))+'_*'
   ENDELSE
 
   CD, start_folder
