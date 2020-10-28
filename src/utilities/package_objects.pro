@@ -285,7 +285,7 @@ PRO package_single_object, obj, outfolder, psffolder, notar=notar
      FOR el = 0, n_elements(lsout_startf)-1 DO $
         lsout_startf[el] = strmid(lsout_startf[el],strpos(lsout_startf[el],'/',/reverse_search)+1)
      files_to_copy_new = [files_to_copy_new, lsout_startf]
-  ENDIF
+  ENDIF ELSE  primary_file_exists = 0
      
 ;;; fit_info
   spawn, 'ls '+strtrim(galfit_restart_file,2)+'_primary_fit_info', lsout_fitinfo,errxxx

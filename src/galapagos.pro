@@ -3990,7 +3990,7 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
         update_log, logfile, 'SExtraction... done!'
      print, 'finished SExtractor: '+systime(0)
   ENDIF
-  
+
 ;==============================================================================
 ;create postage stamp description files 
   IF setup.dostamps THEN BEGIN
