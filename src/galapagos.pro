@@ -3942,6 +3942,12 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
 ; needed. Nothing is done to those until starting the BD-block!
   define_addcol, addcol, nband, bd_fit = setup.dobd, read_bd = setup.docombinebd
 
+;==============================================================================
+; check if psf in setup file is an image or a list and read into structure used
+  print, 'reading PSFs'
+  readin_psf_file, setup.psf, images[*,1:nband], psf_struct, nband, save_folder
+;==============================================================================
+
 ;run SExtractor
   IF setup.dosex THEN BEGIN
      print, 'starting SExtractor: '+systime(0)
@@ -4184,12 +4190,6 @@ jump_over_this_1:
   FOR q=0, nband DO orgpath_file_no_band[*,q]=orgpath[*,q]+orgpre[*,q]
   
   IF setup.dosky or setup.dobd  THEN BEGIN 
-;==============================================================================
-; check if psf in setup file is an image or a list and read into structure used
-; can not be done earlier as sexcat does not then exist
-     print, 'reading PSFs'
-     readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband, save_folder
-;==============================================================================
      IF keyword_set(logfile) THEN $
         update_log, logfile, systime()+': Setting up objects list to be fit...'
      add_tag, table, 'do_list', 0, table_new
