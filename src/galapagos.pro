@@ -3778,7 +3778,7 @@ PRO start_log, logfile, message
   free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2, sex_overwrite=sex_overwrite
+PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2, sex_skip=sex_skip
   galapagos_version = 'GALAPAGOS-v2.4.1'
   galapagos_date = '(Sept 26th, 2019)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
@@ -3803,7 +3803,8 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
      print, '                           ; (might not work on all systems and setups)'
      print, '   /bridgejournal          ; switches on creation of journal files for all bridges, e.g. to examine the Galfit/GalfitM outputs directly'
      print, '                           ; can be found in a subfolder "journal" in the output folder'
-     print, '   /sex_overwrite          ; re-runs all SExtractor runs even if the output files already exist, e.g. SExtractor has already been run'
+     print, '   /sex_skip               ; avoids running SExtractor on the individual tiles again, e.g. when SExtractor has already been run. '
+     print, '                           ; Only the catalogue combination will be redone'
      print, '   /jump1                  ; jumps some parts at the beginning of the code that do not need to be repeated (for speedup)'
      print, '                           ; more precisely the creation of some catalogue files'
      print, '                           ; typically can be set when Galapagos has crashed or has been stopped somewhere during the fits'
@@ -3961,7 +3962,8 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
         IF ct GT 0 THEN BEGIN
            exclude = [[transpose(exclude_x[j]), transpose(exclude_y[j])]] 
         ENDIF ELSE exclude = [[-1, -1]]
-        IF NOT FILE_TEST(strtrim(outpath_file[i,0]+'combined.reg',2)) OR keyword_set(sex_overwrite) THEN run_sextractor, setup, images, weights, outpath_file, i, exclude
+        IF NOT keyword_set(sex_skip) THEN $
+           run_sextractor, setup, images, weights, outpath_file, i, exclude
      ENDFOR
      
 ;combine all SExtractor catalogues
