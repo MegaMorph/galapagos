@@ -96,9 +96,9 @@ PRO gala_bridge, filein
 ; the run on the reference band.
      IF b EQ 1 THEN BEGIN
         contrib_targets, setup.expt[b], setup.zp[b], setup.neiscl, setup.skyoff, setup.power, table, $
-                         cur, setup.cut, nums, frames 
+                         cur, setup.cut, nums, frames, setup.nobj_max 
         IF nums[0] GE 0 THEN print, strtrim(n_elements(nums),2)+' contributing targets found'
-    ENDIF 
+     ENDIF 
      
 ; get sky values, while using the contributing sources
      print, 'starting getsky_loop at '+systime(0)  

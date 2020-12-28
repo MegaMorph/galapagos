@@ -1027,13 +1027,15 @@ FUNCTION sersic_flux, _r, _phi, _q, _f0, _re, _n
 END
 
 PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
-                     nums, frames
+                     nums, frames, nobj_max
 ;power: convert flux_radius to proper half-light radius of a spheroid (1.4)
 ;t: sextractor table (ASSUMES THAT ALL IMAGE POSITIONS ARE ON THE SAME WCS FRAME)
 ;c: idx of current object id
-;cut: magnitude cut (4.5)
+;cut: magnitude cut (e.g. 4.5)
 ;nums: OUTPUT, numbers of the most contributing objects
 ;frames: OUTPUT, frames of the most contributing objects
+
+; set standard values, if no fit has been done yet
   n = t.number*0.+4.
   q = t.b_image/t.a_image
   re = t.flux_radius^power
@@ -1041,10 +1043,12 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
   theta_image = t.theta_world-t[c].theta_world+t[c].theta_image
   IF n_elements(t) GT 0 THEN BEGIN
      
+; create a table with all fitted values (for better profiles)
 ; try using 'match'
      ident1 = strtrim(t.org_image,2)+':'+strtrim(t.number,2)
      ident2 = strtrim(t.frame[0],2)+':'+strtrim(t.number,2)
      match, ident1, ident2, id_idx1, id_idx2
+; identify the ones that have finished fits (re>0)
      wh_re_gt0 = where(t[id_idx1].re_galfit GE 0,cntregt0)
      IF cntregt0 GT 0 THEN BEGIN
         n[id_idx2[wh_re_gt0]] = t[id_idx1[wh_re_gt0]].n_galfit
@@ -1060,16 +1064,20 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
      IF cnt_lt GT 0 THEN theta_image[wh_theta_lt0] += 180
   ENDIF
   
+; flux normalization of all objects in sersic profiles
   ftot = 10.^(-0.4*(mag-zeropt))*exptime
   kap = (kappa(n))[0]
   f0 = ftot/(2*!pi*re^2.*exp(kap)*n*kap^(-2.*n)*gamma(2.*n)*q)
   
-;distance from the current object c
+;distance of all objects from the current object c
   d = sqrt((t[c].x_image-t.x_image)^2.+(t[c].y_image-t.y_image)^2.)
+
 ;position angle of the current source in the reference system of all
 ;other galaxies
   pa_all = rel_pos_ang(t[c].x_image, t[c].y_image, t.x_image, t.y_image, $
                        theta_image/!radeg)
+
+;calculate sersic flux for all objects to get
 ;contribution of all galaxies at the position of the current source
   c_all = -2.5*alog10(sersic_flux(d, pa_all, q, f0, re, n))
 ;distance that all objects 'reach' towards the current object
@@ -1087,6 +1095,7 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
           scale+offset
   con = r_ctr+r_all
   
+; now sort by influence and find objects above threshold
   o = sort(c_all)
   no_fit = where(con[o] LT d[o], ct)
   IF ct EQ 0 THEN BEGIN
@@ -1095,7 +1104,8 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
   ENDIF ELSE BEGIN
 ;      print, 'cur', 'num', 'x', 'y', 'dist', 'con', 'mag', 'magc', $
 ;             'c_all', 'c_ctr', format = '(2(A5),4(A7),2(A8),2(A6))'
-     nno = n_elements(no_fit)-1
+
+;     nno = n_elements(no_fit)-1
 ;      forprint, t[c].number+fltarr(11 < nno), $
 ;                t[o[no_fit[0:10 < nno]]].number, $
 ;                t[o[no_fit[0:10 < nno]]].x_image, $
@@ -1108,10 +1118,26 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
 ;                c_ctr[o[no_fit[0:10 < nno]]], $
 ;                format = '(2(I5),4(F7.0),2(F8.2),2(F6.2))'
      
-     grad = where(c_all[o[no_fit]] LT cut, ct)
-     IF ct GT 0 THEN nums = t[o[no_fit[grad]]].number ELSE nums = -1
-     IF ct GT 0 THEN frames = t[o[no_fit[grad]]].frame[0] ELSE frames = ''
+; limit to worst offenders
+; sort all arrays by strength
+     c_all_sort = c_all[o[no_fit]]
+     t_sort = t[o[no_fit]]
+     
+;     grad = where(c_all[o[no_fit]] LT cut, ct)
+     grad = where(c_all_sort LT cut, ct)
+     IF n_elements(grad) GT nobj_max THEN grad = grad[0:nobj_max-1]
+
+     IF ct GT 0 THEN BEGIN
+;        nums = t[o[no_fit[grad]]].number
+;        frames = t[o[no_fit[grad]]].frame[0]
+        nums = t_sort[grad].number
+        frames = t_sort[grad].frame[0]
+     ENDIF ELSE BEGIN
+        nums = -1
+        frames = ''
+     ENDELSE
   ENDELSE
+
 ;   print, 'gradient sources:'
 ;   forprint, nums, ' '+frames
   
@@ -1980,6 +2006,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      ELSE $
         table[objects[nn]].mag_best = max(table[objects[good_mag]].mag_best)+2
   ENDIF
+
 ;loop over all (primary & secondary) sources
   FOR i=0ul, n_elements(objects)-1 DO BEGIN
      object_description = ' '
@@ -1993,9 +2020,6 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ; command line.
      forward_function read_sersic_results
      forward_function read_sersic_results_old_galfit
-
-; delete actual output file for primary object, if it (wrongly) exists
-;     IF file_test(strtrim(secout_file,2)) AND i eq 0 then THEN file_delete, strtrim(secout_file,2)
 
      IF file_test(strtrim(secout_file,2)) THEN BEGIN
 ;sources with existing fit will be included as static source
@@ -2038,6 +2062,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         fix = ['0', '0', '0', '0', '0', '0', '0']
         
      ENDIF ELSE BEGIN
+
 ;sources without fit will be included as free fit
         
 ; reading in file works, because it returns the correct FORMAT, but
@@ -2069,7 +2094,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         fix = ['1', '1', '1', '1', '1', '1', '1']
      ENDELSE
      
-;if the source position is off the frame: fix the position, PA and q
+;if the source position is off the frame (postage stamp?): fix the position, PA and q
      IF table[objects[i]].x_image-corner[0] LT 1 OR $
         table[objects[i]].x_image-corner[0] GT xmax OR $
         table[objects[i]].y_image-corner[1] LT 1 OR $
@@ -2188,7 +2213,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   
   IF n_nums EQ 1 AND num_contrib[0] EQ -1 THEN GOTO, finish
   
-;find the GALFIT output file for the current contributing source
+;find the GALFIT output file for the current source
   num_current = round_digit(table[current].number, 0, /str)
   
   orgim = setup.images
@@ -2203,8 +2228,9 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   line = strmid(line, 0, strpos(line, ' '))
   ctr = fix(line)+1
   
-;loop over all contributing sources, by definitioin far away and not
-;in the fitting table of neighbouring files.
+;loop over all contributing sources, by definition far away and not
+;in the fitting table of neighbouring files. I don't think that's
+;true. They can even be on the same frame
   FOR i=0ul, n_nums-1 DO BEGIN
      object_description = ' '
      i_con = where(table.number EQ num_contrib[i] AND $
@@ -2255,11 +2281,13 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         par.y_galfit_band = par.y_galfit_band+cat[icat].ylo-tb[itb].y_image+ $
                             table[i_con].y_image
         
-        object_description = 'contributing source has been fit, output file exists. Reading result from file'
+        object_description = 'contributing source already has been fit, output file exists. Reading result from file'
         fix = ['0', '0', '0', '0', '0', '0', '0']
      ENDIF ELSE BEGIN
 ;the source might be in the fit_table
         i_fit = where(table.number EQ num_contrib[i] AND $
+; next line already selects objects where the fit has been tried
+; already, as org_image is only then defined!
                       table.org_image EQ frame_contrib[i], ct)
         IF ct GT 0 THEN BEGIN
            IF table[i_fit].re_galfit GE 0 THEN BEGIN
@@ -2289,7 +2317,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
               par.pa_galfit_band = table[i_fit].pa_galfit_band
               
 ;if so fixate the fit
-              object_description = 'contributing source is on neighbouring frames, and has a fit'
+              object_description = 'contributing source already has a known fit, just subtracting'
               fix = ['0', '0', '0', '0', '0', '0', '0']
            ENDIF ELSE BEGIN
 ;source is in fit_table but no fit exists -> bombed -> free fit
@@ -2315,11 +2343,11 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
               par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
               
 ;the source is off the frame so just fit profile and magnitude, position fixed
-              object_description = 'contributing source is on neighbouring frames, but has no fit parameters. Fitting only basic parameters, SExtractor values as start parameters'
+              object_description = 'contributing source has crashed in the fits, e.g. it has no fit parameters. Fitting only basic parameters, SExtractor values as start parameters'
               fix = ['0', '0', '1', '1', '1', '0', '0']
            ENDELSE
         ENDIF ELSE BEGIN
-;source is not in fit_table -> free fit
+;source is not in fit_table and not yet fit -> free fit
            forward_function read_sersic_results
            forward_function read_sersic_results_old_galfit
            IF setup.version GE 4. THEN par = read_sersic_results(secout_file,nband,setup)
@@ -2342,7 +2370,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
            par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
            
 ;the source is off the frame so just fit profile and magnitude
-           object_description = 'contributing source is NOT on neighbouring frames, but further away. Fixing position, only fitting basic parameters, startvalues from SExtractor'
+           object_description = 'contributing source has not yet been fit or is NOT on neighbouring frames, but further away. Fixing position, only fitting basic parameters, startvalues from SExtractor'
            fix = ['0', '0', '1', '1', '1', '0', '0']
         ENDELSE
 ;else make it a fully free fit (unless the source is in the fit_table:
