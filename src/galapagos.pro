@@ -2228,9 +2228,9 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
   line = strmid(line, 0, strpos(line, ' '))
   ctr = fix(line)+1
   
-;loop over all contributing sources, by definition far away and not
-;in the fitting table of neighbouring files. I don't think that's
-;true. They can even be on the same frame
+;loop over all contributing sources.
+; Those are all objects where the SExtractor ellipses don't
+; overlap, but which might be important
   FOR i=0ul, n_nums-1 DO BEGIN
      object_description = ' '
      i_con = where(table.number EQ num_contrib[i] AND $
