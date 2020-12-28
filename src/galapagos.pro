@@ -1058,27 +1058,6 @@ PRO contrib_targets, exptime, zeropt, scale, offset, power, t, c, cut, $
      IF cnt_gt GT 0 THEN theta_image[wh_theta_gt0] -= 180
      wh_theta_lt0 = where(theta_image LT 180, cnt_lt)
      IF cnt_lt GT 0 THEN theta_image[wh_theta_lt0] += 180
-     
-;; Marcos original, loops over all objects and is very slow if tiles
-;; contain many objects!
-;      FOR i=0ul, n_elements(n)-1 DO BEGIN
-;          idx = where(fit_table.org_image EQ t[i].frame AND $
-;                      fit_table.number EQ t[i].number, ct) 
-;          IF ct GT 1 THEN message, 'unexpected error in contrib_sky'
-;          IF ct GT 0 THEN BEGIN
-;              IF fit_table[idx].re_galfit GE 0 THEN BEGIN
-;                  n[i] = fit_table[idx].n_galfit
-;                  q[i] = fit_table[idx].q_galfit
-;                  re[i] = fit_table[idx].re_galfit
-;                  mag[i] = fit_table[idx].mag_galfit
-;                  theta_image[i] = theta_image[i]-t[c].theta_image+ $
-;                    90+fit_table[idx].pa_galfit
-;                  IF theta_image[i] GT 180 THEN theta_image[i] -= 180
-;                  IF theta_image[i] LT -180 THEN theta_image[i] += 180
-;              ENDIF
-;          ENDIF
-;      ENDFOR
-     
   ENDIF
   
   ftot = 10.^(-0.4*(mag-zeropt))*exptime
@@ -3075,7 +3054,7 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
         ENDELSE
      ENDIF
 ; read out these values from ascii file
-     readcol, fit_info_primary_file, ndof_prime, chi2_prime, chi2nu_prime, format='I,F,F',/silent
+     readcol, fit_info_primary_file, ndof_prime, chi2_prime, chi2nu_prime, format='L,F,F',/silent
      
 ; delete feedback, just in case the format of one is different, avoiding crash
      delvarx, feedback
@@ -3487,9 +3466,9 @@ FUNCTION read_sersic_results_old_galfit, obj, setup, bd=bd
      neigh_galfit = comp-3
      flag_galfit = 2
      chisq_galfit = float(strmid(sxpar(hd, 'CHISQ'),2)) 
-     ndof_galfit = fix(strmid(sxpar(hd, 'NDOF'),2))
-     nfree_galfit = fix(strmid(sxpar(hd, 'NFREE'),2))
-     nfix_galfit = fix(strmid(sxpar(hd, 'NFIX'),2))
+     ndof_galfit = long(strmid(sxpar(hd, 'NDOF'),2))
+     nfree_galfit = long(strmid(sxpar(hd, 'NFREE'),2))
+     nfix_galfit = long(strmid(sxpar(hd, 'NFIX'),2))
      chi2nu_galfit = float(strmid(sxpar(hd, 'CHI2NU'),2))
   ENDIF ELSE BEGIN
      mag = -999.
@@ -3510,9 +3489,9 @@ FUNCTION read_sersic_results_old_galfit, obj, setup, bd=bd
      neigh_galfit = -99
      flag_galfit = 1
      chisq_galfit = -99.
-     ndof_galfit = -99
-     nfree_galfit = -99
-     nfix_galfit = -99
+     ndof_galfit = -99l
+     nfree_galfit = -99l
+     nfix_galfit = -99l
      chi2nu_galfit = -99.
      psf='none'
   ENDELSE
@@ -3961,7 +3940,14 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
 ; This already defines ALL parameters, even the B/D ones if later
 ; needed. Nothing is done to those until starting the BD-block!
   define_addcol, addcol, nband, bd_fit = setup.dobd, read_bd = setup.docombinebd
+
 ;==============================================================================
+; check if psf in setup file is an image or a list and read into
+; structure used
+  print, 'reading PSFs'
+  readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband, save_folder
+;==============================================================================
+
 ;run SExtractor
   IF setup.dosex THEN BEGIN
      print, 'starting SExtractor: '+systime(0)
@@ -4203,15 +4189,8 @@ jump_over_this_1:
   FOR q=0, nband DO orgpath_file_no_band[*,q]=orgpath[*,q]+orgpre[*,q]
   
   IF setup.dosky or setup.dobd  THEN BEGIN 
-;==============================================================================
-; check if psf in setup file is an image or a list and read into
-; structure used
-     print, 'reading PSFs'
-     readin_psf_file, setup.psf, sexcat.alpha_j2000, sexcat.delta_j2000, images[*,1:nband], psf_struct, nband, save_folder
-     
      IF keyword_set(logfile) THEN $
         update_log, logfile, systime()+': Setting up objects list to be fit...'
-;;==============================================================================
      add_tag, table, 'do_list', 0, table_new
      table = table_new
      delvarx, table_new
