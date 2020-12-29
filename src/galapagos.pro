@@ -2211,6 +2211,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
 ;frames as well.
   n_nums = n_elements(num_contrib)
   
+; break loop if no contributing source is found
   IF n_nums EQ 1 AND num_contrib[0] EQ -1 THEN GOTO, finish
   
 ;find the GALFIT output file for the current source
@@ -2236,6 +2237,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      i_con = where(table.number EQ num_contrib[i] AND $
                    strtrim(table.frame[0],2) EQ strtrim(frame_contrib[i],2))
      
+; this line removes secondaries from contributing sources!!
      dum = where(table[objects].number EQ num_contrib[i] AND $
                  strtrim(table[objects].frame[0],2) EQ strtrim(frame_contrib[i],2), ct)
      IF ct GT 0 THEN CONTINUE
@@ -2246,6 +2248,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
      current_contrib_file = outpath_galfit[idx]+outpre[idx,1]+objnum+'_'+strtrim(setup.galfit_out,2)+'.fits'
      object_id = strtrim(outpre[idx,1]+objnum,2)
 
+; output file for contributing source exists
      IF file_test(strtrim(current_contrib_file,2)) THEN BEGIN
 ;sources with existing fit will be included as static source
         forward_function read_sersic_results
@@ -2284,6 +2287,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
         object_description = 'contributing source already has been fit, output file exists. Reading result from file'
         fix = ['0', '0', '0', '0', '0', '0', '0']
      ENDIF ELSE BEGIN
+
 ;the source might be in the fit_table
         i_fit = where(table.number EQ num_contrib[i] AND $
 ; next line already selects objects where the fit has been tried
@@ -2343,7 +2347,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
               par.pa_galfit_band = fltarr(nband)+table[i_con].theta_image-90.
               
 ;the source is off the frame so just fit profile and magnitude, position fixed
-              object_description = 'contributing source has crashed in the fits, e.g. it has no fit parameters. Fitting only basic parameters, SExtractor values as start parameters'
+              object_description = 'contributing source has no fit parameters. Fitting only basic parameters, SExtractor values as start parameters'
               fix = ['0', '0', '1', '1', '1', '0', '0']
            ENDELSE
         ENDIF ELSE BEGIN
@@ -2384,6 +2388,7 @@ PRO prepare_galfit, setup, objects, files, corner, table0, obj_file, im_file, si
            ENDIF ELSE fix = ['1', '1', '1', '1', '1', '1', '1']
         ENDIF
      ENDELSE
+
      
      par.re_galfit = par.re_galfit < conmaxre > 0.3
 ; hard contraints work on ALL bands if this is used below. USED!!
