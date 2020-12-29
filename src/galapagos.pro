@@ -3812,8 +3812,8 @@ PRO start_log, logfile, message
 END
 
 PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2, sex_skip=sex_skip
-  galapagos_version = 'GALAPAGOS-v2.4.2'
-  galapagos_date = '(Dec 28th, 2020)'
+  galapagos_version = 'GALAPAGOS-v2.4.3'
+  galapagos_date = '(Dec 29th, 2020)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)
