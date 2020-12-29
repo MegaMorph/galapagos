@@ -1,4 +1,4 @@
-pro readin_psf_file, files, sex_ra, sex_dec, images, psf_struct, nband, save_folder
+pro readin_psf_file, files, images, psf_struct, nband, save_folder
 ; for each band individually:
 ; 4 possibilities (for now)
 ; fits name: sinfilif file[0] eq ' ' then file=file[1:n_elements(file)-1]

@@ -14,8 +14,7 @@ PRO gala_bridge, filein
   print, 'starting object '+obj_file
   print, ' '
   print, ' '
-  
-  
+    
   FOR b=1,nband DO BEGIN
       print, 'getting sky in '+setup.stamp_pre[b]+'-band'
 ;read in image and weight (takes few sec)
@@ -96,10 +95,10 @@ PRO gala_bridge, filein
 ; the run on the reference band.
      IF b EQ 1 THEN BEGIN
         contrib_targets, setup.expt[b], setup.zp[b], setup.neiscl, setup.skyoff, setup.power, table, $
-                         cur, setup.cut, nums, frames 
+                         cur, setup.cut, nums, frames, setup.nobj_max 
         IF nums[0] GE 0 THEN print, strtrim(n_elements(nums),2)+' contributing targets found'
-    ENDIF 
-     
+     ENDIF 
+
 ; get sky values, while using the contributing sources
      print, 'starting getsky_loop at '+systime(0)  
      getsky_loop, setup, cur, table, rad, im, hd, map, setup.expt, $
@@ -113,6 +112,7 @@ PRO gala_bridge, filein
                   xarr, yarr, seed
      
 ; create mask images
+; also decides on secondaries, tertiaries, etc.!
      print, 'creating mask image for '+setup.stamp_pre[b]+'-band'
      create_mask, table, wht, seg, stamp_param_file, mask_file[b], mask_file_primary, $
                   im_file[b], table[cur].frame[b], cur, $
@@ -125,9 +125,9 @@ PRO gala_bridge, filein
         save_objects = objects
         save_corner = corner
      ENDIF       
-     
+
   ENDFOR
-  
+
   print, 'preparing GALFIT start file'
   prepare_galfit, setup, save_objects, setup.files, save_corner, table, obj_file, $
                   im_file, sigma_file, constr_file, mask_file, mask_file_primary, chosen_psf_file, $
