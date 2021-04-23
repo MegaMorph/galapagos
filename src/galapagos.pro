@@ -3035,7 +3035,7 @@ PRO read_image_files, setup, save_folder, silent=silent
   ENDIF
   IF ncolf NE 6 AND ncolf NE 5 AND ncolf NE 4 THEN message, 'Invalid Entry in '+setup.files
   
-; now check whether all images exis
+; now check whether all images exist
   IF setup.dosex+setup.dostamps+setup.dosky+setup.dobd GE 1 THEN BEGIN
      image_exist = file_test(strtrim(setup.images,2))
      weight_exist = file_test(strtrim(setup.weights,2))
@@ -3936,7 +3936,9 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
   
   nframes = n_elements(images[*,0])
 ;calculate image centres, but only if needed in further program
+
   IF setup.dosex+setup.dostamps+setup.dosky+setup.dobd GE 1 THEN BEGIN
+;  IF setup.dosex+setup.dostamps+setup.dosky GE 1 THEN BEGIN
      dec_cnt = (ra_cnt = dblarr(nframes))
      FOR i=0ul, nframes-1 DO BEGIN
         head = headfits(images[i,0])
@@ -4676,17 +4678,15 @@ loopend:
      print, strtrim(sscnt,2)+' succesful single-sersic fits read in'
      print, ' '
      
-;    save, table, filename = setup.outdir+'table_before_'+setup.bd_label+'.sav'
-     save, table, filename = setup.outdir+'table_before_bd.sav'
+     save, table, filename = setup.outdir+'table_before_bd_'+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'.sav'
 jump_over_this_2:
      
-;    restore, setup.outdir+'table_before_'+setup.bd_label+'.sav'
      IF keyword_set(jump2) THEN BEGIN
         print, 'reading already exisiting table instead of all results'
-        restore, setup.outdir+'table_before_bd.sav'
+        restore, setup.outdir+'table_before_bd_'+strmid(setup.galfit_out_path,0,strlen(setup.galfit_out_path)-1)+'.sav'
      ENDIF
 
-     print, 'Got all primary fit results now and setting up table for B/D fits'
+     print, 'Got all single-sersic fit results now and setting up table for B/D fits'
 ;=========================================================================
 ; finished reading in all single sersic results
 ;=========================================================================
