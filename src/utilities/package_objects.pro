@@ -8,7 +8,6 @@ PRO package_objects, object_list, outfolder, outname=outname, notar=notar
   spawn, 'mkdir -p '+outfolder
   psffolder = outfolder+'/PSF/'  
   spawn, 'mkdir -p '+psffolder
-
 ; remove 'null' from object list
   wh_null = where(strtrim(object_list,2) EQ 'null', ctnull)
   IF ctnull GT 0 THEN BEGIN
@@ -114,8 +113,11 @@ END
 
 
 PRO package_single_object, obj, outfolder, psffolder, notar=notar
-; .run package_objects.pro
-; package_single_object, '~/GAMA/galapagos/galapagos_2.0.3_galfit_0.1.2.1_GAMA_9/tile41_26/galfit/t41_26.321_obj', '~/test_package'
+; .run package_objectsA.pro
+; obj: galfit start file
+; outfolder: location where the files should be put
+; psffolder: ????
+;  package_single_object,'/home/bhaeussl/CANDELS/galapagos/goodsn_30mas_f160_detect_lin/tile1_6/galfit/t1_6.72_obj','~/Desktop_For_Kalina','PSF'
   obj = strtrim(obj,2)
 
 ;IF n_elements(obj) GT 1 

@@ -208,3 +208,78 @@ END
 ;
 ;
 ;end
+pro objects_for_kalina
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodsn_30mas_f160_detect_lin/tile1_6/galfit/t1_6.72_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodsn_30mas_f160_detect_lin/tile6_6/galfit/t6_6.46_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodsn_30mas_f160_detect_lin/tile4_7/galfit/t4_7.552_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile6_8/galfit/t6_8.160_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile4_8/galfit/t4_8.407_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile7_8/galfit/t7_8.133_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile4_10/galfit/t4_10.39_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile4_10/galfit/t4_10.371_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/cosmos_30mas_f160w_detect/tile4_5/galfit/t4_5.226_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/cosmos_30mas_f160w_detect/tile2_9/galfit/t2_9.390_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/uds_30mas_f160_detect/tile6_3/galfit/t6_3.418_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/uds_30mas_f160_detect/tile4_3/galfit/t4_3.1407_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/uds_30mas_f160_detect/tile6_4/galfit/t6_4.76_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile4_1/galfit/t4_1.70_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile10_2/galfit/t10_2.5_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile9_2/galfit/t9_2.16_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile10_2/galfit/t10_2.11_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile10_2/galfit/t10_2.341_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodsn_30mas_f160_detect_lin/tile1_6/galfit_bd1/t1_6.72_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodsn_30mas_f160_detect_lin/tile6_6/galfit_bd1/t6_6.46_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodsn_30mas_f160_detect_lin/tile4_7/galfit_bd1/t4_7.552_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile6_8/galfit_bd1/t6_8.160_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile4_8/galfit_bd1/t4_8.407_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile7_8/galfit_bd1/t7_8.133_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile4_10/galfit_bd1/t4_10.39_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile4_10/galfit_bd1/t4_10.371_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/cosmos_30mas_f160w_detect/tile4_5/galfit_bd1/t4_5.226_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/cosmos_30mas_f160w_detect/tile2_9/galfit_bd1/t2_9.390_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/uds_30mas_f160_detect/tile6_3/galfit_bd1/t6_3.418_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/uds_30mas_f160_detect/tile4_3/galfit_bd1/t4_3.1407_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/uds_30mas_f160_detect/tile6_4/galfit_bd1/t6_4.76_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile4_1/galfit_bd1/t4_1.70_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile10_2/galfit_bd1/t10_2.5_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile9_2/galfit_bd1/t9_2.16_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile10_2/galfit_bd1/t10_2.11_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile10_2/galfit_bd1/t10_2.341_bd1_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+
+
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodsn_30mas_f160_detect_lin/tile1_6/galfit_bd4/t1_6.72_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodsn_30mas_f160_detect_lin/tile6_6/galfit_bd4/t6_6.46_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodsn_30mas_f160_detect_lin/tile4_7/galfit_bd4/t4_7.552_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile6_8/galfit_bd4/t6_8.160_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile4_8/galfit_bd4/t4_8.407_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile7_8/galfit_bd4/t7_8.133_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile4_10/galfit_bd4/t4_10.39_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/goodss_30mas_f160_detect/tile4_10/galfit_bd4/t4_10.371_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/cosmos_30mas_f160w_detect/tile4_5/galfit_bd4/t4_5.226_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/cosmos_30mas_f160w_detect/tile2_9/galfit_bd4/t2_9.390_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/uds_30mas_f160_detect/tile6_3/galfit_bd4/t6_3.418_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/uds_30mas_f160_detect/tile4_3/galfit_bd4/t4_3.1407_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/uds_30mas_f160_detect/tile6_4/galfit_bd4/t6_4.76_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile4_1/galfit_bd4/t4_1.70_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile10_2/galfit_bd4/t10_2.5_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile9_2/galfit_bd4/t9_2.16_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile10_2/galfit_bd4/t10_2.11_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+create_output_from_fits, '/home/bhaeussl/CANDELS/galapagos/egs_30mas_f160w_detect_lin/tile10_2/galfit_bd4/t10_2.341_bd4_gf.fits','input,model,residual,psf','/Users/haeussler/megamorph/galfit/exec/galfitm-1.4.4-osx'
+
+end

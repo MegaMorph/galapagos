@@ -3136,7 +3136,8 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
                                  'galfit_version', fit_info.version, $
                                  'firstcon_galfit', fit_info.firstcon, $
                                  'lastcon_galfit', fit_info.lastcon, $
-                                 'neigh_galfit', comp-3, 'flag_galfit', 2, $
+                                 'neigh_galfit', comp-3, $
+                                 'flag_galfit', 2, $
                                  'X_GALFIT_DEG', total(res_cheb.comp2_xc_fit), $
                                  'Y_GALFIT_DEG', total(res_cheb.comp2_yc_fit), $
                                  'MAG_GALFIT_DEG', total(res_cheb.comp2_mag_fit), $
@@ -3210,7 +3211,8 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
                                  'galfit_version_bd', fit_info.version, $
                                  'firstcon_galfit_bd', fit_info.firstcon, $
                                  'lastcon_galfit_bd', fit_info.lastcon, $
-                                 'neigh_galfit_bd', comp-4, 'flag_galfit_bd', 2, $
+                                 'neigh_galfit_bd', comp-4, $
+                                 'flag_galfit_bd', 2, $
                                  'X_GALFIT_DEG_B', total(res_cheb.comp3_xc_fit), $
                                  'Y_GALFIT_DEG_B', total(res_cheb.comp3_yc_fit), $
                                  'MAG_GALFIT_DEG_B', total(res_cheb.comp3_mag_fit), $
@@ -3278,7 +3280,8 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
                                  'galfit_version', 'crash', $
                                  'firstcon_galfit', -99, $
                                  'lastcon_galfit', -99, $
-                                 'neigh_galfit', -99, 'flag_galfit', 1, $
+                                 'neigh_galfit', -99, $
+                                 'flag_galfit', 1, $
                                  'X_GALFIT_DEG', -99, $
                                  'Y_GALFIT_DEG', -99, $
                                  'MAG_GALFIT_DEG', -99, $
@@ -3560,7 +3563,8 @@ FUNCTION read_sersic_results_old_galfit, obj, setup, bd=bd
                               'nfree_galfit', nfree_galfit, $
                               'nfix_galfit', nfix_galfit, $
                               'chi2nu_galfit', chi2nu_galfit, $
-                              'neigh_galfit', neigh_galfit, 'flag_galfit', flag_galfit, $
+                              'neigh_galfit', neigh_galfit, $
+                              'flag_galfit', flag_galfit, $
                               'X_GALFIT_DEG', -99, $
                               'Y_GALFIT_DEG', -99, $
                               'MAG_GALFIT_DEG', -99, $
@@ -3664,7 +3668,8 @@ FUNCTION read_sersic_results_old_galfit, obj, setup, bd=bd
                               'nfree_galfit_bd', nfree_galfit, $
                               'nfix_galfit_bd', nfix_galfit, $
                               'chi2nu_galfit_bd', chi2nu_galfit, $
-                              'neigh_galfit_bd', neigh_galfit, 'flag_galfit_bd', flag_galfit, $
+                              'neigh_galfit_bd', neigh_galfit, $
+                              'flag_galfit_bd', flag_galfit, $
                               'X_GALFIT_DEG_B', -99, $
                               'Y_GALFIT_DEG_B', -99, $
                               'MAG_GALFIT_DEG_B', -99, $
