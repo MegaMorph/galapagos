@@ -2850,7 +2850,7 @@ bad_input:
   message, 'Invalid Entry in '+setup_file
 END
 
-PRO read_image_files, setup, save_folder, silent=silent
+PRO read_image_files, setup, save_folder, silent=silent,nocheck_read=nocheck_read
 ; reads in the image file and returns the results to main routine
 ; count number of columns in file
   lineone = ''
@@ -2950,7 +2950,7 @@ PRO read_image_files, setup, save_folder, silent=silent
      readcol, filelist[0], hlpimages, hlpweights, hlpoutpath, hlpoutpre, $
               format = 'A,A,A,A', comment = '#', /silent
      cnt=intarr(nband+1)
-     
+
      hlpimages = strtrim(hlpimages,2)
 ; create arrays in setup needed to store all the data
      add_tag, setup, 'images', strarr(n_elements(hlpimages),nband+1), setup2
@@ -3036,28 +3036,30 @@ PRO read_image_files, setup, save_folder, silent=silent
   IF ncolf NE 6 AND ncolf NE 5 AND ncolf NE 4 THEN message, 'Invalid Entry in '+setup.files
   
 ; now check whether all images exist
-  IF setup.dosex+setup.dostamps+setup.dosky+setup.dobd GE 1 THEN BEGIN
-     image_exist = file_test(strtrim(setup.images,2))
-     weight_exist = file_test(strtrim(setup.weights,2))
-     im_non_exist = where(image_exist EQ 0, cntimne)
-     wh_non_exist = where(weight_exist EQ 0, cntwhne)
-     IF cntimne NE 0 THEN BEGIN
-        stopnow=1
-        print, ' '
-        print, 'there is at least one image missing as currently defined (typo?)'
-        print, 'missing images:'
-        forprint, setup.images(im_non_exist), textout=1
+  IF NOT keyword_set(nocheck_read) THEN BEGIN
+     IF setup.dosex+setup.dostamps+setup.dosky+setup.dobd GE 1 THEN BEGIN
+        image_exist = file_test(strtrim(setup.images,2))
+        weight_exist = file_test(strtrim(setup.weights,2))
+        im_non_exist = where(image_exist EQ 0, cntimne)
+        wh_non_exist = where(weight_exist EQ 0, cntwhne)
+        IF cntimne NE 0 THEN BEGIN
+           stopnow=1
+           print, ' '
+           print, 'there is at least one image missing as currently defined (typo?)'
+           print, 'missing images:'
+           forprint, setup.images(im_non_exist), textout=1
+        ENDIF
+        IF cntwhne NE 0 THEN BEGIN
+           stopnow=1
+           print, ' '
+           print, 'there is at least one weight image missing as currently defined (typo?)'
+           print, 'missing weights:'
+           forprint, setup.weights(wh_non_exist), textout=1
+        ENDIF
+        
+        IF (cntimne NE 0) OR (cntwhne NE 0) THEN stop
+        IF (cntimne EQ 0) AND (cntwhne EQ 0) THEN print, 'all images and weights have been checked to exist'
      ENDIF
-     IF cntwhne NE 0 THEN BEGIN
-        stopnow=1
-        print, ' '
-        print, 'there is at least one weight image missing as currently defined (typo?)'
-        print, 'missing weights:'
-        forprint, setup.weights(wh_non_exist), textout=1
-     ENDIF
-     
-     IF (cntimne NE 0) OR (cntwhne NE 0) THEN stop
-     IF (cntimne EQ 0) AND (cntwhne EQ 0) THEN print, 'all images and weights have been checked to exist'
   ENDIF
 END
 
@@ -3084,6 +3086,7 @@ FUNCTION read_sersic_results, obj, nband, setup, bd=bd, final=final
            stop
         ENDIF ELSE BEGIN
            derive_primary_chi2, strtrim(fit_info.logfile,2),setup.galexe
+           wait,0.2
         ENDELSE
      ENDIF
 ; read out these values from ascii file
@@ -3811,7 +3814,7 @@ PRO start_log, logfile, message
   free_lun, lun
 END
 
-PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2, sex_skip=sex_skip
+PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2, sex_skip=sex_skip, nocheck=nocheck
   galapagos_version = 'GALAPAGOS-v2.4.3'
   galapagos_date = '(Dec 29th, 2020)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
@@ -3879,7 +3882,7 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
   
 ;==============================================================================   
 ;read input files into arrays
-  read_image_files, setup, save_folder
+  read_image_files, setup, save_folder,nocheck_read=nocheck
   images = setup.images
   weights = setup.weights
   outpath = setup.outpath
@@ -3937,8 +3940,8 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
   nframes = n_elements(images[*,0])
 ;calculate image centres, but only if needed in further program
 
-  IF setup.dosex+setup.dostamps+setup.dosky+setup.dobd GE 1 THEN BEGIN
-;  IF setup.dosex+setup.dostamps+setup.dosky GE 1 THEN BEGIN
+;  IF setup.dosex+setup.dostamps+setup.dosky+setup.dobd GE 1 THEN BEGIN
+  IF setup.dosex+setup.dostamps+setup.dosky GE 1 THEN BEGIN
      dec_cnt = (ra_cnt = dblarr(nframes))
      FOR i=0ul, nframes-1 DO BEGIN
         head = headfits(images[i,0])
@@ -4114,6 +4117,7 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
               post_bridge_arr[free[0]]->execute, $
                  'skymap_bridge, "'+outpath_file_no_band[i,0]+'skymap.sav"', /nowait
            ENDIF ELSE BEGIN
+              print, 'starting skymap '+outpath_file_no_band[i,0]+'skymap.sav'
               skymap_bridge, outpath_file_no_band[i,0]+'skymap.sav'
            ENDELSE
            done_cnt = done_cnt+1
@@ -4142,6 +4146,7 @@ PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=b
         skymap_exist[t,b-1] = file_test(strtrim(outpath_file_no_band[t,b]+setup.stamp_pre[b]+'.'+setup.skymap+'.fits',2))
      endfor
   endfor
+
   if (total(skymap_exist) ne nframes*nband) and (setup.dosky eq 1 or setup.dobd eq 1) then begin
      print, ' '
      print, 'WARNING'

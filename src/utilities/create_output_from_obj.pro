@@ -1,6 +1,6 @@
 PRO create_output_from_obj, obj, layers, gal_exe
 ; this script does REPEAT the fit with new output options, e.g. can
-; NOT be used to simplycreate the residuals
+; NOT be used to simply create the residuals
 ; .run create_output_from_obj.pro
 ; create_output_from_obj, '/Users/haeussler/Documents/Dropbox/Arianna_Fits/414.556/414.556_obj_adapt','blank,input,model,residual,psf','~/megamorph/galfit/exec/galfitm-1.2.0-osx'
   spawn, 'pwd', infolder
