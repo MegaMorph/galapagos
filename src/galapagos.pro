@@ -2939,7 +2939,7 @@ PRO read_image_files, setup, save_folder, silent=silent,nocheck_read=nocheck_rea
         stop
      ENDIF
      readcol, setup.files, band, wavelength, mag_offset, filelist, zeropoint, exptime, $
-              format = 'A,I,F,A,F,F', comment = '#', /silent
+              format = 'A,F,F,A,F,F', comment = '#', /silent
      
 ; copy the setup files to the folder
      for f = 0, n_elements(filelist)-1 do spawn, 'cp '+filelist[f]+' '+save_folder
@@ -3815,8 +3815,8 @@ PRO start_log, logfile, message
 END
 
 PRO galapagos, setup_file, gala_pro, logfile=logfile, plot=plot, bridgejournal=bridgejournal, galfitoutput=galfitoutput, jump1=jump1, jump2=jump2, sex_skip=sex_skip, nocheck=nocheck
-  galapagos_version = 'GALAPAGOS-v2.4.3'
-  galapagos_date = '(Dec 29th, 2020)'
+  galapagos_version = 'GALAPAGOS-v2.4.4'
+  galapagos_date = '(Aug 22th, 2022)'
   print, 'THIS IS '+galapagos_version+' '+galapagos_date+' '
   print, ''
   start=systime(0)
